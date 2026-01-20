@@ -273,7 +273,7 @@ export default function LeadDetailsPage() {
 							<div>
 								<p className="font-medium text-sm">
 									{lead.budget
-										? BUDGET_LABELS[lead.budget] ?? lead.budget
+										? (BUDGET_LABELS[lead.budget] ?? lead.budget)
 										: "Not specified"}
 								</p>
 								<p className="text-muted-foreground text-xs">Budget Range</p>

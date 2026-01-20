@@ -93,12 +93,12 @@ function RecentLeadItem({
 	}[status] as "info" | "warning" | "secondary" | "success" | "outline";
 
 	const projectTypeLabel = projectType
-		? {
-			AI_AUTOMATION: "AI Automation",
-			BRAND_IDENTITY: "Brand Identity",
-			WEB_MOBILE: "Web & Mobile",
-			FULL_PRODUCT: "Full Product",
-		}[projectType] ?? projectType
+		? ({
+				AI_AUTOMATION: "AI Automation",
+				BRAND_IDENTITY: "Brand Identity",
+				WEB_MOBILE: "Web & Mobile",
+				FULL_PRODUCT: "Full Product",
+			}[projectType] ?? projectType)
 		: "Project type not specified";
 
 	return (

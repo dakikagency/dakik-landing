@@ -4,13 +4,13 @@ const GOOGLE_FONTS_URL =
 export default function Head() {
 	return (
 		<>
-			<link rel="preconnect" href="https://fonts.googleapis.com" />
+			<link href="https://fonts.googleapis.com" rel="preconnect" />
 			<link
-				rel="preconnect"
-				href="https://fonts.gstatic.com"
 				crossOrigin="anonymous"
+				href="https://fonts.gstatic.com"
+				rel="preconnect"
 			/>
-			<link rel="stylesheet" href={GOOGLE_FONTS_URL} />
+			<link href={GOOGLE_FONTS_URL} rel="stylesheet" />
 		</>
 	);
 }
