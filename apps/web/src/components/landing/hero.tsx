@@ -21,21 +21,12 @@ export function Hero() {
 
 	// Video expands to fullscreen
 	const videoWidth = useTransform(scrollYProgress, [0, 0.5], ["50%", "100vw"]);
-	const videoHeight = useTransform(
-		scrollYProgress,
-		[0, 0.5],
-		["auto", "100vh"]
-	);
 	const videoRight = useTransform(
 		scrollYProgress,
 		[0, 0.5],
 		["clamp(1rem,5vw,4rem)", "0px"]
 	);
-	const videoBottom = useTransform(
-		scrollYProgress,
-		[0, 0.5],
-		["clamp(2rem,5vh,4rem)", "0px"]
-	);
+	const videoBottom = useTransform(scrollYProgress, [0, 0.1], ["0px", "0px"]);
 
 	return (
 		<section
@@ -89,7 +80,7 @@ export function Hero() {
 					</Reveal>
 
 					{/* Description */}
-					<div className="mt-auto">
+					<div className="mt-auto mb-32 lg:mb-0">
 						<Reveal delay={0.4} direction="down">
 							<p className="w-[25ch] text-3xl text-foreground/90 leading-[1.15]">
 								Boutique digital agency crafting premium experiences through AI
@@ -114,10 +105,9 @@ export function Hero() {
 					</div>
 				) : (
 					<motion.div
-						className="absolute"
+						className="absolute aspect-video"
 						style={{
 							width: videoWidth,
-							height: videoHeight,
 							right: videoRight,
 							bottom: videoBottom,
 							willChange: "width, height, right, bottom",

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import "../index.css";
 import Providers from "@/components/providers";
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://dakik.studio";
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://dakik.co.uk";
 
 export const metadata: Metadata = {
 	metadataBase: new URL(BASE_URL),

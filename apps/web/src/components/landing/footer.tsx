@@ -97,15 +97,21 @@ export function Footer() {
 						<div className="space-y-1">
 							<a
 								className="block text-sm text-white/50 transition-colors hover:text-[#4ADE80]"
-								href="mailto:hello@dakikstudio.com"
+								href="mailto:hello@dakik.co.uk"
 							>
-								hello@dakikstudio.com
+								new@dakik.co.uk
 							</a>
 							<a
-								className="block text-sm text-white/50 transition-colors hover:text-white"
-								href="tel:+441234567890"
+								className="block text-sm text-white/50 transition-colors hover:text-[#4ADE80]"
+								href="mailto:hello@dakik.co.uk"
 							>
-								+44 123 456 7890
+								ask@dakik.co.uk
+							</a>
+							<a
+								className="block text-sm text-white/50 transition-colors hover:text-[#4ADE80]"
+								href="mailto:hello@dakik.co.uk"
+							>
+								help@dakik.co.uk
 							</a>
 						</div>
 					</motion.div>
