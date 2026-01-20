@@ -1,0 +1,10 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated"
+  moduleFormat = "esm"
+  previewFeatures = ["prismaSchemaFolder", "driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}

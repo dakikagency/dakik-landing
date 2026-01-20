@@ -1,0 +1,2 @@
+# Tailwind v4 CSS file with @variant syntax not supported by Biome
+apps/web/src/index.css

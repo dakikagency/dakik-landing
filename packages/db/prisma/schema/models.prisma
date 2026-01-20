@@ -1,0 +1,494 @@
+// =============================================================================
+// Enums
+// =============================================================================
+
+enum Role {
+  ADMIN
+  CUSTOMER
+}
+
+enum ProjectType {
+  AI_AUTOMATION
+  BRAND_IDENTITY
+  WEB_MOBILE
+  FULL_PRODUCT
+}
+
+enum BudgetRange {
+  RANGE_5K_10K
+  RANGE_10K_25K
+  RANGE_25K_50K
+  RANGE_50K_PLUS
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  MEETING_SCHEDULED
+  MEETING_COMPLETED
+  CONVERTED
+  CLOSED
+}
+
+enum LeadStep {
+  PROJECT_TYPE
+  BUDGET
+  CONTACT
+  MEETING_PICKER
+  SUCCESS
+}
+
+enum ProjectStatus {
+  PENDING
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum ContractStatus {
+  DRAFT
+  SENT
+  VIEWED
+  SIGNED
+  EXPIRED
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PENDING
+  PAID
+  OVERDUE
+}
+
+enum MeetingStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum EmailStatus {
+  SENT
+  FAILED
+  BOUNCED
+}
+
+enum SurveyQuestionType {
+  PROJECT_TYPE
+  BUDGET
+}
+
+enum SurveyInputType {
+  SINGLE_CHOICE
+  MULTIPLE_CHOICE
+}
+
+// =============================================================================
+// Lead Management
+// =============================================================================
+
+model Lead {
+  id              String      @id @default(cuid())
+  email           String      @unique
+  name            String?
+  projectType     ProjectType?
+  budget          BudgetRange?
+  details         String?
+  status          LeadStatus  @default(NEW)
+  currentStep     Int         @default(1)
+  surveyProgress  Json?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relations
+  meetings Meeting[]
+  customer Customer?
+
+  @@index([email])
+  @@index([status])
+  @@map("lead")
+}
+
+// =============================================================================
+// Customer Management
+// =============================================================================
+
+model Customer {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  leadId      String?  @unique
+  companyName String?
+  phone       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lead      Lead?      @relation(fields: [leadId], references: [id])
+  projects  Project[]
+  invoices  Invoice[]
+  contracts Contract[]
+  meetings  Meeting[]
+
+  @@index([userId])
+  @@map("customer")
+}
+
+// =============================================================================
+// Project Management
+// =============================================================================
+
+model Project {
+  id          String        @id @default(cuid())
+  customerId  String
+  title       String
+  description String?
+  status      ProjectStatus @default(PENDING)
+  progress    Int           @default(0) // 0-100
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  customer Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+  qAndAs   QAndA[]
+  updates  ProjectUpdate[]
+
+  @@index([customerId])
+  @@index([status])
+  @@map("project")
+}
+
+model ProjectUpdate {
+  id        String   @id @default(cuid())
+  projectId String
+  title     String
+  content   String
+  progress  Int? // Progress at time of update
+  createdAt DateTime @default(now())
+
+  // Relations
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("project_update")
+}
+
+model QAndA {
+  id         String    @id @default(cuid())
+  projectId  String
+  question   String
+  answer     String?
+  askedAt    DateTime  @default(now())
+  answeredAt DateTime?
+
+  // Relations
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("q_and_a")
+}
+
+// =============================================================================
+// Contracts
+// =============================================================================
+
+model Contract {
+  id             String         @id @default(cuid())
+  customerId     String
+  title          String
+  fileUrl        String
+  status         ContractStatus @default(DRAFT)
+  signedAt       DateTime?
+  signatureData  String?        // Base64 encoded signature image
+  signerName     String?        // Name of the person who signed
+  signerIp       String?        // IP address at time of signing
+  signatureHash  String?        // Hash of signature data for verification
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  // Relations
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([status])
+  @@map("contract")
+}
+
+// =============================================================================
+// Invoices
+// =============================================================================
+
+model Invoice {
+  id          String        @id @default(cuid())
+  customerId  String
+  projectId   String?
+  invoiceDate DateTime      @default(now())
+  dueDate     DateTime?
+  amount      Decimal       @db.Decimal(10, 2)
+  description String?
+  status      InvoiceStatus @default(UNPAID)
+  fileUrl     String
+  paidAt      DateTime?
+  stripePaymentIntentId String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  project  Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([customerId])
+  @@index([projectId])
+  @@index([status])
+  @@index([invoiceDate])
+  @@map("invoice")
+}
+
+// =============================================================================
+// Scheduling & Meetings
+// =============================================================================
+
+model Meeting {
+  id          String        @id @default(cuid())
+  leadId      String?
+  customerId  String?
+  eventId     String        @unique // Google Calendar event ID
+  meetUrl     String // Google Meet link
+  title       String
+  description String?
+  scheduledAt DateTime
+  duration    Int // minutes
+  status      MeetingStatus @default(SCHEDULED)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  lead     Lead?     @relation(fields: [leadId], references: [id])
+  customer Customer? @relation(fields: [customerId], references: [id])
+
+  @@index([scheduledAt])
+  @@index([leadId])
+  @@index([customerId])
+  @@index([status])
+  @@map("meeting")
+}
+
+model WorkingHours {
+  id        String  @id @default(cuid())
+  dayOfWeek Int // 0=Sunday, 1=Monday, etc.
+  startTime String // HH:mm
+  endTime   String // HH:mm
+  isEnabled Boolean @default(true)
+
+  @@unique([dayOfWeek])
+  @@map("working_hours")
+}
+
+model AvailabilityBlock {
+  id        String   @id @default(cuid())
+  startDate DateTime
+  endDate   DateTime
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@index([startDate, endDate])
+  @@map("availability_block")
+}
+
+// =============================================================================
+// Content Management - Blog
+// =============================================================================
+
+model BlogPost {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  title       String
+  excerpt     String?
+  content     String // Markdown
+  coverImage  String?
+  published   Boolean   @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  tags Tag[]
+
+  @@index([slug])
+  @@index([published, publishedAt])
+  @@map("blog_post")
+}
+
+model Tag {
+  id   String @id @default(cuid())
+  name String @unique
+  slug String @unique
+
+  // Relations
+  posts BlogPost[]
+
+  @@map("tag")
+}
+
+// =============================================================================
+// Content Management - Documentation
+// =============================================================================
+
+model ComponentDoc {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  category    String
+  description String?
+  props       Json // Props documentation
+  code        String // Component code/example
+  preview     String? // Preview HTML/component
+  published   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  files ComponentFile[]
+
+  @@index([slug])
+  @@index([category])
+  @@map("component_doc")
+}
+
+model ComponentFile {
+  id             String       @id @default(cuid())
+  componentId    String
+  filename       String       // e.g., "button.tsx", "button.css"
+  fileType       FileType     @default(TYPESCRIPT)
+  content        String       // The file content
+  isMainFile     Boolean      @default(false) // Main entry file for the component
+  order          Int          @default(0) // Order for displaying files
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relations
+  component ComponentDoc @relation(fields: [componentId], references: [id], onDelete: Cascade)
+
+  @@unique([componentId, filename])
+  @@index([componentId])
+  @@map("component_file")
+}
+
+enum FileType {
+  TYPESCRIPT
+  TYPESCRIPT_RX
+  CSS
+  SCSS
+  JSON
+  MARKDOWN
+  OTHER
+}
+
+model Icon {
+  id         String   @id @default(cuid())
+  name       String
+  slug       String   @unique
+  category   String
+  svgContent String // SVG markup
+  keywords   String[] // Search keywords
+  isCustom   Boolean  @default(true) // false for Phosphor icons
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([slug])
+  @@index([category])
+  @@map("icon")
+}
+
+// =============================================================================
+// Assets
+// =============================================================================
+
+model Asset {
+  id           String   @id @default(cuid())
+  publicId     String   @unique // Cloudinary public ID
+  url          String
+  secureUrl    String
+  format       String
+  resourceType String // image, video, raw
+  width        Int?
+  height       Int?
+  bytes        Int
+  folder       String?
+  createdAt    DateTime @default(now())
+
+  @@index([publicId])
+  @@index([folder])
+  @@map("asset")
+}
+
+// =============================================================================
+// Email Logs
+// =============================================================================
+
+model EmailLog {
+  id      String      @id @default(cuid())
+  userId  String // Admin who sent
+  to      String[]
+  subject String
+  body    String
+  status  EmailStatus
+  sentAt  DateTime    @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sentAt])
+  @@map("email_log")
+}
+
+// =============================================================================
+// Survey Configuration
+// =============================================================================
+
+model SurveyQuestion {
+  id          String           @id @default(cuid())
+  key         String           @unique // Unique identifier (e.g., "PROJECT_TYPE", "BUDGET")
+  title       String // Display title (e.g., "What type of project?")
+  description String? // Subtitle/helper text
+  inputType   SurveyInputType  @default(SINGLE_CHOICE)
+  order       Int              @default(0)
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  // Relations
+  options SurveyOption[]
+
+  @@index([order])
+  @@index([isActive])
+  @@map("survey_question")
+}
+
+model SurveyOption {
+  id           String              @id @default(cuid())
+  questionId   String? // Foreign key to SurveyQuestion (nullable for migration)
+  questionType SurveyQuestionType? // Deprecated: kept for backward compatibility
+  label        String
+  value        String
+  description  String?
+  icon         String? // Icon name (e.g., "Bot", "Palette")
+  order        Int                 @default(0)
+  isActive     Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  // Relations
+  question SurveyQuestion? @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, value])
+  @@index([questionId])
+  @@index([questionType])
+  @@index([isActive])
+  @@map("survey_option")
+}

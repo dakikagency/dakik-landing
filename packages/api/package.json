@@ -1,0 +1,33 @@
+{
+  "name": "@collab/api",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@collab/auth": "workspace:*",
+    "@collab/db": "workspace:*",
+    "@collab/env": "workspace:*",
+    "@trpc/client": "catalog:",
+    "@trpc/server": "catalog:",
+    "dotenv": "catalog:",
+    "googleapis": "^170.0.0",
+    "next": "catalog:",
+    "nodemailer": "^7.0.12",
+    "stripe": "^20.2.0",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@collab/config": "workspace:*",
+    "@types/nodemailer": "^7.0.5",
+    "typescript": "catalog:"
+  }
+}

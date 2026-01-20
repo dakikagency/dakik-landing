@@ -1,0 +1,15 @@
+// =============================================================================
+// Webhooks
+// =============================================================================
+
+model Webhook {
+  id        String   @id @default(cuid())
+  url       String
+  secret    String?  // Shared secret for HMAC signature
+  events    String[] // List of event types
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("webhook")
+}
