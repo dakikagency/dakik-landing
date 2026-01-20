@@ -20,13 +20,21 @@ export function Hero() {
 	const textOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0]);
 
 	// Video expands to fullscreen
-	const videoWidth = useTransform(scrollYProgress, [0, 0.5], ["50%", "100vw"]);
+	const videoWidth = useTransform(
+		scrollYProgress,
+		[0, 0.3, 1],
+		["50%", "100vw", "100vw"]
+	);
 	const videoRight = useTransform(
 		scrollYProgress,
-		[0, 0.5],
-		["clamp(1rem,5vw,4rem)", "0px"]
+		[0, 0.3, 1],
+		["20px", "0px", "0px"]
 	);
-	const videoBottom = useTransform(scrollYProgress, [0, 0.1], ["0px", "0px"]);
+	const videoBottom = useTransform(
+		scrollYProgress,
+		[0, 0.3, 1],
+		["20px", "0px", "0px"]
+	);
 
 	return (
 		<section
