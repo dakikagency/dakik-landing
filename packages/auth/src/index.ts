@@ -39,7 +39,7 @@ export const auth = betterAuth({
 	databaseHooks: {
 		user: {
 			create: {
-				before: (user) => {
+				before: async (user) => {
 					// Auto-assign ADMIN role to specific email addresses
 					if (ADMIN_EMAILS.includes(user.email.toLowerCase())) {
 						return {

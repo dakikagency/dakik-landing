@@ -432,44 +432,62 @@ export const surveyOptionsRouter = router({
 
 		// Upsert project type options
 		for (const option of projectTypeDefaults) {
-			await prisma.surveyOption.upsert({
+			const existing = await prisma.surveyOption.findFirst({
 				where: {
-					questionType_value: {
-						questionType: "PROJECT_TYPE",
-						value: option.value,
-					},
+					questionType: "PROJECT_TYPE",
+					value: option.value,
 				},
-				create: {
+				select: { id: true },
+			});
+
+			if (existing) {
+				await prisma.surveyOption.update({
+					where: { id: existing.id },
+					data: {
+						label: option.label,
+						description: option.description,
+						icon: option.icon,
+						order: option.order,
+					},
+				});
+				continue;
+			}
+
+			await prisma.surveyOption.create({
+				data: {
 					questionType: "PROJECT_TYPE",
 					...option,
-				},
-				update: {
-					label: option.label,
-					description: option.description,
-					icon: option.icon,
-					order: option.order,
 				},
 			});
 		}
 
 		// Upsert budget options
 		for (const option of budgetDefaults) {
-			await prisma.surveyOption.upsert({
+			const existing = await prisma.surveyOption.findFirst({
 				where: {
-					questionType_value: {
-						questionType: "BUDGET",
-						value: option.value,
-					},
+					questionType: "BUDGET",
+					value: option.value,
 				},
-				create: {
+				select: { id: true },
+			});
+
+			if (existing) {
+				await prisma.surveyOption.update({
+					where: { id: existing.id },
+					data: {
+						label: option.label,
+						description: option.description,
+						icon: option.icon,
+						order: option.order,
+					},
+				});
+				continue;
+			}
+
+			await prisma.surveyOption.create({
+				data: {
 					questionType: "BUDGET",
 					...option,
-				},
-				update: {
-					label: option.label,
-					description: option.description,
-					icon: option.icon,
-					order: option.order,
 				},
 			});
 		}

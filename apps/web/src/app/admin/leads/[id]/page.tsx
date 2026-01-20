@@ -54,6 +54,12 @@ const STATUS_OPTIONS = [
 	{ value: "CLOSED", label: "Closed" },
 ] as const;
 
+type LeadStatus = (typeof STATUS_OPTIONS)[number]["value"];
+type UpdateLeadStatusInput = {
+	leadId: string;
+	status: LeadStatus;
+};
+
 const MEETING_STATUS_COLORS: Record<string, string> = {
 	SCHEDULED: "bg-blue-500/10 text-blue-500",
 	COMPLETED: "bg-green-500/10 text-green-500",
@@ -108,22 +114,26 @@ export default function LeadDetailsPage() {
 		isError,
 	} = useQuery(trpc.admin.getLead.queryOptions({ id: leadId }));
 
-	const updateStatusMutation = useMutation(
-		trpc.admin.updateLeadStatus.mutationOptions({
-			onSuccess: () => {
-				queryClient.invalidateQueries({
-					queryKey: trpc.admin.getLead.queryKey({ id: leadId }),
-				});
-				queryClient.invalidateQueries({
-					queryKey: trpc.admin.getLeads.queryKey({}),
-				});
-				toast.success("Lead status updated");
-			},
-			onError: (error) => {
-				toast.error(error.message || "Failed to update status");
-			},
-		})
-	);
+	const updateLeadStatus = trpc.admin.updateLeadStatus as unknown as {
+		mutate: (input: UpdateLeadStatusInput) => Promise<unknown>;
+	};
+
+	const updateStatusMutation = useMutation({
+		mutationFn: (input: UpdateLeadStatusInput) =>
+			updateLeadStatus.mutate(input),
+		onSuccess: () => {
+			queryClient.invalidateQueries({
+				queryKey: trpc.admin.getLead.queryKey({ id: leadId }),
+			});
+			queryClient.invalidateQueries({
+				queryKey: trpc.admin.getLeads.queryKey({}),
+			});
+			toast.success("Lead status updated");
+		},
+		onError: (error) => {
+			toast.error(error.message || "Failed to update status");
+		},
+	});
 
 	const handleStatusChange = (newStatus: string | null) => {
 		if (!newStatus) {
@@ -131,13 +141,7 @@ export default function LeadDetailsPage() {
 		}
 		updateStatusMutation.mutate({
 			leadId,
-			status: newStatus as
-				| "NEW"
-				| "CONTACTED"
-				| "MEETING_SCHEDULED"
-				| "MEETING_COMPLETED"
-				| "CONVERTED"
-				| "CLOSED",
+			status: newStatus as LeadStatus,
 		});
 	};
 
@@ -253,7 +257,10 @@ export default function LeadDetailsPage() {
 							</div>
 							<div>
 								<p className="font-medium text-sm">
-									{PROJECT_TYPE_LABELS[lead.projectType] ?? lead.projectType}
+									{lead.projectType
+										? (PROJECT_TYPE_LABELS[lead.projectType] ??
+											lead.projectType)
+										: "Not specified"}
 								</p>
 								<p className="text-muted-foreground text-xs">Project Type</p>
 							</div>
@@ -265,7 +272,9 @@ export default function LeadDetailsPage() {
 							</div>
 							<div>
 								<p className="font-medium text-sm">
-									{BUDGET_LABELS[lead.budget] ?? lead.budget}
+									{lead.budget
+										? BUDGET_LABELS[lead.budget] ?? lead.budget
+										: "Not specified"}
 								</p>
 								<p className="text-muted-foreground text-xs">Budget Range</p>
 							</div>

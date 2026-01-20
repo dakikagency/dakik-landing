@@ -258,9 +258,9 @@
 	--spacing-section-y: var(--section-padding-y);
 	--spacing-section-x: var(--section-padding-x);
 
-	--font-sans: var(--font-sans), ui-sans-serif, system-ui;
-	--font-display: var(--font-display), ui-sans-serif, system-ui;
-	--font-mono: var(--font-mono), ui-monospace, monospace;
+	--font-sans: "Space Grotesk", ui-sans-serif, system-ui;
+	--font-display: "Sofia Sans Extra Condensed", ui-sans-serif, system-ui;
+	--font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
 @layer base {

@@ -8,7 +8,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { PaymentModal } from "@/components/portal/payment-modal";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
 	Card,
 	CardContent,
@@ -114,12 +114,15 @@ export default function InvoiceDetailsPage() {
 				</div>
 				<div className="flex items-center gap-2">
 					{invoice.fileUrl && (
-						<Link href={invoice.fileUrl} target="_blank">
-							<Button variant="outline">
-								<Download className="mr-2 size-4" />
-								Download PDF
-							</Button>
-						</Link>
+						<a
+							className={buttonVariants({ variant: "outline" })}
+							href={invoice.fileUrl}
+							rel="noreferrer"
+							target="_blank"
+						>
+							<Download className="mr-2 size-4" />
+							Download PDF
+						</a>
 					)}
 					{invoice.status !== "PAID" && (
 						<Button onClick={() => setIsPaymentModalOpen(true)}>

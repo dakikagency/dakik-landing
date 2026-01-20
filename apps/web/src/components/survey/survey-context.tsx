@@ -18,6 +18,18 @@ export const contactSchema = z.object({
 
 export type ContactInfo = z.infer<typeof contactSchema>;
 
+export type ProjectType =
+	| "AI_AUTOMATION"
+	| "BRAND_IDENTITY"
+	| "WEB_MOBILE"
+	| "FULL_PRODUCT";
+
+export type BudgetRange =
+	| "RANGE_5K_10K"
+	| "RANGE_10K_25K"
+	| "RANGE_25K_50K"
+	| "RANGE_50K_PLUS";
+
 // Meeting data type
 export interface ScheduledMeeting {
 	date: Date;
@@ -32,6 +44,8 @@ export type QuestionAnswer = string | string[];
 interface SurveyState {
 	currentStep: number;
 	questionAnswers: Record<string, QuestionAnswer>; // questionId -> answer(s)
+	projectType: ProjectType | null;
+	budget: BudgetRange | null;
 	contact: ContactInfo | null;
 	scheduledMeeting: ScheduledMeeting | null;
 	leadId: string | null;
@@ -42,6 +56,8 @@ interface SurveyContextValue extends SurveyState {
 	nextStep: () => void;
 	prevStep: () => void;
 	setAnswer: (questionId: string, answer: QuestionAnswer) => void;
+	setProjectType: (projectType: ProjectType) => void;
+	setBudget: (budget: BudgetRange) => void;
 	setContact: (contact: ContactInfo) => void;
 	setScheduledMeeting: (meeting: ScheduledMeeting) => void;
 	setLeadId: (leadId: string) => void;
@@ -52,6 +68,8 @@ interface SurveyContextValue extends SurveyState {
 const initialState: SurveyState = {
 	currentStep: 0,
 	questionAnswers: {},
+	projectType: null,
+	budget: null,
 	contact: null,
 	scheduledMeeting: null,
 	leadId: null,
@@ -97,6 +115,28 @@ export function SurveyProvider({ children }: SurveyProviderProps) {
 		[]
 	);
 
+	const setProjectType = useCallback((projectType: ProjectType) => {
+		setState((prev) => ({
+			...prev,
+			projectType,
+			questionAnswers: {
+				...prev.questionAnswers,
+				PROJECT_TYPE: projectType,
+			},
+		}));
+	}, []);
+
+	const setBudget = useCallback((budget: BudgetRange) => {
+		setState((prev) => ({
+			...prev,
+			budget,
+			questionAnswers: {
+				...prev.questionAnswers,
+				BUDGET: budget,
+			},
+		}));
+	}, []);
+
 	const setContact = useCallback((contact: ContactInfo) => {
 		setState((prev) => ({ ...prev, contact }));
 	}, []);
@@ -120,6 +160,8 @@ export function SurveyProvider({ children }: SurveyProviderProps) {
 			prevStep,
 			goToStep,
 			setAnswer,
+			setProjectType,
+			setBudget,
 			setContact,
 			setScheduledMeeting,
 			setLeadId,
@@ -131,6 +173,8 @@ export function SurveyProvider({ children }: SurveyProviderProps) {
 			prevStep,
 			goToStep,
 			setAnswer,
+			setProjectType,
+			setBudget,
 			setContact,
 			setScheduledMeeting,
 			setLeadId,

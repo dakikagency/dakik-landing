@@ -480,19 +480,21 @@ function MeetingEditor({
 
 	// Auto-generate title when attendee changes
 	useEffect(() => {
-		if (attendeeId) {
-			const attendee =
-				attendeeType === "lead"
-					? leads?.find((l) => l.id === attendeeId)
-					: customers?.find((c) => c.id === attendeeId);
+		if (!attendeeId) {
+			return;
+		}
 
-			if (attendee) {
-				const name =
-					attendeeType === "lead"
-						? attendee.name
-						: (attendee as (typeof customers)[0]).user.name;
-				setTitle(`Meeting with ${name}`);
+		if (attendeeType === "lead") {
+			const lead = leads?.find((l) => l.id === attendeeId);
+			if (lead) {
+				setTitle(`Meeting with ${lead.name}`);
 			}
+			return;
+		}
+
+		const customer = customers?.find((c) => c.id === attendeeId);
+		if (customer) {
+			setTitle(`Meeting with ${customer.user.name}`);
 		}
 	}, [attendeeId, attendeeType, leads, customers]);
 
@@ -628,7 +630,19 @@ function MeetingEditor({
 									value={attendeeId}
 								>
 									<SelectTrigger className="w-full">
-										<SelectValue placeholder={`Choose a ${attendeeType}...`} />
+										<SelectValue>
+											{(value) => {
+												if (!value) {
+													return `Choose a ${attendeeType}...`;
+												}
+												const selected = attendeeOptions.find(
+													(option) => option.id === value
+												);
+												return selected
+													? `${selected.name} (${selected.email})`
+													: `Choose a ${attendeeType}...`;
+											}}
+										</SelectValue>
 									</SelectTrigger>
 									<SelectContent>
 										{attendeeOptions.map((option) => (

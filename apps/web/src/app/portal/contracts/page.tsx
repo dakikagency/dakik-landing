@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
 	Card,
 	CardContent,
@@ -228,20 +228,26 @@ function ContractCard({
 					</div>
 					<div className="flex gap-2">
 						{(contract.status === "SENT" || contract.status === "VIEWED") && (
-							<Button asChild size="sm" variant="default">
-								<Link href={`/portal/contracts/${contract.id}`}>
-									<PenIcon className="size-4" />
-									Review & Sign
-								</Link>
-							</Button>
+							<Link
+								className={cn(
+									buttonVariants({ variant: "default", size: "sm" })
+								)}
+								href={`/portal/contracts/${contract.id}`}
+							>
+								<PenIcon className="size-4" />
+								Review & Sign
+							</Link>
 						)}
 						{contract.status === "SIGNED" && (
 							<>
-								<Button asChild size="sm" variant="outline">
-									<Link href={`/portal/contracts/${contract.id}`}>
-										View Details
-									</Link>
-								</Button>
+								<Link
+									className={cn(
+										buttonVariants({ variant: "outline", size: "sm" })
+									)}
+									href={`/portal/contracts/${contract.id}`}
+								>
+									View Details
+								</Link>
 								<Button onClick={handleDownload} size="sm" variant="ghost">
 									<DownloadIcon className="size-4" />
 									Download

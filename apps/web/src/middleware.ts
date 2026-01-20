@@ -1,6 +1,11 @@
-import { auth } from "@collab/auth";
+import { auth, type Session } from "@collab/auth";
 import prisma from "@collab/db";
 import { type NextRequest, NextResponse } from "next/server";
+
+type UserRole = "ADMIN" | "CUSTOMER";
+type SessionWithRole = Session & {
+	user: Session["user"] & { role?: UserRole };
+};
 
 const ADMIN_ROUTES = ["/admin"];
 const PORTAL_ROUTES = ["/portal"];
@@ -37,9 +42,9 @@ export async function middleware(request: NextRequest) {
 	}
 
 	// Get session from better-auth
-	const session = await auth.api.getSession({
+	const session = (await auth.api.getSession({
 		headers: request.headers,
-	});
+	})) as SessionWithRole | null;
 
 	// Redirect unauthenticated users to login
 	if (!session?.user) {
@@ -48,7 +53,7 @@ export async function middleware(request: NextRequest) {
 		return NextResponse.redirect(loginUrl);
 	}
 
-	const userRole = session.user.role;
+	const userRole = session.user.role ?? "CUSTOMER";
 	const userEmail = session.user.email;
 
 	// Check admin routes - only ADMIN role allowed

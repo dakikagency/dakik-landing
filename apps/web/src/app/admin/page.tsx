@@ -77,9 +77,9 @@ function RecentLeadItem({
 	status,
 	createdAt,
 }: {
-	name: string;
-	email: string;
-	projectType: string;
+	name: string | null;
+	email: string | null;
+	projectType: string | null;
 	status: string;
 	createdAt: Date | string;
 }) {
@@ -92,18 +92,22 @@ function RecentLeadItem({
 		CLOSED: "outline",
 	}[status] as "info" | "warning" | "secondary" | "success" | "outline";
 
-	const projectTypeLabel = {
-		AI_AUTOMATION: "AI Automation",
-		BRAND_IDENTITY: "Brand Identity",
-		WEB_MOBILE: "Web & Mobile",
-		FULL_PRODUCT: "Full Product",
-	}[projectType];
+	const projectTypeLabel = projectType
+		? {
+			AI_AUTOMATION: "AI Automation",
+			BRAND_IDENTITY: "Brand Identity",
+			WEB_MOBILE: "Web & Mobile",
+			FULL_PRODUCT: "Full Product",
+		}[projectType] ?? projectType
+		: "Project type not specified";
 
 	return (
 		<div className="flex items-center justify-between border-b py-3 last:border-0">
 			<div className="space-y-1">
-				<p className="font-medium text-sm">{name}</p>
-				<p className="text-muted-foreground text-xs">{email}</p>
+				<p className="font-medium text-sm">{name ?? "Unnamed lead"}</p>
+				<p className="text-muted-foreground text-xs">
+					{email ?? "No email provided"}
+				</p>
 				<p className="text-muted-foreground text-xs">{projectTypeLabel}</p>
 			</div>
 			<div className="flex flex-col items-end gap-1">

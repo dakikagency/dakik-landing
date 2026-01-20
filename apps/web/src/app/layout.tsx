@@ -1,29 +1,7 @@
 import type { Metadata } from "next";
 
-import {
-	JetBrains_Mono,
-	Sofia_Sans_Extra_Condensed,
-	Space_Grotesk,
-} from "next/font/google";
-
 import "../index.css";
 import Providers from "@/components/providers";
-
-const display = Sofia_Sans_Extra_Condensed({
-	variable: "--font-display-base",
-	subsets: ["latin"],
-	weight: ["900"],
-});
-
-const sans = Space_Grotesk({
-	variable: "--font-sans-base",
-	subsets: ["latin"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-	variable: "--font-mono-base",
-	subsets: ["latin"],
-});
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://dakik.studio";
 
@@ -97,9 +75,7 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en" suppressHydrationWarning>
-			<body
-				className={`${sans.variable} ${display.variable} ${jetbrainsMono.variable} antialiased`}
-			>
+			<body className="antialiased">
 				<Providers>{children}</Providers>
 			</body>
 		</html>
