@@ -35,12 +35,20 @@ function findMonorepoRoot(): string {
 const monorepoRoot = findMonorepoRoot();
 const envPath = join(monorepoRoot, ".env");
 
-config({ path: envPath });
+// Load .env file if it exists (won't exist on Vercel - they inject env vars directly)
+if (existsSync(envPath)) {
+	config({ path: envPath });
+}
 
 if (process.env.NODE_ENV === "development") {
 	console.log(`[ENV] Loading from: ${envPath}`);
 	console.log(`[ENV] DATABASE_URL exists: ${!!process.env.DATABASE_URL}`);
 }
+
+// Skip validation during build time on Vercel/CI
+// Vercel injects env vars into process.env, but validation during static generation
+// can cause issues. The app will validate at runtime when it actually needs the vars.
+const skipValidation = !!process.env.VERCEL || !!process.env.CI;
 
 export const env = createEnv({
 	server: {
@@ -79,4 +87,5 @@ export const env = createEnv({
 	},
 	runtimeEnv: process.env,
 	emptyStringAsUndefined: false,
+	skipValidation,
 });
