@@ -5,12 +5,17 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["dist/**", ".next/**", "node_modules/.prisma/**"],
+      "outputs": [".next/**", "dist/**", "node_modules/.prisma/**"],
+      "outputLogs": "new-only",
       "env": [
         "DATABASE_URL",
         "POSTGRES_PRISMA_URL",
         "POSTGRES_URL_NON_POOLING"
       ]
+    },
+    "@collab/db#build": {
+      "outputs": ["node_modules/.prisma/**"],
+      "cache": true
     },
     "lint": {
       "dependsOn": ["^lint"]
