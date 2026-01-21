@@ -115,7 +115,7 @@ function AutomationEditor({
 	const [uploadingFile, setUploadingFile] = useState(false);
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-	const tagsQuery = useQuery(trpc.automation.getAllTags.queryOptions());
+	const { data: allTags } = useQuery(trpc.automation.getAllTags.queryOptions());
 
 	const createMutation = useMutation(trpc.automation.create.mutationOptions());
 	const updateMutation = useMutation(trpc.automation.update.mutationOptions());
@@ -499,7 +499,7 @@ function AutomationEditor({
 						</CardHeader>
 						<CardContent className="space-y-4">
 							<div className="flex flex-wrap gap-2">
-								{tagsQuery.data?.map((tag) => (
+								{allTags?.map((tag) => (
 									<button
 										className={cn(
 											"border px-2 py-1 text-xs transition-colors",
