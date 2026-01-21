@@ -1,0 +1,30 @@
+.git
+.github
+.gitignore
+README.md
+CLAUDE.md
+.claude
+.worktrees
+*.md
+
+# Node modules in individual apps/packages (included via turbo caching)
+node_modules
+
+# Dependencies managed at root level via bun
+# Don't ignore root node_modules - needed for build
+
+# Build outputs (keep .next and dist)
+# .next is NOT ignored - it's the output we need
+# dist is NOT ignored - contains build artifacts
+
+# Development files
+.env.local
+.env.*.local
+*.log
+.DS_Store
+.vscode
+.idea
+
+# Testing
+coverage
+.playwright
