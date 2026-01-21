@@ -1,6 +1,7 @@
 import { protectedProcedure, publicProcedure, router } from "../index";
 import { adminRouter } from "./admin";
 import { auditRouter } from "./audit";
+import { automationRouter } from "./automation";
 import { availabilityRouter } from "./availability";
 import { blogRouter } from "./blog";
 import { componentsRouter } from "./components";
@@ -27,6 +28,7 @@ export const appRouter = router({
 	}),
 	admin: adminRouter,
 	audit: auditRouter,
+	automation: automationRouter,
 	availability: availabilityRouter,
 	blog: blogRouter,
 	components: componentsRouter,

@@ -114,7 +114,7 @@ export function StepSuccess() {
 	};
 
 	return (
-		<div className="relative flex w-full max-w-lg flex-col items-center gap-8 text-center">
+		<div className="relative flex w-full max-w-2xl flex-col items-center gap-12 text-center">
 			<Confetti />
 
 			{/* Animated Checkmark */}
@@ -135,7 +135,7 @@ export function StepSuccess() {
 						scale: [1, 1.2, 1],
 						opacity: [0.5, 0, 0.5],
 					}}
-					className="absolute inset-0 rounded-full border-2 border-cta"
+					className="absolute inset-0 border-2 border-cta"
 					transition={{
 						duration: 2,
 						repeat: Number.POSITIVE_INFINITY,
@@ -144,7 +144,7 @@ export function StepSuccess() {
 				/>
 
 				{/* Main checkmark container */}
-				<div className="flex size-24 items-center justify-center rounded-full border-2 border-cta bg-cta/10">
+				<div className="flex size-28 items-center justify-center border-2 border-cta bg-cta/10">
 					<motion.div
 						animate={{ scale: 1 }}
 						initial={{ scale: 0 }}
@@ -155,7 +155,7 @@ export function StepSuccess() {
 							delay: 0.4,
 						}}
 					>
-						<Check className="size-12 text-cta" strokeWidth={3} />
+						<Check className="size-14 text-cta" strokeWidth={3} />
 					</motion.div>
 				</div>
 			</motion.div>
@@ -163,12 +163,14 @@ export function StepSuccess() {
 			{/* Success Message */}
 			<motion.div
 				animate={{ opacity: 1, y: 0 }}
-				className="space-y-2"
+				className="space-y-4"
 				initial={{ opacity: 0, y: 20 }}
 				transition={{ delay: 0.5, duration: 0.5 }}
 			>
-				<h2 className="font-medium text-2xl">Meeting Scheduled!</h2>
-				<p className="text-muted-foreground text-sm">
+				<h2 className="font-black font-display text-4xl uppercase tracking-tight lg:text-6xl">
+					Meeting Scheduled!
+				</h2>
+				<p className="mx-auto max-w-md text-foreground/60 text-lg">
 					{contact?.name
 						? `Thanks ${contact.name}, we're looking forward to meeting you.`
 						: "We're looking forward to meeting you."}
@@ -178,52 +180,54 @@ export function StepSuccess() {
 			{/* Meeting Details Card */}
 			<motion.div
 				animate={{ opacity: 1, y: 0 }}
-				className="w-full space-y-4 border border-gray-800 bg-gray-900/50 p-6"
+				className="w-full space-y-6 border-2 border-foreground/10 bg-muted/30 p-8"
 				initial={{ opacity: 0, y: 20 }}
 				transition={{ delay: 0.7, duration: 0.5 }}
 			>
-				<div className="space-y-4">
+				<div className="space-y-5">
 					{/* Date and Time */}
-					<div className="flex items-start gap-4">
-						<div className="flex size-10 shrink-0 items-center justify-center border border-gray-700 bg-gray-800">
-							<Calendar className="size-5 text-gray-400" />
+					<div className="flex items-start gap-5">
+						<div className="flex size-12 shrink-0 items-center justify-center border-2 border-foreground/20 bg-background">
+							<Calendar className="size-6 text-foreground/60" />
 						</div>
 						<div className="text-left">
-							<p className="font-medium text-sm">{formatDate(meeting.date)}</p>
-							<p className="text-muted-foreground text-xs">
+							<p className="font-semibold text-base">
+								{formatDate(meeting.date)}
+							</p>
+							<p className="text-foreground/60 text-sm">
 								{formatTime(meeting.date)}
 							</p>
 						</div>
 					</div>
 
 					{/* Meeting Type */}
-					<div className="flex items-start gap-4">
-						<div className="flex size-10 shrink-0 items-center justify-center border border-gray-700 bg-gray-800">
-							<Video className="size-5 text-gray-400" />
+					<div className="flex items-start gap-5">
+						<div className="flex size-12 shrink-0 items-center justify-center border-2 border-foreground/20 bg-background">
+							<Video className="size-6 text-foreground/60" />
 						</div>
 						<div className="text-left">
-							<p className="font-medium text-sm">{meeting.meetingType}</p>
-							<p className="text-muted-foreground text-xs">
+							<p className="font-semibold text-base">{meeting.meetingType}</p>
+							<p className="text-foreground/60 text-sm">
 								Video call via Google Meet
 							</p>
 						</div>
 					</div>
 
 					{/* Google Meet Link */}
-					<div className="flex items-start gap-4">
-						<div className="flex size-10 shrink-0 items-center justify-center border border-gray-700 bg-gray-800">
-							<ExternalLink className="size-5 text-gray-400" />
+					<div className="flex items-start gap-5">
+						<div className="flex size-12 shrink-0 items-center justify-center border-2 border-foreground/20 bg-background">
+							<ExternalLink className="size-6 text-foreground/60" />
 						</div>
 						<div className="text-left">
-							<p className="font-medium text-sm">Meeting Link</p>
+							<p className="font-semibold text-base">Meeting Link</p>
 							<a
-								className="inline-flex items-center gap-1 text-cta text-xs transition-colors hover:text-cta-dark"
+								className="inline-flex items-center gap-1 text-cta text-sm transition-colors hover:text-cta-dark"
 								href={meeting.meetLink}
 								rel="noopener noreferrer"
 								target="_blank"
 							>
 								{meeting.meetLink}
-								<ExternalLink className="size-3" />
+								<ExternalLink className="size-4" />
 							</a>
 						</div>
 					</div>
@@ -233,24 +237,24 @@ export function StepSuccess() {
 			{/* Action Buttons */}
 			<motion.div
 				animate={{ opacity: 1, y: 0 }}
-				className="flex w-full flex-col gap-3 sm:flex-row sm:justify-center"
+				className="flex w-full flex-col gap-4 sm:flex-row sm:justify-center"
 				initial={{ opacity: 0, y: 20 }}
 				transition={{ delay: 0.9, duration: 0.5 }}
 			>
 				<Button
-					className="min-w-40 gap-2 bg-cta text-white hover:bg-cta-dark"
+					className="h-14 min-w-48 gap-2 border-2 border-cta bg-cta text-base text-white transition-all hover:bg-transparent hover:text-cta"
 					onClick={handleAddToCalendar}
 					type="button"
 				>
-					<Calendar className="size-4" />
+					<Calendar className="size-5" />
 					Add to Calendar
 				</Button>
 
 				<Link
-					className="inline-flex h-10 min-w-40 items-center justify-center gap-2 border border-input bg-background px-4 py-2 font-medium text-sm ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+					className="inline-flex h-14 min-w-48 items-center justify-center gap-2 border-2 border-foreground bg-transparent px-6 font-medium text-base text-foreground transition-all hover:bg-foreground hover:text-background"
 					href="/"
 				>
-					<Home className="size-4" />
+					<Home className="size-5" />
 					Back to Home
 				</Link>
 			</motion.div>
@@ -258,7 +262,7 @@ export function StepSuccess() {
 			{/* Confirmation Email Note */}
 			<motion.p
 				animate={{ opacity: 1 }}
-				className="text-muted-foreground text-xs"
+				className="text-foreground/50 text-sm"
 				initial={{ opacity: 0 }}
 				transition={{ delay: 1.1, duration: 0.5 }}
 			>

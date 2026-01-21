@@ -67,7 +67,7 @@ function LoadingSkeleton() {
 }
 
 export function StepBudget() {
-	const { budget, setBudget, nextStep, prevStep } = useSurvey();
+	const { budget, setBudget, nextStep } = useSurvey();
 
 	const { data: options, isLoading } = useQuery(
 		trpc.surveyOptions.getByType.queryOptions({ questionType: "BUDGET" })
@@ -80,10 +80,12 @@ export function StepBudget() {
 	};
 
 	return (
-		<div className="flex flex-col gap-8">
-			<div className="space-y-2">
-				<h2 className="font-medium text-2xl">What is your budget range?</h2>
-				<p className="text-muted-foreground text-sm">
+		<div className="flex w-full max-w-3xl flex-col gap-12">
+			<div className="space-y-4 text-center">
+				<h2 className="font-black font-display text-4xl uppercase tracking-tight lg:text-6xl">
+					What is your budget?
+				</h2>
+				<p className="mx-auto max-w-md text-foreground/60 text-lg">
 					Select the investment level that aligns with your project scope
 				</p>
 			</div>
@@ -99,9 +101,9 @@ export function StepBudget() {
 						return (
 							<motion.button
 								className={cn(
-									"group relative flex items-center gap-4 border p-6 text-left transition-colors",
-									"hover:border-foreground/30 hover:bg-muted/50",
-									isSelected && "border-foreground bg-muted"
+									"group relative flex items-center gap-5 border-2 border-foreground/10 p-8 text-left transition-all",
+									"hover:border-foreground/30 hover:bg-muted/30",
+									isSelected && "border-foreground bg-muted/50"
 								)}
 								key={option.id}
 								onClick={() => setBudget(option.value as BudgetRange)}
@@ -112,20 +114,20 @@ export function StepBudget() {
 								<motion.div
 									animate={isSelected ? { scale: 1.1 } : { scale: 1 }}
 									className={cn(
-										"flex size-10 items-center justify-center border transition-colors",
+										"flex size-12 items-center justify-center border-2 transition-all",
 										isSelected
 											? "border-foreground bg-foreground text-background"
 											: "border-foreground/20 bg-transparent"
 									)}
 									transition={{ type: "spring", stiffness: 400, damping: 20 }}
 								>
-									<Icon className="size-5" />
+									<Icon className="size-6" />
 								</motion.div>
 
 								<div className="space-y-1">
-									<h3 className="font-medium text-base">{option.label}</h3>
+									<h3 className="font-semibold text-lg">{option.label}</h3>
 									{option.description && (
-										<p className="text-muted-foreground text-xs">
+										<p className="text-foreground/60 text-sm">
 											{option.description}
 										</p>
 									)}
@@ -145,12 +147,9 @@ export function StepBudget() {
 				</div>
 			)}
 
-			<div className="flex justify-between">
-				<Button onClick={prevStep} variant="ghost">
-					Back
-				</Button>
+			<div className="flex justify-center">
 				<Button
-					className="min-w-32"
+					className="h-14 min-w-48 border-2 border-foreground bg-foreground text-background text-base transition-all hover:bg-background hover:text-foreground"
 					disabled={!budget}
 					onClick={handleContinue}
 				>

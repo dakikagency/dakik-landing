@@ -72,7 +72,6 @@ interface DynamicQuestionStepProps {
 	selectedValue: string | string[] | null;
 	onValueChange: (value: string | string[]) => void;
 	onNext: () => void;
-	onBack?: () => void;
 }
 
 export function StepDynamicQuestion({
@@ -80,7 +79,6 @@ export function StepDynamicQuestion({
 	selectedValue,
 	onValueChange,
 	onNext,
-	onBack,
 }: DynamicQuestionStepProps) {
 	const { data: questionData, isLoading: isLoadingQuestion } = useQuery(
 		trpc.surveyOptions.getAllQuestions.queryOptions()
@@ -135,11 +133,13 @@ export function StepDynamicQuestion({
 	}
 
 	return (
-		<div className="flex flex-col gap-8">
-			<div className="space-y-2">
-				<h2 className="font-medium text-2xl">{question.title}</h2>
+		<div className="flex w-full max-w-3xl flex-col gap-12">
+			<div className="space-y-4 text-center">
+				<h2 className="font-black font-display text-4xl uppercase tracking-tight lg:text-6xl">
+					{question.title}
+				</h2>
 				{question.description && (
-					<p className="text-muted-foreground text-sm">
+					<p className="mx-auto max-w-md text-foreground/60 text-lg">
 						{question.description}
 					</p>
 				)}
@@ -153,9 +153,9 @@ export function StepDynamicQuestion({
 					return (
 						<motion.button
 							className={cn(
-								"group relative flex flex-col items-start gap-3 border p-6 text-left transition-colors",
-								"hover:border-foreground/30 hover:bg-muted/50",
-								isOptionSelected && "border-foreground bg-muted"
+								"group relative flex flex-col items-start gap-4 border-2 border-foreground/10 p-8 text-left transition-all",
+								"hover:border-foreground/30 hover:bg-muted/30",
+								isOptionSelected && "border-foreground bg-muted/50"
 							)}
 							key={option.id}
 							onClick={() => handleOptionClick(option.value)}
@@ -164,19 +164,19 @@ export function StepDynamicQuestion({
 							whileTap={{ scale: 0.99 }}
 						>
 							{isMultipleChoice ? (
-								<div className="flex w-full items-start gap-3">
+								<div className="flex w-full items-start gap-4">
 									<Checkbox
 										checked={isOptionSelected}
-										className="mt-0.5"
+										className="mt-1 size-5 border-2"
 										onCheckedChange={() => handleOptionClick(option.value)}
 									/>
 									<div className="flex-1">
-										<div className="mb-1 flex items-center gap-3">
-											<Icon className="size-5" />
-											<h3 className="font-medium text-sm">{option.label}</h3>
+										<div className="mb-2 flex items-center gap-3">
+											<Icon className="size-6" />
+											<h3 className="font-semibold text-lg">{option.label}</h3>
 										</div>
 										{option.description && (
-											<p className="text-muted-foreground text-xs leading-relaxed">
+											<p className="text-foreground/60 text-sm leading-relaxed">
 												{option.description}
 											</p>
 										)}
@@ -187,20 +187,20 @@ export function StepDynamicQuestion({
 									<motion.div
 										animate={isOptionSelected ? { scale: 1.1 } : { scale: 1 }}
 										className={cn(
-											"flex size-10 items-center justify-center border transition-colors",
+											"flex size-12 items-center justify-center border-2 transition-all",
 											isOptionSelected
 												? "border-foreground bg-foreground text-background"
 												: "border-foreground/20 bg-transparent"
 										)}
 										transition={{ type: "spring", stiffness: 400, damping: 20 }}
 									>
-										<Icon className="size-5" />
+										<Icon className="size-6" />
 									</motion.div>
 
-									<div className="space-y-1">
-										<h3 className="font-medium text-sm">{option.label}</h3>
+									<div className="space-y-2">
+										<h3 className="font-semibold text-lg">{option.label}</h3>
 										{option.description && (
-											<p className="text-muted-foreground text-xs leading-relaxed">
+											<p className="text-foreground/60 text-sm leading-relaxed">
 												{option.description}
 											</p>
 										)}
@@ -221,14 +221,9 @@ export function StepDynamicQuestion({
 				})}
 			</div>
 
-			<div className="flex justify-between">
-				{onBack && (
-					<Button onClick={onBack} variant="ghost">
-						Back
-					</Button>
-				)}
+			<div className="flex justify-center">
 				<Button
-					className="ml-auto min-w-32"
+					className="h-14 min-w-48 border-2 border-foreground bg-foreground text-background text-base transition-all hover:bg-background hover:text-foreground"
 					disabled={!hasSelection}
 					onClick={handleContinue}
 				>

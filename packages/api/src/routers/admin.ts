@@ -2,6 +2,10 @@ import prisma, { type Prisma } from "@collab/db";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
+import {
+	createCalendarEvent,
+	isGoogleCalendarConfigured,
+} from "../google-calendar";
 import { protectedProcedure, router } from "../index";
 
 // Admin-only procedure that checks for ADMIN role
@@ -941,8 +945,8 @@ export const adminRouter = router({
 			} = input;
 
 			// Verify the attendee exists
-			let _attendeeName: string | null = null;
-			let _attendeeEmail: string;
+			let attendeeName: string | null = null;
+			let attendeeEmail: string;
 			let leadId: string | null = null;
 			let customerId: string | null = null;
 
@@ -958,8 +962,8 @@ export const adminRouter = router({
 					});
 				}
 
-				_attendeeName = lead.name;
-				_attendeeEmail = lead.email;
+				attendeeName = lead.name;
+				attendeeEmail = lead.email;
 				leadId = lead.id;
 			} else {
 				const customer = await prisma.customer.findUnique({
@@ -974,8 +978,8 @@ export const adminRouter = router({
 					});
 				}
 
-				_attendeeName = customer.user.name;
-				_attendeeEmail = customer.user.email;
+				attendeeName = customer.user.name;
+				attendeeEmail = customer.user.email;
 				customerId = customer.id;
 			}
 
@@ -984,7 +988,7 @@ export const adminRouter = router({
 			const scheduledAt = new Date(date);
 			scheduledAt.setHours(hours, minutes, 0, 0);
 
-			const _meetingEndTime = new Date(
+			const meetingEndTime = new Date(
 				scheduledAt.getTime() + duration * 60 * 1000
 			);
 
@@ -1010,29 +1014,22 @@ export const adminRouter = router({
 			let eventId: string;
 			let meetUrl: string;
 
-			// TODO: Implement Google Calendar integration
-			const isCalendarConfigured = false; // Replace with actual implementation
-			const createCalendarFn: ((params: unknown) => Promise<unknown>) | null =
-				null; // Replace with actual implementation
-
-			if (isCalendarConfigured && createCalendarFn) {
+			if (isGoogleCalendarConfigured()) {
 				try {
-					// TODO: Uncomment when Google Calendar integration is ready
-					// const calendarResult = await createCalendarFn({
-					// 	summary: title,
-					// 	description: description ?? `Meeting with ${attendeeName} (${attendeeEmail})`,
-					// 	startTime: scheduledAt,
-					// 	endTime: meetingEndTime,
-					// 	attendeeEmail,
-					// 	attendeeName: attendeeName ?? undefined,
-					// 	timezone,
-					// });
-					// eventId = calendarResult.eventId;
-					// meetUrl = calendarResult.meetUrl ?? `https://meet.google.com/${generateMeetId()}`;
-
-					// Placeholder until integration is ready
-					eventId = generateEventId();
-					meetUrl = `https://meet.google.com/${generateMeetId()}`;
+					const calendarResult = await createCalendarEvent({
+						summary: title,
+						description:
+							description ?? `Meeting with ${attendeeName} (${attendeeEmail})`,
+						startTime: scheduledAt,
+						endTime: meetingEndTime,
+						attendeeEmail,
+						attendeeName: attendeeName ?? undefined,
+						timezone: input.timezone,
+					});
+					eventId = calendarResult.eventId;
+					meetUrl =
+						calendarResult.meetUrl ??
+						`https://meet.google.com/${generateMeetId()}`;
 				} catch (error) {
 					console.error("Failed to create Google Calendar event:", error);
 					// Fall back to placeholder if Google Calendar fails

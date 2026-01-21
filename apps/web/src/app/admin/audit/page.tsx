@@ -104,7 +104,7 @@ export default function AuditPage() {
 	const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
 		useInfiniteQuery(
 			trpc.audit.getLogs.infiniteQueryOptions(apiParams, {
-				getNextPageParam: (lastPage: { nextCursor?: string }) =>
+				getNextPageParam: (lastPage) =>
 					lastPage.nextCursor,
 			})
 		);

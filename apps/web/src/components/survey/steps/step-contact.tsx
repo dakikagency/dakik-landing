@@ -15,7 +15,6 @@ export function StepContact() {
 		contact,
 		setContact,
 		nextStep,
-		prevStep,
 		goToStep,
 		setLeadId,
 		questionAnswers,
@@ -59,16 +58,18 @@ export function StepContact() {
 	});
 
 	return (
-		<div className="flex flex-col gap-8">
-			<div className="space-y-2">
-				<h2 className="font-medium text-2xl">How can we reach you?</h2>
-				<p className="text-muted-foreground text-sm">
+		<div className="flex w-full max-w-xl flex-col gap-12">
+			<div className="space-y-4 text-center">
+				<h2 className="font-black font-display text-4xl uppercase tracking-tight lg:text-6xl">
+					How can we reach you?
+				</h2>
+				<p className="mx-auto max-w-md text-foreground/60 text-lg">
 					We will use this information to get in touch about your project
 				</p>
 			</div>
 
 			<form
-				className="flex flex-col gap-6"
+				className="flex flex-col gap-8"
 				onSubmit={(e) => {
 					e.preventDefault();
 					e.stopPropagation();
@@ -77,12 +78,13 @@ export function StepContact() {
 			>
 				<form.Field name="name">
 					{(field) => (
-						<div className="space-y-2">
-							<Label htmlFor={field.name}>
-								Name <span className="text-destructive">*</span>
+						<div className="space-y-3">
+							<Label className="font-medium text-base" htmlFor={field.name}>
+								Name <span className="text-cta">*</span>
 							</Label>
 							<Input
 								autoComplete="name"
+								className="h-14 border-2 border-foreground/20 bg-transparent text-base transition-all focus:border-foreground"
 								id={field.name}
 								name={field.name}
 								onBlur={field.handleBlur}
@@ -93,10 +95,7 @@ export function StepContact() {
 							{field.state.meta.errors.length > 0 && (
 								<div className="space-y-1">
 									{field.state.meta.errors.map((error) => (
-										<p
-											className="text-destructive text-xs"
-											key={error?.message}
-										>
+										<p className="text-cta text-sm" key={error?.message}>
 											{error?.message}
 										</p>
 									))}
@@ -108,12 +107,13 @@ export function StepContact() {
 
 				<form.Field name="email">
 					{(field) => (
-						<div className="space-y-2">
-							<Label htmlFor={field.name}>
-								Email <span className="text-destructive">*</span>
+						<div className="space-y-3">
+							<Label className="font-medium text-base" htmlFor={field.name}>
+								Email <span className="text-cta">*</span>
 							</Label>
 							<Input
 								autoComplete="email"
+								className="h-14 border-2 border-foreground/20 bg-transparent text-base transition-all focus:border-foreground"
 								id={field.name}
 								name={field.name}
 								onBlur={field.handleBlur}
@@ -125,10 +125,7 @@ export function StepContact() {
 							{field.state.meta.errors.length > 0 && (
 								<div className="space-y-1">
 									{field.state.meta.errors.map((error) => (
-										<p
-											className="text-destructive text-xs"
-											key={error?.message}
-										>
+										<p className="text-cta text-sm" key={error?.message}>
 											{error?.message}
 										</p>
 									))}
@@ -138,14 +135,11 @@ export function StepContact() {
 					)}
 				</form.Field>
 
-				<div className="flex justify-between pt-4">
-					<Button onClick={prevStep} type="button" variant="ghost">
-						Back
-					</Button>
+				<div className="flex justify-center pt-4">
 					<form.Subscribe>
 						{(state) => (
 							<Button
-								className="min-w-32"
+								className="h-14 min-w-48 border-2 border-foreground bg-foreground text-background text-base transition-all hover:bg-background hover:text-foreground"
 								disabled={state.isSubmitting}
 								type="submit"
 							>

@@ -13,12 +13,6 @@ import {
 import { StepDynamicQuestion } from "@/components/survey/steps/step-dynamic-question";
 import { queryClient, trpc } from "@/utils/trpc";
 
-// Special step indices that come after dynamic questions
-const _STEP_CONTACT = "contact";
-const _STEP_DUPLICATE_EMAIL = "duplicate_email";
-const _STEP_MEETING_PICKER = "meeting_picker";
-const _STEP_SUCCESS = "success";
-
 function SurveyContent() {
 	const { currentStep, prevStep, nextStep, questionAnswers, setAnswer } =
 		useSurvey();
@@ -78,7 +72,6 @@ function SurveyContent() {
 
 			return (
 				<StepDynamicQuestion
-					onBack={currentStep > 0 ? handleBack : undefined}
 					onNext={nextStep}
 					onValueChange={(value) => setAnswer(question.id, value)}
 					questionId={question.id}
