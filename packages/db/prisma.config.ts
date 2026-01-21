@@ -1,13 +1,13 @@
-import "dotenv/config";
+import { join } from "node:path";
+import { config } from "dotenv";
 import { defineConfig } from "prisma/config";
+
+// Load .env from monorepo root (two levels up from packages/db)
+config({ path: join(__dirname, "../../.env") });
 
 export default defineConfig({
 	schema: "prisma/schema",
 	datasource: {
-		// Use process.env with fallback for prisma generate (doesn't need real DB connection)
-		// The actual URL is validated at runtime in src/index.ts
-		url:
-			process.env.DATABASE_URL ??
-			"postgresql://placeholder:placeholder@localhost:5432/placeholder",
+		url: process.env.DATABASE_URL,
 	},
 });

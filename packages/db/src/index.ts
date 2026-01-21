@@ -12,18 +12,15 @@ export * from "@prisma/client";
 // Prisma 7's query compiler requires this even when using driver adapters
 process.env.DATABASE_URL = env.DATABASE_URL;
 
-// Debug: Log connection info in development
+// Debug: Log connection status in development (never log actual URL)
 if (process.env.NODE_ENV === "development") {
-	console.log(
-		"[DB] Connecting to:",
-		env.DATABASE_URL ? env.DATABASE_URL.substring(0, 30) + "..." : "UNDEFINED"
-	);
+	console.log("[DB] Database connection configured");
 }
 
 // Validate DATABASE_URL
 if (!(env.DATABASE_URL && env.DATABASE_URL.startsWith("postgresql://"))) {
 	throw new Error(
-		`Invalid DATABASE_URL: ${env.DATABASE_URL ? "Invalid format" : "Not set"}. Expected: postgresql://user:password@host/database`
+		"Database configuration error. Please check server environment variables."
 	);
 }
 
