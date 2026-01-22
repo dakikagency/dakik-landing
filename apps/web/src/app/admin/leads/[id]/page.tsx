@@ -55,10 +55,10 @@ const STATUS_OPTIONS = [
 ] as const;
 
 type LeadStatus = (typeof STATUS_OPTIONS)[number]["value"];
-type UpdateLeadStatusInput = {
+interface UpdateLeadStatusInput {
 	leadId: string;
 	status: LeadStatus;
-};
+}
 
 const MEETING_STATUS_COLORS: Record<string, string> = {
 	SCHEDULED: "bg-blue-500/10 text-blue-500",

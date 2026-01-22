@@ -1,5 +1,5 @@
 import { auth } from "@collab/auth";
-import prisma from "@collab/db";
+import { db } from "@collab/db";
 import type { NextRequest } from "next/server";
 
 export async function createContext(req: NextRequest) {
@@ -18,10 +18,11 @@ export async function createContext(req: NextRequest) {
 		// If there's a session, fetch the user's role from the database
 		if (session?.user?.id) {
 			console.log("[Context] Fetching user role for:", session.user.id);
-			const user = await prisma.user.findUnique({
-				where: { id: session.user.id },
-				select: { role: true },
-			});
+			const user = await db
+				.selectFrom("user")
+				.select(["role"])
+				.where("id", "=", session.user.id)
+				.executeTakeFirst();
 			console.log("[Context] User role:", user?.role);
 
 			return {
@@ -47,8 +48,14 @@ export async function createContext(req: NextRequest) {
 		// Log the full error for debugging
 		console.error("[Context] Failed to get session:");
 		console.error("[Context] Error:", error);
-		console.error("[Context] Error message:", error instanceof Error ? error.message : "N/A");
-		console.error("[Context] Error stack:", error instanceof Error ? error.stack : "N/A");
+		console.error(
+			"[Context] Error message:",
+			error instanceof Error ? error.message : "N/A"
+		);
+		console.error(
+			"[Context] Error stack:",
+			error instanceof Error ? error.stack : "N/A"
+		);
 
 		return {
 			session: null,

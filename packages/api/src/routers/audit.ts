@@ -1,4 +1,4 @@
-import prisma, { Prisma } from "@collab/db";
+import { db } from "@collab/db";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { protectedProcedure, router } from "../index";
@@ -40,63 +40,68 @@ export const auditRouter = router({
 				cursor,
 			} = input;
 
-			// Base query parts
-			const conditions: Prisma.Sql[] = [];
+			let query = db
+				.selectFrom("audit_log as l")
+				.leftJoin("user as u", "l.userId", "u.id")
+				.selectAll("l")
+				.select([
+					"u.id as user_id",
+					"u.name as user_name",
+					"u.email as user_email",
+					"u.image as user_image",
+				]);
 
 			if (search) {
-				conditions.push(
-					Prisma.sql`("action" ILIKE ${`%${search}%`} OR "entity" ILIKE ${`%${search}%`} OR u.name ILIKE ${`%${search}%`} OR u.email ILIKE ${`%${search}%`})`
+				query = query.where((eb) =>
+					eb.or([
+						eb("l.action", "ilike", `%${search}%`),
+						eb("l.entity", "ilike", `%${search}%`),
+						eb("u.name", "ilike", `%${search}%`),
+						eb("u.email", "ilike", `%${search}%`),
+					])
 				);
 			}
 
 			if (action) {
-				conditions.push(Prisma.sql`"action" = ${action}`);
+				query = query.where("l.action", "=", action);
 			}
 
 			if (entity) {
-				conditions.push(Prisma.sql`"entity" = ${entity}`);
+				query = query.where("l.entity", "=", entity);
 			}
 
 			if (userId) {
-				conditions.push(Prisma.sql`"userId" = ${userId}`);
+				query = query.where("l.userId", "=", userId);
 			}
 
 			if (dateFrom) {
-				conditions.push(Prisma.sql`l."createdAt" >= ${dateFrom}`);
+				query = query.where("l.createdAt", ">=", dateFrom);
 			}
 
 			if (dateTo) {
-				conditions.push(Prisma.sql`l."createdAt" <= ${dateTo}`);
+				query = query.where("l.createdAt", "<=", dateTo);
 			}
 
 			if (cursor) {
-				// Cursor-based pagination with raw SQL is tricky without a sequential ID or guaranteed unique sort.
-				// For simple implementation, we'll assume we can filter by ID < cursor (if sorting by ID desc)
-				// or createdAt < cursorTime.
-				// Since we sort by createdAt desc, we'd need the createdAt of the cursor.
-				// To keep it simple given the limitations, we might skip cursor for raw query or implement offset.
-				// Let's rely on createdAt + ID for cursor if possible, but that requires fetching the cursor record first.
-				// Fallback: Using offset (skip) is inefficient but safer here without full cursor implementation.
-				// BUT `input` has `cursor` as string (ID).
-				// We'll ignore cursor for raw query safety and just use limit/offset if we could, but inputs are designed for cursor.
-				// Let's implement keyset pagination: WHERE (createdAt, id) < (cursorCreatedAt, cursorId)
-				// requires fetching cursor row first.
+				const cursorRow = await db
+					.selectFrom("audit_log")
+					.select(["createdAt"])
+					.where("id", "=", cursor)
+					.executeTakeFirst();
 
-				const cursorRow = await prisma.$queryRaw<
-					[{ createdAt: Date }]
-				>`SELECT "createdAt" FROM "audit_log" WHERE id = ${cursor} LIMIT 1`;
-				if (cursorRow?.[0]) {
-					const cursorDate = cursorRow[0].createdAt;
-					conditions.push(
-						Prisma.sql`(l."createdAt", l.id) < (${cursorDate}, ${cursor})`
+				if (cursorRow?.createdAt) {
+					const cursorDate = cursorRow.createdAt;
+					query = query.where((eb) =>
+						eb.or([
+							eb("l.createdAt", "<", cursorDate),
+							eb.and([
+								eb("l.createdAt", "=", cursorDate),
+								eb("l.id", "<", cursor),
+							]),
+						])
 					);
 				}
 			}
-
-			const whereClause =
-				conditions.length > 0
-					? Prisma.sql`WHERE ${Prisma.join(conditions, " AND ")}`
-					: Prisma.empty;
 
 			const take = limit + 1;
 
@@ -117,19 +122,11 @@ export const auditRouter = router({
 				user_image: string | null;
 			}
 
-			const rows = await prisma.$queryRaw<AuditLogRow[]>`
-				SELECT 
-					l.*,
-					u.id as "user_id",
-					u.name as "user_name",
-					u.email as "user_email",
-					u.image as "user_image"
-				FROM "audit_log" l
-				LEFT JOIN "user" u ON l."userId" = u.id
-				${whereClause}
-				ORDER BY l."createdAt" DESC, l.id DESC
-				LIMIT ${take}
-			`;
+			const rows = (await query
+				.orderBy("l.createdAt", "desc")
+				.orderBy("l.id", "desc")
+				.limit(take)
+				.execute()) as AuditLogRow[];
 
 			const logs = rows.map((row) => ({
 				id: row.id,

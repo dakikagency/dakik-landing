@@ -65,13 +65,6 @@ interface Automation {
 	tags: { id: string; name: string; slug: string }[];
 }
 
-interface Tag {
-	id: string;
-	name: string;
-	slug: string;
-	_count: { posts: number; automations: number };
-}
-
 const STATUS_OPTIONS = [
 	{ value: "all", label: "All Automations" },
 	{ value: "published", label: "Published" },
@@ -261,7 +254,9 @@ function AutomationEditor({
 					id: automation.id,
 					...automationData,
 				});
-				toast.success(shouldPublish ? "Automation published" : "Automation saved");
+				toast.success(
+					shouldPublish ? "Automation published" : "Automation saved"
+				);
 			} else {
 				await createMutation.mutateAsync(automationData);
 				toast.success(shouldPublish ? "Automation published" : "Draft saved");
@@ -282,294 +277,431 @@ function AutomationEditor({
 
 	return (
 		<div className="space-y-6">
-			{/* Header */}
-			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-				<div className="flex items-center gap-4">
-					<Button onClick={onCancel} size="icon-sm" variant="ghost">
-						<ArrowLeftIcon className="size-4" />
-					</Button>
-					<div>
-						<h1 className="font-bold font-display text-2xl tracking-tight">
-							{isEditing ? "Edit Automation" : "New Automation"}
-						</h1>
-						<p className="mt-1 text-muted-foreground text-sm">
-							{isEditing
-								? "Update the automation details below."
-								: "Create a new automation workflow."}
-						</p>
-					</div>
-				</div>
-				<div className="flex gap-2">
-					<Button
-						disabled={isSaving}
-						onClick={() => handleSave(false)}
-						variant="outline"
-					>
-						{isSaving ? (
-							<Loader2Icon className="mr-2 size-4 animate-spin" />
-						) : null}
-						Save Draft
-					</Button>
-					<Button disabled={isSaving} onClick={() => handleSave(true)}>
-						{isSaving ? (
-							<Loader2Icon className="mr-2 size-4 animate-spin" />
-						) : null}
-						{published ? "Update" : "Publish"}
-					</Button>
-				</div>
-			</div>
-
+			<AutomationEditorHeader
+				isEditing={isEditing}
+				isSaving={isSaving}
+				onCancel={onCancel}
+				onSaveDraft={() => handleSave(false)}
+				onSavePublish={() => handleSave(true)}
+				published={published}
+			/>
 			<div className="grid gap-6 lg:grid-cols-3">
-				{/* Main Content */}
 				<div className="space-y-6 lg:col-span-2">
-					<Card>
-						<CardHeader>
-							<CardTitle className="text-sm">Automation Details</CardTitle>
-						</CardHeader>
-						<CardContent className="space-y-4">
-							<div className="space-y-2">
-								<Label htmlFor="title">Title</Label>
-								<Input
-									id="title"
-									onChange={(e) => setTitle(e.target.value)}
-									placeholder="Enter automation title..."
-									value={title}
-								/>
-							</div>
-
-							<div className="space-y-2">
-								<Label htmlFor="slug">Slug</Label>
-								<div className="flex items-center gap-2">
-									<span className="text-muted-foreground text-xs">
-										/automations/
-									</span>
-									<Input
-										id="slug"
-										onChange={(e) => handleSlugChange(e.target.value)}
-										placeholder="automation-url-slug"
-										value={slug}
-									/>
-								</div>
-								<p className="text-muted-foreground text-xs">
-									The URL-friendly version of the title.
-								</p>
-							</div>
-
-							<div className="space-y-2">
-								<Label htmlFor="excerpt">Excerpt</Label>
-								<textarea
-									className={cn(
-										"min-h-20 w-full resize-none border bg-transparent px-3 py-2 text-sm outline-none transition-colors",
-										"placeholder:text-muted-foreground",
-										"focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50",
-										"disabled:cursor-not-allowed disabled:opacity-50"
-									)}
-									id="excerpt"
-									onChange={(e) => setExcerpt(e.target.value)}
-									placeholder="A brief summary..."
-									value={excerpt}
-								/>
-							</div>
-
-							<div className="space-y-2">
-								<Label htmlFor="content">Content (Markdown)</Label>
-								<textarea
-									className={cn(
-										"min-h-96 w-full resize-y border bg-transparent px-3 py-2 font-mono text-sm outline-none transition-colors",
-										"placeholder:text-muted-foreground",
-										"focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50",
-										"disabled:cursor-not-allowed disabled:opacity-50"
-									)}
-									id="content"
-									onChange={(e) => setContent(e.target.value)}
-									placeholder="Write your automation content in Markdown..."
-									value={content}
-								/>
-								<p className="text-muted-foreground text-xs">
-									Supports Markdown formatting.
-								</p>
-							</div>
-						</CardContent>
-					</Card>
+					<AutomationDetailsCard
+						content={content}
+						excerpt={excerpt}
+						onContentChange={setContent}
+						onExcerptChange={setExcerpt}
+						onSlugChange={handleSlugChange}
+						onTitleChange={setTitle}
+						slug={slug}
+						title={title}
+					/>
 				</div>
-
-				{/* Sidebar */}
 				<div className="space-y-6">
-					<Card>
-						<CardHeader>
-							<CardTitle className="text-sm">Cover Image</CardTitle>
-						</CardHeader>
-						<CardContent className="space-y-4">
-							<div className="space-y-2">
-								<Label htmlFor="coverImage">Image URL</Label>
-								<Input
-									id="coverImage"
-									onChange={(e) => setCoverImage(e.target.value)}
-									placeholder="https://example.com/image.jpg"
-									value={coverImage}
-								/>
-							</div>
-							{coverImage && (
-								<div className="relative aspect-video w-full overflow-hidden border">
-									<Image
-										alt="Cover preview"
-										className="object-cover"
-										fill
-										sizes="(max-width: 768px) 100vw, 33vw"
-										src={coverImage}
-										unoptimized
-									/>
-								</div>
-							)}
-						</CardContent>
-					</Card>
-
-					<Card>
-						<CardHeader>
-							<CardTitle className="text-sm">Automation File</CardTitle>
-						</CardHeader>
-						<CardContent className="space-y-4">
-							{fileUrl ? (
-								<div className="flex items-center justify-between border p-3">
-									<div className="flex items-center gap-2">
-										<FileIcon className="size-4 text-gray-500" />
-										<span className="text-sm">File attached</span>
-									</div>
-									<Button
-										onClick={handleRemoveFile}
-										size="icon-sm"
-										variant="ghost"
-									>
-										<XIcon className="size-4" />
-									</Button>
-								</div>
-							) : (
-								<div className="space-y-2">
-									<input
-										accept="*/*"
-										className="hidden"
-										onChange={handleFileSelect}
-										ref={fileInputRef}
-										type="file"
-									/>
-									{selectedFile ? (
-										<div className="space-y-2">
-											<div className="flex items-center gap-2 border p-3">
-												<FileIcon className="size-4 text-gray-500" />
-												<span className="flex-1 truncate text-sm">
-													{selectedFile.name}
-												</span>
-											</div>
-											<Button
-												className="w-full"
-												disabled={uploadingFile}
-												onClick={handleFileUpload}
-												size="sm"
-											>
-												{uploadingFile ? (
-													<Loader2Icon className="mr-2 size-4 animate-spin" />
-												) : (
-													<UploadIcon className="mr-2 size-4" />
-												)}
-												Upload File
-											</Button>
-										</div>
-									) : (
-										<Button
-											className="w-full"
-											onClick={() => fileInputRef.current?.click()}
-											size="sm"
-											variant="outline"
-										>
-											<FileIcon className="mr-2 size-4" />
-											Select File
-										</Button>
-									)}
-								</div>
-							)}
-							<p className="text-muted-foreground text-xs">
-								Optional file attachment for download (workflow, template, etc.)
-							</p>
-						</CardContent>
-					</Card>
-
-					<Card>
-						<CardHeader>
-							<CardTitle className="text-sm">Tags</CardTitle>
-						</CardHeader>
-						<CardContent className="space-y-4">
-							<div className="flex flex-wrap gap-2">
-								{allTags?.map((tag) => (
-									<button
-										className={cn(
-											"border px-2 py-1 text-xs transition-colors",
-											selectedTagIds.includes(tag.id)
-												? "border-primary bg-primary text-primary-foreground"
-												: "border-input hover:border-primary/50"
-										)}
-										key={tag.id}
-										onClick={() => handleTagToggle(tag.id)}
-										type="button"
-									>
-										{tag.name}
-									</button>
-								))}
-							</div>
-							<div className="flex gap-2">
-								<Input
-									onChange={(e) => setNewTagName(e.target.value)}
-									onKeyDown={(e) => {
-										if (e.key === "Enter") {
-											e.preventDefault();
-											handleCreateTag();
-										}
-									}}
-									placeholder="New tag name"
-									value={newTagName}
-								/>
-								<Button
-									disabled={createTagMutation.isPending || !newTagName.trim()}
-									onClick={handleCreateTag}
-									size="sm"
-									variant="outline"
-								>
-									Add
-								</Button>
-							</div>
-						</CardContent>
-					</Card>
-
-					<Card>
-						<CardHeader>
-							<CardTitle className="text-sm">Publishing</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<div className="flex items-center gap-2">
-								<Checkbox
-									checked={published}
-									id="published"
-									onCheckedChange={(checked) => setPublished(checked === true)}
-								/>
-								<Label className="cursor-pointer text-sm" htmlFor="published">
-									Published
-								</Label>
-							</div>
-							<p className="mt-2 text-muted-foreground text-xs">
-								{published
-									? "This automation is visible to the public."
-									: "This automation is saved as a draft."}
-							</p>
-							{automation?.publishedAt && (
-								<p className="mt-2 text-muted-foreground text-xs">
-									Published on:{" "}
-									{new Date(automation.publishedAt).toLocaleDateString()}
-								</p>
-							)}
-						</CardContent>
-					</Card>
+					<CoverImageCard
+						coverImage={coverImage}
+						onCoverImageChange={setCoverImage}
+					/>
+					<AutomationFileCard
+						fileInputRef={fileInputRef}
+						fileUrl={fileUrl}
+						onFileSelect={handleFileSelect}
+						onRemoveFile={handleRemoveFile}
+						onTriggerFilePicker={() => fileInputRef.current?.click()}
+						onUploadFile={handleFileUpload}
+						selectedFile={selectedFile}
+						uploadingFile={uploadingFile}
+					/>
+					<AutomationTagsCard
+						allTags={allTags ?? []}
+						isCreating={createTagMutation.isPending}
+						newTagName={newTagName}
+						onCreateTag={handleCreateTag}
+						onNewTagNameChange={setNewTagName}
+						onTagToggle={handleTagToggle}
+						selectedTagIds={selectedTagIds}
+					/>
+					<AutomationPublishingCard
+						onPublishChange={(checked) => setPublished(checked === true)}
+						published={published}
+						publishedAt={automation?.publishedAt ?? null}
+					/>
 				</div>
 			</div>
 		</div>
+	);
+}
+
+function AutomationEditorHeader({
+	isEditing,
+	isSaving,
+	onCancel,
+	onSaveDraft,
+	onSavePublish,
+	published,
+}: {
+	isEditing: boolean;
+	isSaving: boolean;
+	onCancel: () => void;
+	onSaveDraft: () => void;
+	onSavePublish: () => void;
+	published: boolean;
+}) {
+	return (
+		<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+			<div className="flex items-center gap-4">
+				<Button onClick={onCancel} size="icon-sm" variant="ghost">
+					<ArrowLeftIcon className="size-4" />
+				</Button>
+				<div>
+					<h1 className="font-bold font-display text-2xl tracking-tight">
+						{isEditing ? "Edit Automation" : "New Automation"}
+					</h1>
+					<p className="mt-1 text-muted-foreground text-sm">
+						{isEditing
+							? "Update the automation details below."
+							: "Create a new automation workflow."}
+					</p>
+				</div>
+			</div>
+			<div className="flex gap-2">
+				<Button disabled={isSaving} onClick={onSaveDraft} variant="outline">
+					{isSaving ? (
+						<Loader2Icon className="mr-2 size-4 animate-spin" />
+					) : null}
+					Save Draft
+				</Button>
+				<Button disabled={isSaving} onClick={onSavePublish}>
+					{isSaving ? (
+						<Loader2Icon className="mr-2 size-4 animate-spin" />
+					) : null}
+					{published ? "Update" : "Publish"}
+				</Button>
+			</div>
+		</div>
+	);
+}
+
+function AutomationDetailsCard({
+	content,
+	excerpt,
+	onContentChange,
+	onExcerptChange,
+	onSlugChange,
+	onTitleChange,
+	slug,
+	title,
+}: {
+	content: string;
+	excerpt: string;
+	onContentChange: (value: string) => void;
+	onExcerptChange: (value: string) => void;
+	onSlugChange: (value: string) => void;
+	onTitleChange: (value: string) => void;
+	slug: string;
+	title: string;
+}) {
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle className="text-sm">Automation Details</CardTitle>
+			</CardHeader>
+			<CardContent className="space-y-4">
+				<div className="space-y-2">
+					<Label htmlFor="title">Title</Label>
+					<Input
+						id="title"
+						onChange={(e) => onTitleChange(e.target.value)}
+						placeholder="Enter automation title..."
+						value={title}
+					/>
+				</div>
+
+				<div className="space-y-2">
+					<Label htmlFor="slug">Slug</Label>
+					<div className="flex items-center gap-2">
+						<span className="text-muted-foreground text-xs">/automations/</span>
+						<Input
+							id="slug"
+							onChange={(e) => onSlugChange(e.target.value)}
+							placeholder="automation-url-slug"
+							value={slug}
+						/>
+					</div>
+					<p className="text-muted-foreground text-xs">
+						The URL-friendly version of the title.
+					</p>
+				</div>
+
+				<div className="space-y-2">
+					<Label htmlFor="excerpt">Excerpt</Label>
+					<textarea
+						className={cn(
+							"min-h-20 w-full resize-none border bg-transparent px-3 py-2 text-sm outline-none transition-colors",
+							"placeholder:text-muted-foreground",
+							"focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50",
+							"disabled:cursor-not-allowed disabled:opacity-50"
+						)}
+						id="excerpt"
+						onChange={(e) => onExcerptChange(e.target.value)}
+						placeholder="A brief summary..."
+						value={excerpt}
+					/>
+				</div>
+
+				<div className="space-y-2">
+					<Label htmlFor="content">Content (Markdown)</Label>
+					<textarea
+						className={cn(
+							"min-h-96 w-full resize-y border bg-transparent px-3 py-2 font-mono text-sm outline-none transition-colors",
+							"placeholder:text-muted-foreground",
+							"focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50",
+							"disabled:cursor-not-allowed disabled:opacity-50"
+						)}
+						id="content"
+						onChange={(e) => onContentChange(e.target.value)}
+						placeholder="Write your automation content in Markdown..."
+						value={content}
+					/>
+					<p className="text-muted-foreground text-xs">
+						Supports Markdown formatting.
+					</p>
+				</div>
+			</CardContent>
+		</Card>
+	);
+}
+
+function CoverImageCard({
+	coverImage,
+	onCoverImageChange,
+}: {
+	coverImage: string;
+	onCoverImageChange: (value: string) => void;
+}) {
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle className="text-sm">Cover Image</CardTitle>
+			</CardHeader>
+			<CardContent className="space-y-4">
+				<div className="space-y-2">
+					<Label htmlFor="coverImage">Image URL</Label>
+					<Input
+						id="coverImage"
+						onChange={(e) => onCoverImageChange(e.target.value)}
+						placeholder="https://example.com/image.jpg"
+						value={coverImage}
+					/>
+				</div>
+				{coverImage && (
+					<div className="relative aspect-video w-full overflow-hidden border">
+						<Image
+							alt="Cover preview"
+							className="object-cover"
+							fill
+							sizes="(max-width: 768px) 100vw, 33vw"
+							src={coverImage}
+							unoptimized
+						/>
+					</div>
+				)}
+			</CardContent>
+		</Card>
+	);
+}
+
+function AutomationFileCard({
+	fileInputRef,
+	fileUrl,
+	onFileSelect,
+	onRemoveFile,
+	onTriggerFilePicker,
+	onUploadFile,
+	selectedFile,
+	uploadingFile,
+}: {
+	fileInputRef: React.RefObject<HTMLInputElement>;
+	fileUrl: string;
+	onFileSelect: (event: React.ChangeEvent<HTMLInputElement>) => void;
+	onRemoveFile: () => void;
+	onTriggerFilePicker: () => void;
+	onUploadFile: () => void;
+	selectedFile: File | null;
+	uploadingFile: boolean;
+}) {
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle className="text-sm">Automation File</CardTitle>
+			</CardHeader>
+			<CardContent className="space-y-4">
+				{fileUrl ? (
+					<div className="flex items-center justify-between border p-3">
+						<div className="flex items-center gap-2">
+							<FileIcon className="size-4 text-gray-500" />
+							<span className="text-sm">File attached</span>
+						</div>
+						<Button onClick={onRemoveFile} size="icon-sm" variant="ghost">
+							<XIcon className="size-4" />
+						</Button>
+					</div>
+				) : (
+					<div className="space-y-2">
+						<input
+							accept="*/*"
+							className="hidden"
+							onChange={onFileSelect}
+							ref={fileInputRef}
+							type="file"
+						/>
+						{selectedFile ? (
+							<div className="space-y-2">
+								<div className="flex items-center gap-2 border p-3">
+									<FileIcon className="size-4 text-gray-500" />
+									<span className="flex-1 truncate text-sm">
+										{selectedFile.name}
+									</span>
+								</div>
+								<Button
+									className="w-full"
+									disabled={uploadingFile}
+									onClick={onUploadFile}
+									size="sm"
+								>
+									{uploadingFile ? (
+										<Loader2Icon className="mr-2 size-4 animate-spin" />
+									) : (
+										<UploadIcon className="mr-2 size-4" />
+									)}
+									Upload File
+								</Button>
+							</div>
+						) : (
+							<Button
+								className="w-full"
+								onClick={onTriggerFilePicker}
+								size="sm"
+								variant="outline"
+							>
+								<FileIcon className="mr-2 size-4" />
+								Select File
+							</Button>
+						)}
+					</div>
+				)}
+				<p className="text-muted-foreground text-xs">
+					Optional file attachment for download (workflow, template, etc.)
+				</p>
+			</CardContent>
+		</Card>
+	);
+}
+
+function AutomationTagsCard({
+	allTags,
+	isCreating,
+	newTagName,
+	onCreateTag,
+	onNewTagNameChange,
+	onTagToggle,
+	selectedTagIds,
+}: {
+	allTags: { id: string; name: string }[];
+	isCreating: boolean;
+	newTagName: string;
+	onCreateTag: () => void;
+	onNewTagNameChange: (value: string) => void;
+	onTagToggle: (tagId: string) => void;
+	selectedTagIds: string[];
+}) {
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle className="text-sm">Tags</CardTitle>
+			</CardHeader>
+			<CardContent className="space-y-4">
+				<div className="flex flex-wrap gap-2">
+					{allTags.map((tag) => (
+						<button
+							className={cn(
+								"border px-2 py-1 text-xs transition-colors",
+								selectedTagIds.includes(tag.id)
+									? "border-primary bg-primary text-primary-foreground"
+									: "border-input hover:border-primary/50"
+							)}
+							key={tag.id}
+							onClick={() => onTagToggle(tag.id)}
+							type="button"
+						>
+							{tag.name}
+						</button>
+					))}
+				</div>
+				<div className="flex gap-2">
+					<Input
+						onChange={(e) => onNewTagNameChange(e.target.value)}
+						onKeyDown={(e) => {
+							if (e.key === "Enter") {
+								e.preventDefault();
+								onCreateTag();
+							}
+						}}
+						placeholder="New tag name"
+						value={newTagName}
+					/>
+					<Button
+						disabled={isCreating || !newTagName.trim()}
+						onClick={onCreateTag}
+						size="sm"
+						variant="outline"
+					>
+						Add
+					</Button>
+				</div>
+			</CardContent>
+		</Card>
+	);
+}
+
+function AutomationPublishingCard({
+	onPublishChange,
+	published,
+	publishedAt,
+}: {
+	onPublishChange: (checked: boolean | "indeterminate") => void;
+	published: boolean;
+	publishedAt: Date | string | null;
+}) {
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle className="text-sm">Publishing</CardTitle>
+			</CardHeader>
+			<CardContent>
+				<div className="flex items-center gap-2">
+					<Checkbox
+						checked={published}
+						id="published"
+						onCheckedChange={onPublishChange}
+					/>
+					<Label className="cursor-pointer text-sm" htmlFor="published">
+						Published
+					</Label>
+				</div>
+				<p className="mt-2 text-muted-foreground text-xs">
+					{published
+						? "This automation is visible to the public."
+						: "This automation is saved as a draft."}
+				</p>
+				{publishedAt && (
+					<p className="mt-2 text-muted-foreground text-xs">
+						Published on: {new Date(publishedAt).toLocaleDateString()}
+					</p>
+				)}
+			</CardContent>
+		</Card>
 	);
 }
 
@@ -688,7 +820,9 @@ function AutomationsTable({
 									</Badge>
 								))}
 								{automation.tags.length > 3 && (
-									<Badge variant="secondary">+{automation.tags.length - 3}</Badge>
+									<Badge variant="secondary">
+										+{automation.tags.length - 3}
+									</Badge>
 								)}
 							</div>
 						</TableCell>

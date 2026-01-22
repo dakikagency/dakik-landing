@@ -1,4 +1,4 @@
-import prisma from "@collab/db";
+import { db } from "@collab/db";
 import { env } from "@collab/env/server";
 import { TRPCError } from "@trpc/server";
 import nodemailer from "nodemailer";
@@ -120,15 +120,19 @@ export const emailRouter = router({
 			const result = await sendEmail({ to, subject, body, replyTo });
 
 			// Log the email attempt
-			const emailLog = await prisma.emailLog.create({
-				data: {
+			const emailLog = await db
+				.insertInto("email_log")
+				.values({
+					id: crypto.randomUUID(),
 					userId,
 					to,
 					subject,
 					body,
 					status: result.success ? "SENT" : "FAILED",
-				},
-			});
+					sentAt: new Date(),
+				})
+				.returning(["id"])
+				.executeTakeFirstOrThrow();
 
 			if (!result.success) {
 				throw new TRPCError({
@@ -156,28 +160,66 @@ export const emailRouter = router({
 		.query(async ({ input }) => {
 			const { limit, cursor, status } = input;
 
-			const emails = await prisma.emailLog.findMany({
-				where: status ? { status } : undefined,
-				take: limit + 1,
-				skip: cursor ? 1 : 0,
-				cursor: cursor ? { id: cursor } : undefined,
-				orderBy: { sentAt: "desc" },
-				select: {
-					id: true,
-					to: true,
-					subject: true,
-					body: true,
-					status: true,
-					sentAt: true,
-					user: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-						},
-					},
-				},
-			});
+			let query = db
+				.selectFrom("email_log as e")
+				.leftJoin("user as u", "e.userId", "u.id")
+				.select([
+					"e.id",
+					"e.to",
+					"e.subject",
+					"e.body",
+					"e.status",
+					"e.sentAt",
+					"u.id as user_id",
+					"u.name as user_name",
+					"u.email as user_email",
+				]);
+
+			if (status) {
+				query = query.where("e.status", "=", status);
+			}
+
+			if (cursor) {
+				const cursorRow = await db
+					.selectFrom("email_log")
+					.select(["sentAt"])
+					.where("id", "=", cursor)
+					.executeTakeFirst();
+
+				if (cursorRow?.sentAt) {
+					query = query.where((eb) =>
+						eb.or([
+							eb("e.sentAt", "<", cursorRow.sentAt),
+							eb.and([
+								eb("e.sentAt", "=", cursorRow.sentAt),
+								eb("e.id", "<", cursor),
+							]),
+						])
+					);
+				}
+			}
+
+			const rows = await query
+				.orderBy("e.sentAt", "desc")
+				.orderBy("e.id", "desc")
+				.limit(limit + 1)
+				.execute();
+
+			const emails = rows.map((row) => ({
+				id: row.id,
+				to: row.to,
+				subject: row.subject,
+				body: row.body,
+				status: row.status,
+				sentAt: row.sentAt,
+				user: row.user_id
+					? {
+							id: row.user_id,
+							name: row.user_name,
+							email: row.user_email,
+						}
+					: null,
+			}));
 
 			let nextCursor: string | undefined;
 			if (emails.length > limit) {
@@ -195,24 +237,22 @@ export const emailRouter = router({
 	getById: adminProcedure
 		.input(z.object({ id: z.string() }))
 		.query(async ({ input }) => {
-			const email = await prisma.emailLog.findUnique({
-				where: { id: input.id },
-				select: {
-					id: true,
-					to: true,
-					subject: true,
-					body: true,
-					status: true,
-					sentAt: true,
-					user: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-						},
-					},
-				},
-			});
+			const email = await db
+				.selectFrom("email_log as e")
+				.leftJoin("user as u", "e.userId", "u.id")
+				.select([
+					"e.id",
+					"e.to",
+					"e.subject",
+					"e.body",
+					"e.status",
+					"e.sentAt",
+					"u.id as user_id",
+					"u.name as user_name",
+					"u.email as user_email",
+				])
+				.where("e.id", "=", input.id)
+				.executeTakeFirst();
 
 			if (!email) {
 				throw new TRPCError({
@@ -221,7 +261,21 @@ export const emailRouter = router({
 				});
 			}
 
-			return email;
+			return {
+				id: email.id,
+				to: email.to,
+				subject: email.subject,
+				body: email.body,
+				status: email.status,
+				sentAt: email.sentAt,
+				user: email.user_id
+					? {
+							id: email.user_id,
+							name: email.user_name,
+							email: email.user_email,
+						}
+					: null,
+			};
 		}),
 });
 

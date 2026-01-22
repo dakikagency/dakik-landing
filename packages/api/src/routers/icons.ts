@@ -1,5 +1,6 @@
-import prisma from "@collab/db";
+import { db } from "@collab/db";
 import { TRPCError } from "@trpc/server";
+import { sql } from "kysely";
 import { z } from "zod";
 
 import { protectedProcedure, publicProcedure, router } from "../index";
@@ -48,27 +49,46 @@ export const iconsRouter = router({
 		.query(async ({ input }) => {
 			const { search, category, limit, cursor } = input;
 
-			const icons = await prisma.icon.findMany({
-				where: {
-					AND: [
-						{ isCustom: true },
-						search
-							? {
-									OR: [
-										{ name: { contains: search, mode: "insensitive" } },
-										{ slug: { contains: search, mode: "insensitive" } },
-										{ keywords: { hasSome: [search.toLowerCase()] } },
-									],
-								}
-							: {},
-						category ? { category } : {},
-					],
-				},
-				take: limit,
-				skip: cursor ? 1 : 0,
-				cursor: cursor ? { id: cursor } : undefined,
-				orderBy: { createdAt: "desc" },
-			});
+			let query = db
+				.selectFrom("icon")
+				.selectAll()
+				.where("isCustom", "=", true);
+
+			if (search) {
+				query = query.where(
+					sql<boolean>`("name" ILIKE ${`%${search}%`} OR "slug" ILIKE ${`%${search}%`} OR "keywords" && ${sql.array([search.toLowerCase()])})`
+				);
+			}
+
+			if (category) {
+				query = query.where("category", "=", category);
+			}
+
+			if (cursor) {
+				const cursorRow = await db
+					.selectFrom("icon")
+					.select(["createdAt"])
+					.where("id", "=", cursor)
+					.executeTakeFirst();
+
+				if (cursorRow?.createdAt) {
+					query = query.where((eb) =>
+						eb.or([
+							eb("createdAt", "<", cursorRow.createdAt),
+							eb.and([
+								eb("createdAt", "=", cursorRow.createdAt),
+								eb("id", "<", cursor),
+							]),
+						])
+					);
+				}
+			}
+
+			const icons = await query
+				.orderBy("createdAt", "desc")
+				.orderBy("id", "desc")
+				.limit(limit)
+				.execute();
 
 			return {
 				icons,
@@ -80,9 +100,11 @@ export const iconsRouter = router({
 	getById: adminProcedure
 		.input(z.object({ id: z.string() }))
 		.query(async ({ input }) => {
-			const icon = await prisma.icon.findUnique({
-				where: { id: input.id },
-			});
+			const icon = await db
+				.selectFrom("icon")
+				.selectAll()
+				.where("id", "=", input.id)
+				.executeTakeFirst();
 
 			if (!icon) {
 				throw new TRPCError({
@@ -107,9 +129,11 @@ export const iconsRouter = router({
 		)
 		.mutation(async ({ input }) => {
 			// Check if slug already exists
-			const existing = await prisma.icon.findUnique({
-				where: { slug: input.slug },
-			});
+			const existing = await db
+				.selectFrom("icon")
+				.select(["id"])
+				.where("slug", "=", input.slug)
+				.executeTakeFirst();
 
 			if (existing) {
 				throw new TRPCError({
@@ -118,16 +142,21 @@ export const iconsRouter = router({
 				});
 			}
 
-			const icon = await prisma.icon.create({
-				data: {
+			const icon = await db
+				.insertInto("icon")
+				.values({
+					id: crypto.randomUUID(),
 					name: input.name,
 					slug: input.slug,
 					category: input.category,
 					svgContent: input.svgContent,
 					keywords: input.keywords,
 					isCustom: true,
-				},
-			});
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				})
+				.returningAll()
+				.executeTakeFirstOrThrow();
 
 			return icon;
 		}),
@@ -148,9 +177,11 @@ export const iconsRouter = router({
 			const { id, ...data } = input;
 
 			// Check if icon exists
-			const existing = await prisma.icon.findUnique({
-				where: { id },
-			});
+			const existing = await db
+				.selectFrom("icon")
+				.selectAll()
+				.where("id", "=", id)
+				.executeTakeFirst();
 
 			if (!existing) {
 				throw new TRPCError({
@@ -161,9 +192,11 @@ export const iconsRouter = router({
 
 			// If slug is being changed, check for conflicts
 			if (data.slug && data.slug !== existing.slug) {
-				const slugConflict = await prisma.icon.findUnique({
-					where: { slug: data.slug },
-				});
+				const slugConflict = await db
+					.selectFrom("icon")
+					.select(["id"])
+					.where("slug", "=", data.slug)
+					.executeTakeFirst();
 
 				if (slugConflict) {
 					throw new TRPCError({
@@ -173,10 +206,12 @@ export const iconsRouter = router({
 				}
 			}
 
-			const icon = await prisma.icon.update({
-				where: { id },
-				data,
-			});
+			const icon = await db
+				.updateTable("icon")
+				.set(data)
+				.where("id", "=", id)
+				.returningAll()
+				.executeTakeFirstOrThrow();
 
 			return icon;
 		}),
@@ -185,9 +220,11 @@ export const iconsRouter = router({
 	delete: adminProcedure
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ input }) => {
-			const existing = await prisma.icon.findUnique({
-				where: { id: input.id },
-			});
+			const existing = await db
+				.selectFrom("icon")
+				.selectAll()
+				.where("id", "=", input.id)
+				.executeTakeFirst();
 
 			if (!existing) {
 				throw new TRPCError({
@@ -204,9 +241,7 @@ export const iconsRouter = router({
 				});
 			}
 
-			await prisma.icon.delete({
-				where: { id: input.id },
-			});
+			await db.deleteFrom("icon").where("id", "=", input.id).execute();
 
 			return { success: true };
 		}),
@@ -238,10 +273,11 @@ export const iconsRouter = router({
 			}
 
 			// Check for existing slugs in database
-			const existingSlugs = await prisma.icon.findMany({
-				where: { slug: { in: slugs } },
-				select: { slug: true },
-			});
+			const existingSlugs = await db
+				.selectFrom("icon")
+				.select(["slug"])
+				.where("slug", "in", slugs)
+				.execute();
 
 			if (existingSlugs.length > 0) {
 				const conflictSlugs = existingSlugs.map((i) => i.slug).join(", ");
@@ -251,14 +287,22 @@ export const iconsRouter = router({
 				});
 			}
 
-			const icons = await prisma.icon.createMany({
-				data: input.icons.map((icon) => ({
-					...icon,
-					isCustom: true,
-				})),
-			});
+			const now = new Date();
+			const icons = await db
+				.insertInto("icon")
+				.values(
+					input.icons.map((icon) => ({
+						id: crypto.randomUUID(),
+						...icon,
+						isCustom: true,
+						createdAt: now,
+						updatedAt: now,
+					}))
+				)
+				.returning(["id"])
+				.execute();
 
-			return { count: icons.count };
+			return { count: icons.length };
 		}),
 
 	// Create icon with variants (line and/or filled)
@@ -341,10 +385,11 @@ export const iconsRouter = router({
 
 			// Check for existing slugs
 			const slugsToCheck = variantsToCreate.map((v) => v.slug);
-			const existingSlugs = await prisma.icon.findMany({
-				where: { slug: { in: slugsToCheck } },
-				select: { slug: true },
-			});
+			const existingSlugs = await db
+				.selectFrom("icon")
+				.select(["slug"])
+				.where("slug", "in", slugsToCheck)
+				.execute();
 
 			if (existingSlugs.length > 0) {
 				const conflictSlugs = existingSlugs.map((i) => i.slug).join(", ");
@@ -355,12 +400,22 @@ export const iconsRouter = router({
 			}
 
 			// Create all variants
-			const result = await prisma.icon.createMany({
-				data: variantsToCreate,
-			});
+			const now = new Date();
+			const result = await db
+				.insertInto("icon")
+				.values(
+					variantsToCreate.map((variant) => ({
+						...variant,
+						id: crypto.randomUUID(),
+						createdAt: now,
+						updatedAt: now,
+					}))
+				)
+				.returning(["id"])
+				.execute();
 
 			return {
-				count: result.count,
+				count: result.length,
 				variants: variantsToCreate.map((v) => ({
 					name: v.name,
 					slug: v.slug,
@@ -393,34 +448,42 @@ export const iconsRouter = router({
 		.query(async ({ input }) => {
 			const { search, category, limit, cursor } = input;
 
-			const icons = await prisma.icon.findMany({
-				where: {
-					AND: [
-						search
-							? {
-									OR: [
-										{ name: { contains: search, mode: "insensitive" } },
-										{ slug: { contains: search, mode: "insensitive" } },
-										{ keywords: { hasSome: [search.toLowerCase()] } },
-									],
-								}
-							: {},
-						category ? { category } : {},
-					],
-				},
-				take: limit,
-				skip: cursor ? 1 : 0,
-				cursor: cursor ? { id: cursor } : undefined,
-				orderBy: { name: "asc" },
-				select: {
-					id: true,
-					name: true,
-					slug: true,
-					category: true,
-					svgContent: true,
-					keywords: true,
-				},
-			});
+			let query = db
+				.selectFrom("icon")
+				.select(["id", "name", "slug", "category", "svgContent", "keywords"]);
+
+			if (search) {
+				query = query.where(
+					sql<boolean>`("name" ILIKE ${`%${search}%`} OR "slug" ILIKE ${`%${search}%`} OR "keywords" && ${sql.array([search.toLowerCase()])})`
+				);
+			}
+
+			if (category) {
+				query = query.where("category", "=", category);
+			}
+
+			if (cursor) {
+				const cursorRow = await db
+					.selectFrom("icon")
+					.select(["name", "id"])
+					.where("id", "=", cursor)
+					.executeTakeFirst();
+
+				if (cursorRow?.name) {
+					query = query.where((eb) =>
+						eb.or([
+							eb("name", ">", cursorRow.name),
+							eb.and([eb("name", "=", cursorRow.name), eb("id", ">", cursor)]),
+						])
+					);
+				}
+			}
+
+			const icons = await query
+				.orderBy("name", "asc")
+				.orderBy("id", "asc")
+				.limit(limit)
+				.execute();
 
 			return {
 				icons,

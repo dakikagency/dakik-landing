@@ -1,5 +1,6 @@
-import prisma from "@collab/db";
+import { db } from "@collab/db";
 import { TRPCError } from "@trpc/server";
+import { sql } from "kysely";
 import { z } from "zod";
 import { protectedProcedure, publicProcedure, router } from "../index";
 import { logActivity } from "../services/audit";
@@ -25,44 +26,116 @@ const getBySlugInputSchema = z.object({
 	slug: z.string().min(1),
 });
 
+const fetchTagsByPostIds = async (postIds: string[]) => {
+	if (postIds.length === 0) {
+		return new Map<string, { id: string; name: string; slug: string }[]>();
+	}
+
+	const rows = await db
+		.selectFrom("_BlogPostToTag as bt")
+		.innerJoin("tag as t", "bt.B", "t.id")
+		.select([
+			"bt.A as postId",
+			"t.id as id",
+			"t.name as name",
+			"t.slug as slug",
+		])
+		.where("bt.A", "in", postIds)
+		.orderBy("t.name", "asc")
+		.execute();
+
+	const map = new Map<string, { id: string; name: string; slug: string }[]>();
+	for (const row of rows) {
+		const list = map.get(row.postId) ?? [];
+		list.push({ id: row.id, name: row.name, slug: row.slug });
+		map.set(row.postId, list);
+	}
+
+	return map;
+};
+
 export const blogRouter = router({
 	list: publicProcedure.input(listInputSchema).query(async ({ input }) => {
 		const { page, limit, tag } = input;
 		const skip = (page - 1) * limit;
 
-		const where = {
-			published: true,
-			publishedAt: { not: null },
-			...(tag && {
-				tags: {
-					some: {
-						slug: tag,
-					},
-				},
-			}),
-		};
+		let postIdsByTag: string[] | null = null;
+		if (tag) {
+			const tagRow = await db
+				.selectFrom("tag")
+				.select(["id"])
+				.where("slug", "=", tag)
+				.executeTakeFirst();
 
-		const [posts, total] = await Promise.all([
-			prisma.blogPost.findMany({
-				where,
-				orderBy: { publishedAt: "desc" },
-				skip,
-				take: limit,
-				include: {
-					tags: {
-						select: {
-							id: true,
-							name: true,
-							slug: true,
-						},
+			if (!tagRow) {
+				return {
+					posts: [],
+					pagination: {
+						page,
+						limit,
+						total: 0,
+						totalPages: 0,
+						hasNext: false,
+						hasPrev: page > 1,
 					},
-				},
-			}),
-			prisma.blogPost.count({ where }),
+				};
+			}
+
+			const rows = await db
+				.selectFrom("_BlogPostToTag")
+				.select(["A"])
+				.where("B", "=", tagRow.id)
+				.execute();
+
+			postIdsByTag = rows.map((row) => row.A);
+		}
+
+		let query = db
+			.selectFrom("blog_post")
+			.selectAll()
+			.where("published", "=", true)
+			.where("publishedAt", "is not", null);
+
+		if (postIdsByTag) {
+			if (postIdsByTag.length === 0) {
+				return {
+					posts: [],
+					pagination: {
+						page,
+						limit,
+						total: 0,
+						totalPages: 0,
+						hasNext: false,
+						hasPrev: page > 1,
+					},
+				};
+			}
+			query = query.where("id", "in", postIdsByTag);
+		}
+
+		const [posts, totalRow] = await Promise.all([
+			query.orderBy("publishedAt", "desc").limit(limit).offset(skip).execute(),
+			db
+				.selectFrom("blog_post")
+				.select((eb) => eb.fn.count("id").as("count"))
+				.where("published", "=", true)
+				.where("publishedAt", "is not", null)
+				.$if(!!postIdsByTag, (qb) =>
+					postIdsByTag && postIdsByTag.length > 0
+						? qb.where("id", "in", postIdsByTag)
+						: qb.where("id", "=", "__none__")
+				)
+				.executeTakeFirst(),
 		]);
 
+		const tagsByPostId = await fetchTagsByPostIds(posts.map((post) => post.id));
+		const total = Number(totalRow?.count ?? 0);
+
 		return {
-			posts,
+			posts: posts.map((post) => ({
+				...post,
+				tags: tagsByPostId.get(post.id) ?? [],
+			})),
 			pagination: {
 				page,
 				limit,
@@ -77,36 +150,43 @@ export const blogRouter = router({
 	getBySlug: publicProcedure
 		.input(getBySlugInputSchema)
 		.query(async ({ input }) => {
-			const post = await prisma.blogPost.findFirst({
-				where: {
-					slug: input.slug,
-					published: true,
-				},
-				include: {
-					tags: {
-						select: {
-							id: true,
-							name: true,
-							slug: true,
-						},
-					},
-				},
-			});
+			const post = await db
+				.selectFrom("blog_post")
+				.selectAll()
+				.where("slug", "=", input.slug)
+				.where("published", "=", true)
+				.executeTakeFirst();
 
-			return post;
+			if (!post) {
+				return null;
+			}
+
+			const tagsByPostId = await fetchTagsByPostIds([post.id]);
+
+			return {
+				...post,
+				tags: tagsByPostId.get(post.id) ?? [],
+			};
 		}),
 
 	getTags: publicProcedure.query(async () => {
-		const tags = await prisma.tag.findMany({
-			orderBy: { name: "asc" },
-			include: {
-				_count: {
-					select: { posts: true },
-				},
-			},
-		});
+		const rows = await db
+			.selectFrom("tag as t")
+			.leftJoin("_BlogPostToTag as bt", "t.id", "bt.B")
+			.select(["t.id", "t.name", "t.slug"])
+			.select((eb) => eb.fn.count("bt.A").as("postsCount"))
+			.groupBy(["t.id", "t.name", "t.slug"])
+			.orderBy("t.name", "asc")
+			.execute();
 
-		return tags.filter((tag) => tag._count.posts > 0);
+		return rows
+			.map((row) => ({
+				id: row.id,
+				name: row.name,
+				slug: row.slug,
+				_count: { posts: Number(row.postsCount ?? 0) },
+			}))
+			.filter((tag) => tag._count.posts > 0);
 	}),
 
 	getRelatedPosts: publicProcedure
@@ -117,41 +197,58 @@ export const blogRouter = router({
 			})
 		)
 		.query(async ({ input }) => {
-			const currentPost = await prisma.blogPost.findFirst({
-				where: { slug: input.slug, published: true },
-				include: { tags: true },
-			});
+			const currentPost = await db
+				.selectFrom("blog_post")
+				.selectAll()
+				.where("slug", "=", input.slug)
+				.where("published", "=", true)
+				.executeTakeFirst();
 
 			if (!currentPost) {
 				return [];
 			}
 
-			const tagIds = currentPost.tags.map((tag) => tag.id);
+			const tagLinks = await db
+				.selectFrom("_BlogPostToTag")
+				.select(["B"])
+				.where("A", "=", currentPost.id)
+				.execute();
 
-			const relatedPosts = await prisma.blogPost.findMany({
-				where: {
-					published: true,
-					id: { not: currentPost.id },
-					tags: {
-						some: {
-							id: { in: tagIds },
-						},
-					},
-				},
-				orderBy: { publishedAt: "desc" },
-				take: input.limit,
-				include: {
-					tags: {
-						select: {
-							id: true,
-							name: true,
-							slug: true,
-						},
-					},
-				},
-			});
+			const tagIds = tagLinks.map((link) => link.B);
+			if (tagIds.length === 0) {
+				return [];
+			}
 
-			return relatedPosts;
+			const relatedIdsRows = await db
+				.selectFrom("_BlogPostToTag")
+				.select(["A"])
+				.where("B", "in", tagIds)
+				.where("A", "<>", currentPost.id)
+				.distinct()
+				.execute();
+
+			const relatedIds = relatedIdsRows.map((row) => row.A);
+			if (relatedIds.length === 0) {
+				return [];
+			}
+
+			const relatedPosts = await db
+				.selectFrom("blog_post")
+				.selectAll()
+				.where("published", "=", true)
+				.where("id", "in", relatedIds)
+				.orderBy("publishedAt", "desc")
+				.limit(input.limit)
+				.execute();
+
+			const tagsByPostId = await fetchTagsByPostIds(
+				relatedPosts.map((post) => post.id)
+			);
+
+			return relatedPosts.map((post) => ({
+				...post,
+				tags: tagsByPostId.get(post.id) ?? [],
+			}));
 		}),
 
 	// Admin endpoints
@@ -168,38 +265,46 @@ export const blogRouter = router({
 			const { page, limit, search, status } = input;
 			const skip = (page - 1) * limit;
 
-			const where = {
-				...(status === "published" && { published: true }),
-				...(status === "draft" && { published: false }),
-				...(search && {
-					OR: [
-						{ title: { contains: search, mode: "insensitive" as const } },
-						{ content: { contains: search, mode: "insensitive" as const } },
-					],
-				}),
-			};
+			let query = db.selectFrom("blog_post").selectAll();
 
-			const [posts, total] = await Promise.all([
-				prisma.blogPost.findMany({
-					where,
-					orderBy: { createdAt: "desc" },
-					skip,
-					take: limit,
-					include: {
-						tags: {
-							select: {
-								id: true,
-								name: true,
-								slug: true,
-							},
-						},
-					},
-				}),
-				prisma.blogPost.count({ where }),
+			if (status === "published") {
+				query = query.where("published", "=", true);
+			}
+			if (status === "draft") {
+				query = query.where("published", "=", false);
+			}
+			if (search) {
+				query = query.where(
+					sql<boolean>`("title" ILIKE ${`%${search}%`} OR "content" ILIKE ${`%${search}%`})`
+				);
+			}
+
+			const [posts, totalRow] = await Promise.all([
+				query.orderBy("createdAt", "desc").limit(limit).offset(skip).execute(),
+				db
+					.selectFrom("blog_post")
+					.select((eb) => eb.fn.count("id").as("count"))
+					.$if(status === "published", (qb) => qb.where("published", "=", true))
+					.$if(status === "draft", (qb) => qb.where("published", "=", false))
+					.$if(!!search, (qb) =>
+						qb.where(
+							sql<boolean>`("title" ILIKE ${`%${search}%`} OR "content" ILIKE ${`%${search}%`})`
+						)
+					)
+					.executeTakeFirst(),
 			]);
 
+			const tagsByPostId = await fetchTagsByPostIds(
+				posts.map((post) => post.id)
+			);
+
+			const total = Number(totalRow?.count ?? 0);
+
 			return {
-				posts,
+				posts: posts.map((post) => ({
+					...post,
+					tags: tagsByPostId.get(post.id) ?? [],
+				})),
 				pagination: {
 					page,
 					limit,
@@ -214,18 +319,11 @@ export const blogRouter = router({
 	getById: adminProcedure
 		.input(z.object({ id: z.string() }))
 		.query(async ({ input }) => {
-			const post = await prisma.blogPost.findUnique({
-				where: { id: input.id },
-				include: {
-					tags: {
-						select: {
-							id: true,
-							name: true,
-							slug: true,
-						},
-					},
-				},
-			});
+			const post = await db
+				.selectFrom("blog_post")
+				.selectAll()
+				.where("id", "=", input.id)
+				.executeTakeFirst();
 
 			if (!post) {
 				throw new TRPCError({
@@ -234,20 +332,30 @@ export const blogRouter = router({
 				});
 			}
 
-			return post;
+			const tagsByPostId = await fetchTagsByPostIds([post.id]);
+
+			return {
+				...post,
+				tags: tagsByPostId.get(post.id) ?? [],
+			};
 		}),
 
 	getAllTags: adminProcedure.query(async () => {
-		const tags = await prisma.tag.findMany({
-			orderBy: { name: "asc" },
-			include: {
-				_count: {
-					select: { posts: true },
-				},
-			},
-		});
+		const rows = await db
+			.selectFrom("tag as t")
+			.leftJoin("_BlogPostToTag as bt", "t.id", "bt.B")
+			.select(["t.id", "t.name", "t.slug"])
+			.select((eb) => eb.fn.count("bt.A").as("postsCount"))
+			.groupBy(["t.id", "t.name", "t.slug"])
+			.orderBy("t.name", "asc")
+			.execute();
 
-		return tags;
+		return rows.map((row) => ({
+			id: row.id,
+			name: row.name,
+			slug: row.slug,
+			_count: { posts: Number(row.postsCount ?? 0) },
+		}));
 	}),
 
 	create: adminProcedure
@@ -273,9 +381,11 @@ export const blogRouter = router({
 				const { tagIds, ...data } = input;
 
 				// Check if slug is unique
-				const existingPost = await prisma.blogPost.findUnique({
-					where: { slug: data.slug },
-				});
+				const existingPost = await db
+					.selectFrom("blog_post")
+					.select(["id"])
+					.where("slug", "=", data.slug)
+					.executeTakeFirst();
 
 				if (existingPost) {
 					throw new TRPCError({
@@ -285,26 +395,26 @@ export const blogRouter = router({
 				}
 
 				// Create the blog post
-				const post = await prisma.blogPost.create({
-					data: {
+				const post = await db
+					.insertInto("blog_post")
+					.values({
+						id: crypto.randomUUID(),
 						...data,
 						publishedAt: data.published ? new Date() : null,
-						...(tagIds.length > 0 && {
-							tags: {
-								connect: tagIds.map((id) => ({ id })),
-							},
-						}),
-					},
-					include: {
-						tags: {
-							select: {
-								id: true,
-								name: true,
-								slug: true,
-							},
-						},
-					},
-				});
+						createdAt: new Date(),
+						updatedAt: new Date(),
+					})
+					.returningAll()
+					.executeTakeFirstOrThrow();
+
+				if (tagIds.length > 0) {
+					await db
+						.insertInto("_BlogPostToTag")
+						.values(tagIds.map((id) => ({ A: post.id, B: id })))
+						.execute();
+				}
+
+				const tagsByPostId = await fetchTagsByPostIds([post.id]);
 
 				// Log activity (non-blocking, errors are caught internally)
 				await logActivity({
@@ -317,7 +427,10 @@ export const blogRouter = router({
 					userAgent: ctx.userAgent,
 				});
 
-				return post;
+				return {
+					...post,
+					tags: tagsByPostId.get(post.id) ?? [],
+				};
 			} catch (error) {
 				console.error("Error creating blog post:", error);
 
@@ -363,9 +476,11 @@ export const blogRouter = router({
 			const { id, tagIds, ...data } = input;
 
 			// Find the existing post
-			const existingPost = await prisma.blogPost.findUnique({
-				where: { id },
-			});
+			const existingPost = await db
+				.selectFrom("blog_post")
+				.selectAll()
+				.where("id", "=", id)
+				.executeTakeFirst();
 
 			if (!existingPost) {
 				throw new TRPCError({
@@ -376,9 +491,11 @@ export const blogRouter = router({
 
 			// Check if slug is unique (if changing)
 			if (data.slug && data.slug !== existingPost.slug) {
-				const postWithSlug = await prisma.blogPost.findUnique({
-					where: { slug: data.slug },
-				});
+				const postWithSlug = await db
+					.selectFrom("blog_post")
+					.select(["id"])
+					.where("slug", "=", data.slug)
+					.executeTakeFirst();
 
 				if (postWithSlug) {
 					throw new TRPCError({
@@ -400,37 +517,47 @@ export const blogRouter = router({
 				}
 			}
 
-			const post = await prisma.blogPost.update({
-				where: { id },
-				data: {
-					...data,
-					publishedAt,
-					...(tagIds && {
-						tags: {
-							set: tagIds.map((tagId) => ({ id: tagId })),
-						},
-					}),
-				},
-				include: {
-					tags: {
-						select: {
-							id: true,
-							name: true,
-							slug: true,
-						},
-					},
-				},
+			const post = await db.transaction().execute(async (trx) => {
+				const updated = await trx
+					.updateTable("blog_post")
+					.set({
+						...data,
+						publishedAt,
+					})
+					.where("id", "=", id)
+					.returningAll()
+					.executeTakeFirstOrThrow();
+
+				if (tagIds) {
+					await trx.deleteFrom("_BlogPostToTag").where("A", "=", id).execute();
+
+					if (tagIds.length > 0) {
+						await trx
+							.insertInto("_BlogPostToTag")
+							.values(tagIds.map((tagId) => ({ A: id, B: tagId })))
+							.execute();
+					}
+				}
+
+				return updated;
 			});
 
-			return post;
+			const tagsByPostId = await fetchTagsByPostIds([post.id]);
+
+			return {
+				...post,
+				tags: tagsByPostId.get(post.id) ?? [],
+			};
 		}),
 
 	delete: adminProcedure
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ input }) => {
-			const existingPost = await prisma.blogPost.findUnique({
-				where: { id: input.id },
-			});
+			const existingPost = await db
+				.selectFrom("blog_post")
+				.select(["id"])
+				.where("id", "=", input.id)
+				.executeTakeFirst();
 
 			if (!existingPost) {
 				throw new TRPCError({
@@ -439,8 +566,14 @@ export const blogRouter = router({
 				});
 			}
 
-			await prisma.blogPost.delete({
-				where: { id: input.id },
+			type BlogPostDeleteTransaction = typeof db;
+
+			await db.transaction().execute(async (trx: BlogPostDeleteTransaction) => {
+				await trx
+					.deleteFrom("_BlogPostToTag")
+					.where("A", "=", input.id)
+					.execute();
+				await trx.deleteFrom("blog_post").where("id", "=", input.id).execute();
 			});
 
 			return { success: true };
@@ -455,9 +588,11 @@ export const blogRouter = router({
 		)
 		.mutation(async ({ input }) => {
 			// Check if slug is unique
-			const existingTag = await prisma.tag.findUnique({
-				where: { slug: input.slug },
-			});
+			const existingTag = await db
+				.selectFrom("tag")
+				.select(["id"])
+				.where("slug", "=", input.slug)
+				.executeTakeFirst();
 
 			if (existingTag) {
 				throw new TRPCError({
@@ -466,10 +601,13 @@ export const blogRouter = router({
 				});
 			}
 
-			const tag = await prisma.tag.create({
-				data: input,
-			});
-
-			return tag;
+			return db
+				.insertInto("tag")
+				.values({
+					id: crypto.randomUUID(),
+					...input,
+				})
+				.returningAll()
+				.executeTakeFirstOrThrow();
 		}),
 });

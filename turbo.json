@@ -7,11 +7,7 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "dist/**", "node_modules/.prisma/**"],
       "outputLogs": "new-only",
-      "env": [
-        "DATABASE_URL",
-        "POSTGRES_PRISMA_URL",
-        "POSTGRES_URL_NON_POOLING"
-      ]
+      "env": ["DATABASE_URL", "POSTGRES_PRISMA_URL", "POSTGRES_URL_NON_POOLING"]
     },
     "@collab/db#build": {
       "outputs": ["node_modules/.prisma/**"],

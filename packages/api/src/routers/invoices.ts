@@ -1,5 +1,6 @@
-import prisma from "@collab/db";
+import { db } from "@collab/db";
 import { TRPCError } from "@trpc/server";
+import { sql } from "kysely";
 import { z } from "zod";
 
 import { protectedProcedure, router } from "../index";
@@ -40,86 +41,106 @@ export const invoicesRouter = router({
 				cursor,
 			} = input;
 
-			const invoices = await prisma.invoice.findMany({
-				where: {
-					AND: [
-						search
-							? {
-									OR: [
-										{
-											customer: {
-												user: {
-													name: { contains: search, mode: "insensitive" },
-												},
-											},
-										},
-										{
-											customer: {
-												companyName: { contains: search, mode: "insensitive" },
-											},
-										},
-										{
-											project: {
-												title: { contains: search, mode: "insensitive" },
-											},
-										},
-										{ description: { contains: search, mode: "insensitive" } },
-									],
-								}
-							: {},
-						status
-							? {
-									status: status as "UNPAID" | "PENDING" | "PAID" | "OVERDUE",
-								}
-							: {},
-						customerId ? { customerId } : {},
-						projectId ? { projectId } : {},
-						dateFrom || dateTo
-							? {
-									invoiceDate: {
-										gte: dateFrom ? new Date(dateFrom) : undefined,
-										lte: dateTo ? new Date(dateTo) : undefined,
-									},
-								}
-							: {},
-					],
-				},
-				take: limit,
-				skip: cursor ? 1 : 0,
-				cursor: cursor ? { id: cursor } : undefined,
-				orderBy: { invoiceDate: "desc" },
-				select: {
-					id: true,
-					invoiceDate: true,
-					dueDate: true,
-					amount: true,
-					description: true,
-					status: true,
-					fileUrl: true,
-					createdAt: true,
-					customer: {
-						select: {
-							id: true,
-							companyName: true,
-							user: {
-								select: {
-									id: true,
-									name: true,
-									email: true,
-								},
-							},
-						},
-					},
-					project: {
-						select: {
-							id: true,
-							title: true,
-						},
-					},
-				},
-			});
+			let query = db
+				.selectFrom("invoice as i")
+				.innerJoin("customer as cu", "i.customerId", "cu.id")
+				.innerJoin("user as u", "cu.userId", "u.id")
+				.leftJoin("project as p", "i.projectId", "p.id")
+				.select([
+					"i.id",
+					"i.invoiceDate",
+					"i.dueDate",
+					"i.amount",
+					"i.description",
+					"i.status",
+					"i.fileUrl",
+					"i.createdAt",
+					"cu.id as customer_id",
+					"cu.companyName as customer_companyName",
+					"u.id as user_id",
+					"u.name as user_name",
+					"u.email as user_email",
+					"p.id as project_id",
+					"p.title as project_title",
+				]);
 
-			return invoices;
+			if (search) {
+				query = query.where(
+					sql<boolean>`("u"."name" ILIKE ${`%${search}%`} OR "cu"."companyName" ILIKE ${`%${search}%`} OR "p"."title" ILIKE ${`%${search}%`} OR "i"."description" ILIKE ${`%${search}%`})`
+				);
+			}
+
+			if (status) {
+				query = query.where("i.status", "=", status);
+			}
+
+			if (customerId) {
+				query = query.where("i.customerId", "=", customerId);
+			}
+
+			if (projectId) {
+				query = query.where("i.projectId", "=", projectId);
+			}
+
+			if (dateFrom) {
+				query = query.where("i.invoiceDate", ">=", new Date(dateFrom));
+			}
+
+			if (dateTo) {
+				query = query.where("i.invoiceDate", "<=", new Date(dateTo));
+			}
+
+			if (cursor) {
+				const cursorRow = await db
+					.selectFrom("invoice")
+					.select(["invoiceDate"])
+					.where("id", "=", cursor)
+					.executeTakeFirst();
+
+				if (cursorRow?.invoiceDate) {
+					query = query.where((eb) =>
+						eb.or([
+							eb("i.invoiceDate", "<", cursorRow.invoiceDate),
+							eb.and([
+								eb("i.invoiceDate", "=", cursorRow.invoiceDate),
+								eb("i.id", "<", cursor),
+							]),
+						])
+					);
+				}
+			}
+
+			const rows = await query
+				.orderBy("i.invoiceDate", "desc")
+				.orderBy("i.id", "desc")
+				.limit(limit)
+				.execute();
+
+			return rows.map((row) => ({
+				id: row.id,
+				invoiceDate: row.invoiceDate,
+				dueDate: row.dueDate,
+				amount: row.amount,
+				description: row.description,
+				status: row.status,
+				fileUrl: row.fileUrl,
+				createdAt: row.createdAt,
+				customer: {
+					id: row.customer_id,
+					companyName: row.customer_companyName,
+					user: {
+						id: row.user_id,
+						name: row.user_name,
+						email: row.user_email,
+					},
+				},
+				project: row.project_id
+					? {
+							id: row.project_id,
+							title: row.project_title,
+						}
+					: null,
+			}));
 		}),
 
 	create: adminProcedure
@@ -150,9 +171,11 @@ export const invoicesRouter = router({
 				status,
 			} = input;
 
-			const customer = await prisma.customer.findUnique({
-				where: { id: customerId },
-			});
+			const customer = await db
+				.selectFrom("customer")
+				.select(["id"])
+				.where("id", "=", customerId)
+				.executeTakeFirst();
 
 			if (!customer) {
 				throw new TRPCError({
@@ -162,9 +185,12 @@ export const invoicesRouter = router({
 			}
 
 			if (projectId) {
-				const project = await prisma.project.findFirst({
-					where: { id: projectId, customerId },
-				});
+				const project = await db
+					.selectFrom("project")
+					.select(["id"])
+					.where("id", "=", projectId)
+					.where("customerId", "=", customerId)
+					.executeTakeFirst();
 
 				if (!project) {
 					throw new TRPCError({
@@ -174,8 +200,10 @@ export const invoicesRouter = router({
 				}
 			}
 
-			const invoice = await prisma.invoice.create({
-				data: {
+			const invoice = await db
+				.insertInto("invoice")
+				.values({
+					id: crypto.randomUUID(),
 					customerId,
 					projectId,
 					invoiceDate: invoiceDate ? new Date(invoiceDate) : new Date(),
@@ -184,39 +212,55 @@ export const invoicesRouter = router({
 					description,
 					fileUrl,
 					status,
-				},
-				select: {
-					id: true,
-					invoiceDate: true,
-					dueDate: true,
-					amount: true,
-					description: true,
-					status: true,
-					fileUrl: true,
-					createdAt: true,
-					customer: {
-						select: {
-							id: true,
-							companyName: true,
-							user: {
-								select: {
-									id: true,
-									name: true,
-									email: true,
-								},
-							},
-						},
-					},
-					project: {
-						select: {
-							id: true,
-							title: true,
-						},
-					},
-				},
-			});
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				})
+				.returningAll()
+				.executeTakeFirstOrThrow();
 
-			return invoice;
+			const customerRow = await db
+				.selectFrom("customer as cu")
+				.innerJoin("user as u", "cu.userId", "u.id")
+				.select([
+					"cu.id as customer_id",
+					"cu.companyName as customer_companyName",
+					"u.id as user_id",
+					"u.name as user_name",
+					"u.email as user_email",
+				])
+				.where("cu.id", "=", customerId)
+				.executeTakeFirstOrThrow();
+
+			const projectRow = projectId
+				? await db
+						.selectFrom("project")
+						.select(["id", "title"])
+						.where("id", "=", projectId)
+						.executeTakeFirst()
+				: null;
+
+			return {
+				id: invoice.id,
+				invoiceDate: invoice.invoiceDate,
+				dueDate: invoice.dueDate,
+				amount: invoice.amount,
+				description: invoice.description,
+				status: invoice.status,
+				fileUrl: invoice.fileUrl,
+				createdAt: invoice.createdAt,
+				customer: {
+					id: customerRow.customer_id,
+					companyName: customerRow.customer_companyName,
+					user: {
+						id: customerRow.user_id,
+						name: customerRow.user_name,
+						email: customerRow.user_email,
+					},
+				},
+				project: projectRow
+					? { id: projectRow.id, title: projectRow.title }
+					: null,
+			};
 		}),
 
 	update: adminProcedure
@@ -235,9 +279,11 @@ export const invoicesRouter = router({
 		.mutation(async ({ input }) => {
 			const { id, ...data } = input;
 
-			const existingInvoice = await prisma.invoice.findUnique({
-				where: { id },
-			});
+			const existingInvoice = await db
+				.selectFrom("invoice")
+				.selectAll()
+				.where("id", "=", id)
+				.executeTakeFirst();
 
 			if (!existingInvoice) {
 				throw new TRPCError({
@@ -257,12 +303,12 @@ export const invoicesRouter = router({
 			}
 
 			if (data.projectId) {
-				const project = await prisma.project.findFirst({
-					where: {
-						id: data.projectId,
-						customerId: existingInvoice.customerId,
-					},
-				});
+				const project = await db
+					.selectFrom("project")
+					.select(["id"])
+					.where("id", "=", data.projectId)
+					.where("customerId", "=", existingInvoice.customerId)
+					.executeTakeFirst();
 
 				if (!project) {
 					throw new TRPCError({
@@ -280,43 +326,58 @@ export const invoicesRouter = router({
 				updateData.paidAt = null;
 			}
 
-			const invoice = await prisma.invoice.update({
-				where: { id },
-				data: updateData,
-				select: {
-					id: true,
-					invoiceDate: true,
-					dueDate: true,
-					amount: true,
-					description: true,
-					status: true,
-					fileUrl: true,
-					paidAt: true,
-					createdAt: true,
-					updatedAt: true,
-					customer: {
-						select: {
-							id: true,
-							companyName: true,
-							user: {
-								select: {
-									id: true,
-									name: true,
-									email: true,
-								},
-							},
-						},
-					},
-					project: {
-						select: {
-							id: true,
-							title: true,
-						},
+			const invoice = await db
+				.updateTable("invoice")
+				.set(updateData)
+				.where("id", "=", id)
+				.returningAll()
+				.executeTakeFirstOrThrow();
+
+			const customerRow = await db
+				.selectFrom("customer as cu")
+				.innerJoin("user as u", "cu.userId", "u.id")
+				.select([
+					"cu.id as customer_id",
+					"cu.companyName as customer_companyName",
+					"u.id as user_id",
+					"u.name as user_name",
+					"u.email as user_email",
+				])
+				.where("cu.id", "=", invoice.customerId)
+				.executeTakeFirstOrThrow();
+
+			const projectRow = invoice.projectId
+				? await db
+						.selectFrom("project")
+						.select(["id", "title"])
+						.where("id", "=", invoice.projectId)
+						.executeTakeFirst()
+				: null;
+
+			return {
+				id: invoice.id,
+				invoiceDate: invoice.invoiceDate,
+				dueDate: invoice.dueDate,
+				amount: invoice.amount,
+				description: invoice.description,
+				status: invoice.status,
+				fileUrl: invoice.fileUrl,
+				paidAt: invoice.paidAt,
+				createdAt: invoice.createdAt,
+				updatedAt: invoice.updatedAt,
+				customer: {
+					id: customerRow.customer_id,
+					companyName: customerRow.customer_companyName,
+					user: {
+						id: customerRow.user_id,
+						name: customerRow.user_name,
+						email: customerRow.user_email,
 					},
 				},
-			});
-
-			return invoice;
+				project: projectRow
+					? { id: projectRow.id, title: projectRow.title }
+					: null,
+			};
 		}),
 
 	delete: adminProcedure
@@ -324,9 +385,11 @@ export const invoicesRouter = router({
 		.mutation(async ({ input }) => {
 			const { id } = input;
 
-			const existingInvoice = await prisma.invoice.findUnique({
-				where: { id },
-			});
+			const existingInvoice = await db
+				.selectFrom("invoice")
+				.select(["id"])
+				.where("id", "=", id)
+				.executeTakeFirst();
 
 			if (!existingInvoice) {
 				throw new TRPCError({
@@ -335,9 +398,7 @@ export const invoicesRouter = router({
 				});
 			}
 
-			await prisma.invoice.delete({
-				where: { id },
-			});
+			await db.deleteFrom("invoice").where("id", "=", id).execute();
 
 			return { success: true };
 		}),
@@ -347,40 +408,32 @@ export const invoicesRouter = router({
 		.query(async ({ input }) => {
 			const { id } = input;
 
-			const invoice = await prisma.invoice.findUnique({
-				where: { id },
-				select: {
-					id: true,
-					invoiceDate: true,
-					dueDate: true,
-					amount: true,
-					description: true,
-					status: true,
-					fileUrl: true,
-					paidAt: true,
-					createdAt: true,
-					updatedAt: true,
-					customer: {
-						select: {
-							id: true,
-							companyName: true,
-							user: {
-								select: {
-									id: true,
-									name: true,
-									email: true,
-								},
-							},
-						},
-					},
-					project: {
-						select: {
-							id: true,
-							title: true,
-						},
-					},
-				},
-			});
+			const invoice = await db
+				.selectFrom("invoice as i")
+				.innerJoin("customer as cu", "i.customerId", "cu.id")
+				.innerJoin("user as u", "cu.userId", "u.id")
+				.leftJoin("project as p", "i.projectId", "p.id")
+				.select([
+					"i.id",
+					"i.invoiceDate",
+					"i.dueDate",
+					"i.amount",
+					"i.description",
+					"i.status",
+					"i.fileUrl",
+					"i.paidAt",
+					"i.createdAt",
+					"i.updatedAt",
+					"cu.id as customer_id",
+					"cu.companyName as customer_companyName",
+					"u.id as user_id",
+					"u.name as user_name",
+					"u.email as user_email",
+					"p.id as project_id",
+					"p.title as project_title",
+				])
+				.where("i.id", "=", id)
+				.executeTakeFirst();
 
 			if (!invoice) {
 				throw new TRPCError({
@@ -389,7 +442,30 @@ export const invoicesRouter = router({
 				});
 			}
 
-			return invoice;
+			return {
+				id: invoice.id,
+				invoiceDate: invoice.invoiceDate,
+				dueDate: invoice.dueDate,
+				amount: invoice.amount,
+				description: invoice.description,
+				status: invoice.status,
+				fileUrl: invoice.fileUrl,
+				paidAt: invoice.paidAt,
+				createdAt: invoice.createdAt,
+				updatedAt: invoice.updatedAt,
+				customer: {
+					id: invoice.customer_id,
+					companyName: invoice.customer_companyName,
+					user: {
+						id: invoice.user_id,
+						name: invoice.user_name,
+						email: invoice.user_email,
+					},
+				},
+				project: invoice.project_id
+					? { id: invoice.project_id, title: invoice.project_title }
+					: null,
+			};
 		}),
 
 	getProjectsByCustomer: adminProcedure
@@ -397,16 +473,12 @@ export const invoicesRouter = router({
 		.query(async ({ input }) => {
 			const { customerId } = input;
 
-			const projects = await prisma.project.findMany({
-				where: { customerId },
-				select: {
-					id: true,
-					title: true,
-				},
-				orderBy: { createdAt: "desc" },
-			});
-
-			return projects;
+			return await db
+				.selectFrom("project")
+				.select(["id", "title"])
+				.where("customerId", "=", customerId)
+				.orderBy("createdAt", "desc")
+				.execute();
 		}),
 });
 

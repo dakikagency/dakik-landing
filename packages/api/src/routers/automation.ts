@@ -1,5 +1,6 @@
-import prisma from "@collab/db";
+import { db } from "@collab/db";
 import { TRPCError } from "@trpc/server";
+import { sql } from "kysely";
 import { z } from "zod";
 import { protectedProcedure, publicProcedure, router } from "../index";
 import { logActivity } from "../services/audit";
@@ -25,44 +26,119 @@ const getBySlugInputSchema = z.object({
 	slug: z.string().min(1),
 });
 
+const fetchTagsByAutomationIds = async (automationIds: string[]) => {
+	if (automationIds.length === 0) {
+		return new Map<string, { id: string; name: string; slug: string }[]>();
+	}
+
+	const rows = await db
+		.selectFrom("_AutomationToTag as at")
+		.innerJoin("tag as t", "at.B", "t.id")
+		.select([
+			"at.A as automationId",
+			"t.id as id",
+			"t.name as name",
+			"t.slug as slug",
+		])
+		.where("at.A", "in", automationIds)
+		.orderBy("t.name", "asc")
+		.execute();
+
+	const map = new Map<string, { id: string; name: string; slug: string }[]>();
+	for (const row of rows) {
+		const list = map.get(row.automationId) ?? [];
+		list.push({ id: row.id, name: row.name, slug: row.slug });
+		map.set(row.automationId, list);
+	}
+
+	return map;
+};
+
 export const automationRouter = router({
 	list: publicProcedure.input(listInputSchema).query(async ({ input }) => {
 		const { page, limit, tag } = input;
 		const skip = (page - 1) * limit;
 
-		const where = {
-			published: true,
-			publishedAt: { not: null },
-			...(tag && {
-				tags: {
-					some: {
-						slug: tag,
-					},
-				},
-			}),
-		};
+		let automationIdsByTag: string[] | null = null;
+		if (tag) {
+			const tagRow = await db
+				.selectFrom("tag")
+				.select(["id"])
+				.where("slug", "=", tag)
+				.executeTakeFirst();
 
-		const [automations, total] = await Promise.all([
-			prisma.automation.findMany({
-				where,
-				orderBy: { publishedAt: "desc" },
-				skip,
-				take: limit,
-				include: {
-					tags: {
-						select: {
-							id: true,
-							name: true,
-							slug: true,
-						},
+			if (!tagRow) {
+				return {
+					automations: [],
+					pagination: {
+						page,
+						limit,
+						total: 0,
+						totalPages: 0,
+						hasNext: false,
+						hasPrev: page > 1,
 					},
-				},
-			}),
-			prisma.automation.count({ where }),
+				};
+			}
+
+			const rows = await db
+				.selectFrom("_AutomationToTag")
+				.select(["A"])
+				.where("B", "=", tagRow.id)
+				.execute();
+
+			automationIdsByTag = rows.map((row) => row.A);
+		}
+
+		let query = db
+			.selectFrom("automation")
+			.selectAll()
+			.where("published", "=", true)
+			.where("publishedAt", "is not", null);
+
+		if (automationIdsByTag) {
+			if (automationIdsByTag.length === 0) {
+				return {
+					automations: [],
+					pagination: {
+						page,
+						limit,
+						total: 0,
+						totalPages: 0,
+						hasNext: false,
+						hasPrev: page > 1,
+					},
+				};
+			}
+			query = query.where("id", "in", automationIdsByTag);
+		}
+
+		const [automations, totalRow] = await Promise.all([
+			query.orderBy("publishedAt", "desc").limit(limit).offset(skip).execute(),
+			db
+				.selectFrom("automation")
+				.select((eb) => eb.fn.count("id").as("count"))
+				.where("published", "=", true)
+				.where("publishedAt", "is not", null)
+				.$if(!!automationIdsByTag, (qb) =>
+					automationIdsByTag && automationIdsByTag.length > 0
+						? qb.where("id", "in", automationIdsByTag)
+						: qb.where("id", "=", "__none__")
+				)
+				.executeTakeFirst(),
 		]);
 
+		const tagsByAutomationId = await fetchTagsByAutomationIds(
+			automations.map((automation) => automation.id)
+		);
+
+		const total = Number(totalRow?.count ?? 0);
+
 		return {
-			automations,
+			automations: automations.map((automation) => ({
+				...automation,
+				tags: tagsByAutomationId.get(automation.id) ?? [],
+			})),
 			pagination: {
 				page,
 				limit,
@@ -77,36 +153,45 @@ export const automationRouter = router({
 	getBySlug: publicProcedure
 		.input(getBySlugInputSchema)
 		.query(async ({ input }) => {
-			const automation = await prisma.automation.findFirst({
-				where: {
-					slug: input.slug,
-					published: true,
-				},
-				include: {
-					tags: {
-						select: {
-							id: true,
-							name: true,
-							slug: true,
-						},
-					},
-				},
-			});
+			const automation = await db
+				.selectFrom("automation")
+				.selectAll()
+				.where("slug", "=", input.slug)
+				.where("published", "=", true)
+				.executeTakeFirst();
 
-			return automation;
+			if (!automation) {
+				return null;
+			}
+
+			const tagsByAutomationId = await fetchTagsByAutomationIds([
+				automation.id,
+			]);
+
+			return {
+				...automation,
+				tags: tagsByAutomationId.get(automation.id) ?? [],
+			};
 		}),
 
 	getTags: publicProcedure.query(async () => {
-		const tags = await prisma.tag.findMany({
-			orderBy: { name: "asc" },
-			include: {
-				_count: {
-					select: { automations: true },
-				},
-			},
-		});
+		const rows = await db
+			.selectFrom("tag as t")
+			.leftJoin("_AutomationToTag as at", "t.id", "at.B")
+			.select(["t.id", "t.name", "t.slug"])
+			.select((eb) => eb.fn.count("at.A").as("automationCount"))
+			.groupBy(["t.id", "t.name", "t.slug"])
+			.orderBy("t.name", "asc")
+			.execute();
 
-		return tags.filter((tag) => tag._count.automations > 0);
+		return rows
+			.map((row) => ({
+				id: row.id,
+				name: row.name,
+				slug: row.slug,
+				_count: { automations: Number(row.automationCount ?? 0) },
+			}))
+			.filter((tag) => tag._count.automations > 0);
 	}),
 
 	getRelatedAutomations: publicProcedure
@@ -117,41 +202,58 @@ export const automationRouter = router({
 			})
 		)
 		.query(async ({ input }) => {
-			const currentAutomation = await prisma.automation.findFirst({
-				where: { slug: input.slug, published: true },
-				include: { tags: true },
-			});
+			const currentAutomation = await db
+				.selectFrom("automation")
+				.selectAll()
+				.where("slug", "=", input.slug)
+				.where("published", "=", true)
+				.executeTakeFirst();
 
 			if (!currentAutomation) {
 				return [];
 			}
 
-			const tagIds = currentAutomation.tags.map((tag) => tag.id);
+			const tagLinks = await db
+				.selectFrom("_AutomationToTag")
+				.select(["B"])
+				.where("A", "=", currentAutomation.id)
+				.execute();
 
-			const relatedAutomations = await prisma.automation.findMany({
-				where: {
-					published: true,
-					id: { not: currentAutomation.id },
-					tags: {
-						some: {
-							id: { in: tagIds },
-						},
-					},
-				},
-				orderBy: { publishedAt: "desc" },
-				take: input.limit,
-				include: {
-					tags: {
-						select: {
-							id: true,
-							name: true,
-							slug: true,
-						},
-					},
-				},
-			});
+			const tagIds = tagLinks.map((link) => link.B);
+			if (tagIds.length === 0) {
+				return [];
+			}
 
-			return relatedAutomations;
+			const relatedIdsRows = await db
+				.selectFrom("_AutomationToTag")
+				.select(["A"])
+				.where("B", "in", tagIds)
+				.where("A", "<>", currentAutomation.id)
+				.distinct()
+				.execute();
+
+			const relatedIds = relatedIdsRows.map((row) => row.A);
+			if (relatedIds.length === 0) {
+				return [];
+			}
+
+			const relatedAutomations = await db
+				.selectFrom("automation")
+				.selectAll()
+				.where("published", "=", true)
+				.where("id", "in", relatedIds)
+				.orderBy("publishedAt", "desc")
+				.limit(input.limit)
+				.execute();
+
+			const tagsByAutomationId = await fetchTagsByAutomationIds(
+				relatedAutomations.map((automation) => automation.id)
+			);
+
+			return relatedAutomations.map((automation) => ({
+				...automation,
+				tags: tagsByAutomationId.get(automation.id) ?? [],
+			}));
 		}),
 
 	// Admin endpoints
@@ -168,38 +270,46 @@ export const automationRouter = router({
 			const { page, limit, search, status } = input;
 			const skip = (page - 1) * limit;
 
-			const where = {
-				...(status === "published" && { published: true }),
-				...(status === "draft" && { published: false }),
-				...(search && {
-					OR: [
-						{ title: { contains: search, mode: "insensitive" as const } },
-						{ content: { contains: search, mode: "insensitive" as const } },
-					],
-				}),
-			};
+			let query = db.selectFrom("automation").selectAll();
 
-			const [automations, total] = await Promise.all([
-				prisma.automation.findMany({
-					where,
-					orderBy: { createdAt: "desc" },
-					skip,
-					take: limit,
-					include: {
-						tags: {
-							select: {
-								id: true,
-								name: true,
-								slug: true,
-							},
-						},
-					},
-				}),
-				prisma.automation.count({ where }),
+			if (status === "published") {
+				query = query.where("published", "=", true);
+			}
+			if (status === "draft") {
+				query = query.where("published", "=", false);
+			}
+			if (search) {
+				query = query.where(
+					sql<boolean>`("title" ILIKE ${`%${search}%`} OR "content" ILIKE ${`%${search}%`})`
+				);
+			}
+
+			const [automations, totalRow] = await Promise.all([
+				query.orderBy("createdAt", "desc").limit(limit).offset(skip).execute(),
+				db
+					.selectFrom("automation")
+					.select((eb) => eb.fn.count("id").as("count"))
+					.$if(status === "published", (qb) => qb.where("published", "=", true))
+					.$if(status === "draft", (qb) => qb.where("published", "=", false))
+					.$if(!!search, (qb) =>
+						qb.where(
+							sql<boolean>`("title" ILIKE ${`%${search}%`} OR "content" ILIKE ${`%${search}%`})`
+						)
+					)
+					.executeTakeFirst(),
 			]);
 
+			const tagsByAutomationId = await fetchTagsByAutomationIds(
+				automations.map((automation) => automation.id)
+			);
+
+			const total = Number(totalRow?.count ?? 0);
+
 			return {
-				automations,
+				automations: automations.map((automation) => ({
+					...automation,
+					tags: tagsByAutomationId.get(automation.id) ?? [],
+				})),
 				pagination: {
 					page,
 					limit,
@@ -214,18 +324,11 @@ export const automationRouter = router({
 	getById: adminProcedure
 		.input(z.object({ id: z.string() }))
 		.query(async ({ input }) => {
-			const automation = await prisma.automation.findUnique({
-				where: { id: input.id },
-				include: {
-					tags: {
-						select: {
-							id: true,
-							name: true,
-							slug: true,
-						},
-					},
-				},
-			});
+			const automation = await db
+				.selectFrom("automation")
+				.selectAll()
+				.where("id", "=", input.id)
+				.executeTakeFirst();
 
 			if (!automation) {
 				throw new TRPCError({
@@ -234,20 +337,37 @@ export const automationRouter = router({
 				});
 			}
 
-			return automation;
+			const tagsByAutomationId = await fetchTagsByAutomationIds([
+				automation.id,
+			]);
+
+			return {
+				...automation,
+				tags: tagsByAutomationId.get(automation.id) ?? [],
+			};
 		}),
 
 	getAllTags: adminProcedure.query(async () => {
-		const tags = await prisma.tag.findMany({
-			orderBy: { name: "asc" },
-			include: {
-				_count: {
-					select: { posts: true, automations: true },
-				},
-			},
-		});
+		const rows = await db
+			.selectFrom("tag as t")
+			.leftJoin("_BlogPostToTag as bt", "t.id", "bt.B")
+			.leftJoin("_AutomationToTag as at", "t.id", "at.B")
+			.select(["t.id", "t.name", "t.slug"])
+			.select((eb) => eb.fn.count("bt.A").as("postsCount"))
+			.select((eb) => eb.fn.count("at.A").as("automationsCount"))
+			.groupBy(["t.id", "t.name", "t.slug"])
+			.orderBy("t.name", "asc")
+			.execute();
 
-		return tags;
+		return rows.map((row) => ({
+			id: row.id,
+			name: row.name,
+			slug: row.slug,
+			_count: {
+				posts: Number(row.postsCount ?? 0),
+				automations: Number(row.automationsCount ?? 0),
+			},
+		}));
 	}),
 
 	create: adminProcedure
@@ -277,9 +397,11 @@ export const automationRouter = router({
 				const { tagIds, ...data } = input;
 
 				// Check if slug is unique
-				const existingAutomation = await prisma.automation.findUnique({
-					where: { slug: data.slug },
-				});
+				const existingAutomation = await db
+					.selectFrom("automation")
+					.select(["id"])
+					.where("slug", "=", data.slug)
+					.executeTakeFirst();
 
 				if (existingAutomation) {
 					throw new TRPCError({
@@ -289,26 +411,28 @@ export const automationRouter = router({
 				}
 
 				// Create the automation
-				const automation = await prisma.automation.create({
-					data: {
+				const automation = await db
+					.insertInto("automation")
+					.values({
+						id: crypto.randomUUID(),
 						...data,
 						publishedAt: data.published ? new Date() : null,
-						...(tagIds.length > 0 && {
-							tags: {
-								connect: tagIds.map((id) => ({ id })),
-							},
-						}),
-					},
-					include: {
-						tags: {
-							select: {
-								id: true,
-								name: true,
-								slug: true,
-							},
-						},
-					},
-				});
+						createdAt: new Date(),
+						updatedAt: new Date(),
+					})
+					.returningAll()
+					.executeTakeFirstOrThrow();
+
+				if (tagIds.length > 0) {
+					await db
+						.insertInto("_AutomationToTag")
+						.values(tagIds.map((id) => ({ A: automation.id, B: id })))
+						.execute();
+				}
+
+				const tagsByAutomationId = await fetchTagsByAutomationIds([
+					automation.id,
+				]);
 
 				// Log activity (non-blocking, errors are caught internally)
 				await logActivity({
@@ -321,7 +445,10 @@ export const automationRouter = router({
 					userAgent: ctx.userAgent,
 				});
 
-				return automation;
+				return {
+					...automation,
+					tags: tagsByAutomationId.get(automation.id) ?? [],
+				};
 			} catch (error) {
 				console.error("Error creating automation:", error);
 
@@ -372,9 +499,11 @@ export const automationRouter = router({
 			const { id, tagIds, ...data } = input;
 
 			// Find the existing automation
-			const existingAutomation = await prisma.automation.findUnique({
-				where: { id },
-			});
+			const existingAutomation = await db
+				.selectFrom("automation")
+				.selectAll()
+				.where("id", "=", id)
+				.executeTakeFirst();
 
 			if (!existingAutomation) {
 				throw new TRPCError({
@@ -385,9 +514,11 @@ export const automationRouter = router({
 
 			// Check if slug is unique (if changing)
 			if (data.slug && data.slug !== existingAutomation.slug) {
-				const automationWithSlug = await prisma.automation.findUnique({
-					where: { slug: data.slug },
-				});
+				const automationWithSlug = await db
+					.selectFrom("automation")
+					.select(["id"])
+					.where("slug", "=", data.slug)
+					.executeTakeFirst();
 
 				if (automationWithSlug) {
 					throw new TRPCError({
@@ -409,37 +540,52 @@ export const automationRouter = router({
 				}
 			}
 
-			const automation = await prisma.automation.update({
-				where: { id },
-				data: {
-					...data,
-					publishedAt,
-					...(tagIds && {
-						tags: {
-							set: tagIds.map((tagId) => ({ id: tagId })),
-						},
-					}),
-				},
-				include: {
-					tags: {
-						select: {
-							id: true,
-							name: true,
-							slug: true,
-						},
-					},
-				},
+			const automation = await db.transaction().execute(async (trx) => {
+				const updated = await trx
+					.updateTable("automation")
+					.set({
+						...data,
+						publishedAt,
+					})
+					.where("id", "=", id)
+					.returningAll()
+					.executeTakeFirstOrThrow();
+
+				if (tagIds) {
+					await trx
+						.deleteFrom("_AutomationToTag")
+						.where("A", "=", id)
+						.execute();
+
+					if (tagIds.length > 0) {
+						await trx
+							.insertInto("_AutomationToTag")
+							.values(tagIds.map((tagId) => ({ A: id, B: tagId })))
+							.execute();
+					}
+				}
+
+				return updated;
 			});
 
-			return automation;
+			const tagsByAutomationId = await fetchTagsByAutomationIds([
+				automation.id,
+			]);
+
+			return {
+				...automation,
+				tags: tagsByAutomationId.get(automation.id) ?? [],
+			};
 		}),
 
 	delete: adminProcedure
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ input }) => {
-			const existingAutomation = await prisma.automation.findUnique({
-				where: { id: input.id },
-			});
+			const existingAutomation = await db
+				.selectFrom("automation")
+				.select(["id"])
+				.where("id", "=", input.id)
+				.executeTakeFirst();
 
 			if (!existingAutomation) {
 				throw new TRPCError({
@@ -448,8 +594,12 @@ export const automationRouter = router({
 				});
 			}
 
-			await prisma.automation.delete({
-				where: { id: input.id },
+			await db.transaction().execute(async (trx) => {
+				await trx
+					.deleteFrom("_AutomationToTag")
+					.where("A", "=", input.id)
+					.execute();
+				await trx.deleteFrom("automation").where("id", "=", input.id).execute();
 			});
 
 			return { success: true };
@@ -464,9 +614,11 @@ export const automationRouter = router({
 		)
 		.mutation(async ({ input }) => {
 			// Check if slug is unique
-			const existingTag = await prisma.tag.findUnique({
-				where: { slug: input.slug },
-			});
+			const existingTag = await db
+				.selectFrom("tag")
+				.select(["id"])
+				.where("slug", "=", input.slug)
+				.executeTakeFirst();
 
 			if (existingTag) {
 				throw new TRPCError({
@@ -475,10 +627,13 @@ export const automationRouter = router({
 				});
 			}
 
-			const tag = await prisma.tag.create({
-				data: input,
-			});
-
-			return tag;
+			return db
+				.insertInto("tag")
+				.values({
+					id: crypto.randomUUID(),
+					...input,
+				})
+				.returningAll()
+				.executeTakeFirstOrThrow();
 		}),
 });

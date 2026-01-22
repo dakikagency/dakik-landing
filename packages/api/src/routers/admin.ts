@@ -1,5 +1,6 @@
-import prisma, { type Prisma } from "@collab/db";
+import { db } from "@collab/db";
 import { TRPCError } from "@trpc/server";
+import { sql } from "kysely";
 import { z } from "zod";
 
 import {
@@ -25,43 +26,123 @@ export interface Activity {
 	timestamp: Date;
 }
 
-// Helper to build text search conditions for projects
-const buildSearchConditions = (
-	searchTerm: string
-): Prisma.ProjectWhereInput => ({
-	OR: [
-		{ title: { contains: searchTerm, mode: "insensitive" } },
-		{ description: { contains: searchTerm, mode: "insensitive" } },
-		{
-			customer: {
-				user: { name: { contains: searchTerm, mode: "insensitive" } },
-			},
-		},
-		{
-			customer: {
-				companyName: { contains: searchTerm, mode: "insensitive" },
-			},
-		},
-	],
-});
+type ProjectSortBy =
+	| "createdAt"
+	| "updatedAt"
+	| "title"
+	| "progress"
+	| "startDate"
+	| "endDate";
 
-// Helper to build date range conditions for projects
-const buildDateRangeConditions = (
-	field: "startDate" | "endDate" | "createdAt",
-	from?: Date,
-	to?: Date
-): Prisma.ProjectWhereInput | null => {
-	if (!(from || to)) {
-		return null;
+const getProjectSortColumn = (sortBy?: ProjectSortBy): string => {
+	switch (sortBy) {
+		case "title":
+			return "p.title";
+		case "progress":
+			return "p.progress";
+		case "startDate":
+			return "p.startDate";
+		case "endDate":
+			return "p.endDate";
+		case "updatedAt":
+			return "p.updatedAt";
+		default:
+			return "p.createdAt";
 	}
-	const condition: Record<string, unknown> = {};
-	if (from) {
-		condition.gte = from;
+};
+
+const applyProjectFilters = (
+	query: ReturnType<typeof db.selectFrom>,
+	filters: {
+		search?: string;
+		status?: string;
+		statuses?: string[];
+		progressMin?: number;
+		progressMax?: number;
+		startDateFrom?: Date;
+		startDateTo?: Date;
+		endDateFrom?: Date;
+		endDateTo?: Date;
+		createdFrom?: Date;
+		createdTo?: Date;
+		customerId?: string;
 	}
-	if (to) {
-		condition.lte = to;
+) => {
+	const {
+		search,
+		status,
+		statuses,
+		progressMin,
+		progressMax,
+		startDateFrom,
+		startDateTo,
+		endDateFrom,
+		endDateTo,
+		createdFrom,
+		createdTo,
+		customerId,
+	} = filters;
+
+	return query
+		.$if(!!search, (qb) =>
+			qb.where(
+				sql<boolean>`("p"."title" ILIKE ${`%${search}%`} OR "p"."description" ILIKE ${`%${search}%`} OR "u"."name" ILIKE ${`%${search}%`} OR "c"."companyName" ILIKE ${`%${search}%`})`
+			)
+		)
+		.$if(!!status, (qb) => qb.where("p.status", "=", status))
+		.$if(!!statuses?.length, (qb) => qb.where("p.status", "in", statuses))
+		.$if(progressMin !== undefined, (qb) =>
+			qb.where("p.progress", ">=", progressMin)
+		)
+		.$if(progressMax !== undefined, (qb) =>
+			qb.where("p.progress", "<=", progressMax)
+		)
+		.$if(!!startDateFrom, (qb) => qb.where("p.startDate", ">=", startDateFrom))
+		.$if(!!startDateTo, (qb) => qb.where("p.startDate", "<=", startDateTo))
+		.$if(!!endDateFrom, (qb) => qb.where("p.endDate", ">=", endDateFrom))
+		.$if(!!endDateTo, (qb) => qb.where("p.endDate", "<=", endDateTo))
+		.$if(!!createdFrom, (qb) => qb.where("p.createdAt", ">=", createdFrom))
+		.$if(!!createdTo, (qb) => qb.where("p.createdAt", "<=", createdTo))
+		.$if(!!customerId, (qb) => qb.where("p.customerId", "=", customerId));
+};
+
+const applyProjectCursor = async (
+	query: ReturnType<typeof db.selectFrom>,
+	params: {
+		cursor?: string;
+		sortColumn: string;
+		orderDirection: "asc" | "desc";
 	}
-	return { [field]: condition };
+) => {
+	const { cursor, sortColumn, orderDirection } = params;
+	if (!cursor) {
+		return query;
+	}
+
+	const cursorRow = await db
+		.selectFrom("project as p")
+		.select(sql.ref(sortColumn).as("cursor_value"))
+		.where("p.id", "=", cursor)
+		.executeTakeFirst();
+
+	const cursorValue = cursorRow?.cursor_value;
+	if (cursorValue === undefined || cursorValue === null) {
+		return query;
+	}
+
+	return query.where((eb) =>
+		eb.or([
+			eb(
+				sql.ref(sortColumn),
+				orderDirection === "asc" ? ">" : "<",
+				cursorValue
+			),
+			eb.and([
+				eb(sql.ref(sortColumn), "=", cursorValue),
+				eb("p.id", orderDirection === "asc" ? ">" : "<", cursor),
+			]),
+		])
+	);
 };
 
 export const adminRouter = router({
@@ -71,92 +152,101 @@ export const adminRouter = router({
 
 		// Get all metrics in parallel
 		const [
-			totalCustomers,
-			activeProjects,
-			newLeadsThisWeek,
-			upcomingMeetings,
+			totalCustomersRow,
+			activeProjectsRow,
+			newLeadsThisWeekRow,
+			upcomingMeetingsRow,
 			recentLeads,
-			recentMeetings,
-			recentCustomers,
+			recentMeetingsRows,
+			recentCustomersRows,
 		] = await Promise.all([
 			// Total customers count
-			prisma.customer.count(),
+			db
+				.selectFrom("customer")
+				.select((eb) => eb.fn.count("id").as("count"))
+				.executeTakeFirst(),
 
 			// Active projects count
-			prisma.project.count({
-				where: {
-					status: "IN_PROGRESS",
-				},
-			}),
+			db
+				.selectFrom("project")
+				.select((eb) => eb.fn.count("id").as("count"))
+				.where("status", "=", "IN_PROGRESS")
+				.executeTakeFirst(),
 
 			// New leads this week
-			prisma.lead.count({
-				where: {
-					createdAt: {
-						gte: oneWeekAgo,
-					},
-				},
-			}),
+			db
+				.selectFrom("lead")
+				.select((eb) => eb.fn.count("id").as("count"))
+				.where("createdAt", ">=", oneWeekAgo)
+				.executeTakeFirst(),
 
 			// Upcoming meetings count
-			prisma.meeting.count({
-				where: {
-					status: "SCHEDULED",
-					scheduledAt: {
-						gte: now,
-					},
-				},
-			}),
+			db
+				.selectFrom("meeting")
+				.select((eb) => eb.fn.count("id").as("count"))
+				.where("status", "=", "SCHEDULED")
+				.where("scheduledAt", ">=", now)
+				.executeTakeFirst(),
 
 			// Recent leads (last 5)
-			prisma.lead.findMany({
-				take: 5,
-				orderBy: { createdAt: "desc" },
-				select: {
-					id: true,
-					name: true,
-					email: true,
-					projectType: true,
-					status: true,
-					createdAt: true,
-				},
-			}),
+			db
+				.selectFrom("lead")
+				.select(["id", "name", "email", "projectType", "status", "createdAt"])
+				.orderBy("createdAt", "desc")
+				.limit(5)
+				.execute(),
 
 			// Recent meetings (last 5)
-			prisma.meeting.findMany({
-				take: 5,
-				orderBy: { createdAt: "desc" },
-				select: {
-					id: true,
-					title: true,
-					scheduledAt: true,
-					status: true,
-					lead: {
-						select: { name: true },
-					},
-					customer: {
-						select: {
-							user: {
-								select: { name: true },
-							},
-						},
-					},
-				},
-			}),
+			db
+				.selectFrom("meeting as m")
+				.leftJoin("lead as l", "l.id", "m.leadId")
+				.leftJoin("customer as c", "c.id", "m.customerId")
+				.leftJoin("user as u", "u.id", "c.userId")
+				.select([
+					"m.id",
+					"m.title",
+					"m.scheduledAt",
+					"m.status",
+					"l.name as lead_name",
+					"u.name as customer_user_name",
+				])
+				.orderBy("m.createdAt", "desc")
+				.limit(5)
+				.execute(),
 
 			// Recent customers (last 5)
-			prisma.customer.findMany({
-				take: 5,
-				orderBy: { createdAt: "desc" },
-				select: {
-					id: true,
-					createdAt: true,
-					user: {
-						select: { name: true },
-					},
-				},
-			}),
+			db
+				.selectFrom("customer as c")
+				.innerJoin("user as u", "u.id", "c.userId")
+				.select(["c.id", "c.createdAt", "u.name as user_name"])
+				.orderBy("c.createdAt", "desc")
+				.limit(5)
+				.execute(),
 		]);
+
+		const totalCustomers = Number(totalCustomersRow?.count ?? 0);
+		const activeProjects = Number(activeProjectsRow?.count ?? 0);
+		const newLeadsThisWeek = Number(newLeadsThisWeekRow?.count ?? 0);
+		const upcomingMeetings = Number(upcomingMeetingsRow?.count ?? 0);
+
+		const recentMeetings = recentMeetingsRows.map((meeting) => ({
+			id: meeting.id,
+			title: meeting.title,
+			scheduledAt: meeting.scheduledAt,
+			status: meeting.status,
+			lead: meeting.lead_name ? { name: meeting.lead_name } : null,
+			customer: meeting.customer_user_name
+				? { user: { name: meeting.customer_user_name } }
+				: null,
+		}));
+
+		const recentCustomers = recentCustomersRows.map((customer) => ({
+			id: customer.id,
+			createdAt: customer.createdAt,
+			user: {
+				name: customer.user_name,
+			},
+		}));
 
 		// Build recent activity from various sources
 		const recentActivity: Activity[] = [
@@ -225,87 +315,135 @@ export const adminRouter = router({
 				limit,
 			} = input;
 
-			// Build where conditions
-			const whereConditions: Prisma.CustomerWhereInput[] = [];
+			let query = db
+				.selectFrom("customer as c")
+				.innerJoin("user as u", "u.id", "c.userId")
+				.select([
+					"c.id",
+					"c.companyName",
+					"c.phone",
+					"c.createdAt",
+					"u.id as user_id",
+					"u.name as user_name",
+					"u.email as user_email",
+					"u.image as user_image",
+				]);
 
-			// Text search
 			if (search) {
-				whereConditions.push({
-					OR: [
-						{ user: { name: { contains: search, mode: "insensitive" } } },
-						{ user: { email: { contains: search, mode: "insensitive" } } },
-						{ companyName: { contains: search, mode: "insensitive" } },
-						{ phone: { contains: search, mode: "insensitive" } },
-					],
-				});
+				query = query.where(
+					sql<boolean>`("u"."name" ILIKE ${`%${search}%`} OR "u"."email" ILIKE ${`%${search}%`} OR "c"."companyName" ILIKE ${`%${search}%`} OR "c"."phone" ILIKE ${`%${search}%`})`
+				);
 			}
 
-			// Has projects filter
 			if (hasProjects === true) {
-				whereConditions.push({
-					projects: { some: {} },
-				});
+				query = query.where((eb) =>
+					eb.exists(
+						db
+							.selectFrom("project")
+							.select("id")
+							.whereRef("project.customerId", "=", "c.id")
+					)
+				);
 			} else if (hasProjects === false) {
-				whereConditions.push({
-					projects: { none: {} },
-				});
+				query = query.where((eb) =>
+					eb.not(
+						eb.exists(
+							db
+								.selectFrom("project")
+								.select("id")
+								.whereRef("project.customerId", "=", "c.id")
+						)
+					)
+				);
 			}
 
-			// Has contracts filter
 			if (hasContracts === true) {
-				whereConditions.push({
-					contracts: { some: {} },
-				});
+				query = query.where((eb) =>
+					eb.exists(
+						db
+							.selectFrom("contract")
+							.select("id")
+							.whereRef("contract.customerId", "=", "c.id")
+					)
+				);
 			} else if (hasContracts === false) {
-				whereConditions.push({
-					contracts: { none: {} },
-				});
+				query = query.where((eb) =>
+					eb.not(
+						eb.exists(
+							db
+								.selectFrom("contract")
+								.select("id")
+								.whereRef("contract.customerId", "=", "c.id")
+						)
+					)
+				);
 			}
 
-			// Date range filter
-			if (dateFrom || dateTo) {
-				whereConditions.push({
-					createdAt: {
-						...(dateFrom && { gte: dateFrom }),
-						...(dateTo && { lte: dateTo }),
-					},
-				});
+			if (dateFrom) {
+				query = query.where("c.createdAt", ">=", dateFrom);
+			}
+			if (dateTo) {
+				query = query.where("c.createdAt", "<=", dateTo);
 			}
 
-			// Determine sort field and order
-			let orderBy: Prisma.CustomerFindManyArgs["orderBy"];
-			if (sortBy === "name" || sortBy === "email") {
-				orderBy = { user: { [sortBy]: sortOrder ?? "desc" } };
+			const orderDirection = sortOrder ?? "desc";
+			if (sortBy === "name") {
+				query = query.orderBy("u.name", orderDirection);
+			} else if (sortBy === "email") {
+				query = query.orderBy("u.email", orderDirection);
+			} else if (sortBy === "companyName") {
+				query = query.orderBy("c.companyName", orderDirection);
 			} else {
-				orderBy = { [sortBy ?? "createdAt"]: sortOrder ?? "desc" };
+				query = query.orderBy("c.createdAt", orderDirection);
 			}
+			query = query.orderBy("c.id", orderDirection);
 
-			const customers = await prisma.customer.findMany({
-				where:
-					whereConditions.length > 0 ? { AND: whereConditions } : undefined,
-				take: limit,
-				orderBy,
-				select: {
-					id: true,
-					companyName: true,
-					phone: true,
-					createdAt: true,
-					user: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-							image: true,
-						},
-					},
-					_count: {
-						select: {
-							projects: true,
-							contracts: true,
-						},
-					},
+			const customerRows = await query.limit(limit).execute();
+			const customerIds = customerRows.map((customer) => customer.id);
+
+			const projectCounts = customerIds.length
+				? await db
+						.selectFrom("project")
+						.select(["customerId"])
+						.select((eb) => eb.fn.count("id").as("count"))
+						.where("customerId", "in", customerIds)
+						.groupBy("customerId")
+						.execute()
+				: [];
+
+			const contractCounts = customerIds.length
+				? await db
+						.selectFrom("contract")
+						.select(["customerId"])
+						.select((eb) => eb.fn.count("id").as("count"))
+						.where("customerId", "in", customerIds)
+						.groupBy("customerId")
+						.execute()
+				: [];
+
+			const projectCountByCustomer = new Map(
+				projectCounts.map((row) => [row.customerId, Number(row.count ?? 0)])
+			);
+			const contractCountByCustomer = new Map(
+				contractCounts.map((row) => [row.customerId, Number(row.count ?? 0)])
+			);
+
+			const customers = customerRows.map((customer) => ({
+				id: customer.id,
+				companyName: customer.companyName,
+				phone: customer.phone,
+				createdAt: customer.createdAt,
+				user: {
+					id: customer.user_id,
+					name: customer.user_name,
+					email: customer.user_email,
+					image: customer.user_image,
 				},
-			});
+				_count: {
+					projects: projectCountByCustomer.get(customer.id) ?? 0,
+					contracts: contractCountByCustomer.get(customer.id) ?? 0,
+				},
+			}));
 
 			// Filter by project count if needed (done in memory as Prisma doesn't support count filters directly)
 			let filteredCustomers = customers;
@@ -328,25 +466,11 @@ export const adminRouter = router({
 	getLead: adminProcedure
 		.input(z.object({ id: z.string() }))
 		.query(async ({ input }) => {
-			const lead = await prisma.lead.findUnique({
-				where: { id: input.id },
-				include: {
-					meetings: {
-						orderBy: { scheduledAt: "desc" },
-						select: {
-							id: true,
-							title: true,
-							description: true,
-							scheduledAt: true,
-							duration: true,
-							status: true,
-							meetUrl: true,
-							eventId: true,
-							createdAt: true,
-						},
-					},
-				},
-			});
+			const lead = await db
+				.selectFrom("lead")
+				.selectAll()
+				.where("id", "=", input.id)
+				.executeTakeFirst();
 
 			if (!lead) {
 				throw new TRPCError({
@@ -355,7 +479,27 @@ export const adminRouter = router({
 				});
 			}
 
-			return lead;
+			const meetings = await db
+				.selectFrom("meeting")
+				.select([
+					"id",
+					"title",
+					"description",
+					"scheduledAt",
+					"duration",
+					"status",
+					"meetUrl",
+					"eventId",
+					"createdAt",
+				])
+				.where("leadId", "=", input.id)
+				.orderBy("scheduledAt", "desc")
+				.execute();
+
+			return {
+				...lead,
+				meetings,
+			};
 		}),
 
 	getLeads: adminProcedure
@@ -387,111 +531,84 @@ export const adminRouter = router({
 				limit,
 			} = input;
 
-			// Build where conditions
-			const whereConditions: Prisma.LeadWhereInput[] = [];
+			let query = db
+				.selectFrom("lead")
+				.select([
+					"id",
+					"name",
+					"email",
+					"projectType",
+					"budget",
+					"details",
+					"status",
+					"createdAt",
+					"updatedAt",
+				]);
 
-			// Text search
 			if (search) {
-				whereConditions.push({
-					OR: [
-						{ name: { contains: search, mode: "insensitive" } },
-						{ email: { contains: search, mode: "insensitive" } },
-						{ details: { contains: search, mode: "insensitive" } },
-					],
-				});
+				query = query.where(
+					sql<boolean>`("name" ILIKE ${`%${search}%`} OR "email" ILIKE ${`%${search}%`} OR "details" ILIKE ${`%${search}%`})`
+				);
 			}
 
-			// Single status filter (backward compatibility)
 			if (status) {
-				whereConditions.push({
-					status: status as
-						| "NEW"
-						| "CONTACTED"
-						| "MEETING_SCHEDULED"
-						| "MEETING_COMPLETED"
-						| "CONVERTED"
-						| "CLOSED",
-				});
+				query = query.where("status", "=", status);
 			}
 
-			// Multi-select statuses
 			if (statuses && statuses.length > 0) {
-				whereConditions.push({
-					status: {
-						in: statuses as (
-							| "NEW"
-							| "CONTACTED"
-							| "MEETING_SCHEDULED"
-							| "MEETING_COMPLETED"
-							| "CONVERTED"
-							| "CLOSED"
-						)[],
-					},
-				});
+				query = query.where("status", "in", statuses);
 			}
 
-			// Multi-select project types
 			if (projectTypes && projectTypes.length > 0) {
-				whereConditions.push({
-					projectType: {
-						in: projectTypes as (
-							| "AI_AUTOMATION"
-							| "BRAND_IDENTITY"
-							| "WEB_MOBILE"
-							| "FULL_PRODUCT"
-						)[],
-					},
-				});
+				query = query.where("projectType", "in", projectTypes);
 			}
 
-			// Multi-select budgets
 			if (budgets && budgets.length > 0) {
-				whereConditions.push({
-					budget: {
-						in: budgets as (
-							| "RANGE_5K_10K"
-							| "RANGE_10K_25K"
-							| "RANGE_25K_50K"
-							| "RANGE_50K_PLUS"
-						)[],
-					},
-				});
+				query = query.where("budget", "in", budgets);
 			}
 
-			// Date range filter
-			if (dateFrom || dateTo) {
-				whereConditions.push({
-					createdAt: {
-						...(dateFrom && { gte: dateFrom }),
-						...(dateTo && { lte: dateTo }),
-					},
-				});
+			if (dateFrom) {
+				query = query.where("createdAt", ">=", dateFrom);
+			}
+			if (dateTo) {
+				query = query.where("createdAt", "<=", dateTo);
 			}
 
-			const leads = await prisma.lead.findMany({
-				where:
-					whereConditions.length > 0 ? { AND: whereConditions } : undefined,
-				take: limit,
-				orderBy: { [sortBy ?? "createdAt"]: sortOrder ?? "desc" },
-				select: {
-					id: true,
-					name: true,
-					email: true,
-					projectType: true,
-					budget: true,
-					details: true,
-					status: true,
-					createdAt: true,
-					updatedAt: true,
-					_count: {
-						select: {
-							meetings: true,
-						},
-					},
+			const orderDirection = sortOrder ?? "desc";
+			if (sortBy === "name") {
+				query = query.orderBy("name", orderDirection);
+			} else if (sortBy === "email") {
+				query = query.orderBy("email", orderDirection);
+			} else if (sortBy === "updatedAt") {
+				query = query.orderBy("updatedAt", orderDirection);
+			} else {
+				query = query.orderBy("createdAt", orderDirection);
+			}
+			query = query.orderBy("id", orderDirection);
+
+			const leads = await query.limit(limit).execute();
+			const leadIds = leads.map((lead) => lead.id);
+
+			const meetingCounts = leadIds.length
+				? await db
+						.selectFrom("meeting")
+						.select(["leadId"])
+						.select((eb) => eb.fn.count("id").as("count"))
+						.where("leadId", "in", leadIds)
+						.groupBy("leadId")
+						.execute()
+				: [];
+
+			const meetingCountByLead = new Map(
+				meetingCounts.map((row) => [row.leadId, Number(row.count ?? 0)])
+			);
+
+			return leads.map((lead) => ({
+				...lead,
+				_count: {
+					meetings: meetingCountByLead.get(lead.id) ?? 0,
 				},
-			});
-
-			return leads;
+			}));
 		}),
 
 	getMeetings: adminProcedure
@@ -527,116 +644,104 @@ export const adminRouter = router({
 				limit,
 			} = input;
 
-			// Build where conditions
-			const whereConditions: Prisma.MeetingWhereInput[] = [];
+			let query = db
+				.selectFrom("meeting as m")
+				.leftJoin("lead as l", "l.id", "m.leadId")
+				.leftJoin("customer as c", "c.id", "m.customerId")
+				.leftJoin("user as u", "u.id", "c.userId")
+				.select([
+					"m.id",
+					"m.title",
+					"m.description",
+					"m.scheduledAt",
+					"m.duration",
+					"m.status",
+					"m.meetUrl",
+					"m.eventId",
+					"m.createdAt",
+					"l.id as lead_id",
+					"l.name as lead_name",
+					"l.email as lead_email",
+					"c.id as customer_id",
+					"u.name as customer_user_name",
+					"u.email as customer_user_email",
+				]);
 
-			// Text search
 			if (search) {
-				whereConditions.push({
-					OR: [
-						{ title: { contains: search, mode: "insensitive" } },
-						{ description: { contains: search, mode: "insensitive" } },
-						{ lead: { name: { contains: search, mode: "insensitive" } } },
-						{ lead: { email: { contains: search, mode: "insensitive" } } },
-						{
-							customer: {
-								user: { name: { contains: search, mode: "insensitive" } },
-							},
-						},
-						{
-							customer: {
-								user: { email: { contains: search, mode: "insensitive" } },
-							},
-						},
-					],
-				});
+				query = query.where(
+					sql<boolean>`("m"."title" ILIKE ${`%${search}%`} OR "m"."description" ILIKE ${`%${search}%`} OR "l"."name" ILIKE ${`%${search}%`} OR "l"."email" ILIKE ${`%${search}%`} OR "u"."name" ILIKE ${`%${search}%`} OR "u"."email" ILIKE ${`%${search}%`})`
+				);
 			}
 
-			// Single status filter (backward compatibility)
 			if (status) {
-				whereConditions.push({
-					status: status as "SCHEDULED" | "COMPLETED" | "CANCELLED" | "NO_SHOW",
-				});
+				query = query.where("m.status", "=", status);
 			}
 
-			// Multi-select statuses
 			if (statuses && statuses.length > 0) {
-				whereConditions.push({
-					status: {
-						in: statuses as (
-							| "SCHEDULED"
-							| "COMPLETED"
-							| "CANCELLED"
-							| "NO_SHOW"
-						)[],
-					},
-				});
+				query = query.where("m.status", "in", statuses);
 			}
 
-			// Date range filter
-			if (startDate || endDate) {
-				whereConditions.push({
-					scheduledAt: {
-						...(startDate && { gte: startDate }),
-						...(endDate && { lte: endDate }),
-					},
-				});
+			if (startDate) {
+				query = query.where("m.scheduledAt", ">=", startDate);
+			}
+			if (endDate) {
+				query = query.where("m.scheduledAt", "<=", endDate);
 			}
 
-			// Duration filter
-			if (durationMin !== undefined || durationMax !== undefined) {
-				whereConditions.push({
-					duration: {
-						...(durationMin !== undefined && { gte: durationMin }),
-						...(durationMax !== undefined && { lte: durationMax }),
-					},
-				});
+			if (durationMin !== undefined) {
+				query = query.where("m.duration", ">=", durationMin);
+			}
+			if (durationMax !== undefined) {
+				query = query.where("m.duration", "<=", durationMax);
 			}
 
-			// Attendee type filter
 			if (attendeeType === "lead") {
-				whereConditions.push({ leadId: { not: null } });
+				query = query.where("m.leadId", "is not", null);
 			} else if (attendeeType === "customer") {
-				whereConditions.push({ customerId: { not: null } });
+				query = query.where("m.customerId", "is not", null);
 			}
 
-			const meetings = await prisma.meeting.findMany({
-				where:
-					whereConditions.length > 0 ? { AND: whereConditions } : undefined,
-				take: limit,
-				orderBy: { [sortBy ?? "scheduledAt"]: sortOrder ?? "desc" },
-				select: {
-					id: true,
-					title: true,
-					description: true,
-					scheduledAt: true,
-					duration: true,
-					status: true,
-					meetUrl: true,
-					eventId: true,
-					createdAt: true,
-					lead: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-						},
-					},
-					customer: {
-						select: {
-							id: true,
-							user: {
-								select: {
-									name: true,
-									email: true,
-								},
-							},
-						},
-					},
-				},
-			});
+			const orderDirection = sortOrder ?? "desc";
+			if (sortBy === "createdAt") {
+				query = query.orderBy("m.createdAt", orderDirection);
+			} else if (sortBy === "duration") {
+				query = query.orderBy("m.duration", orderDirection);
+			} else if (sortBy === "title") {
+				query = query.orderBy("m.title", orderDirection);
+			} else {
+				query = query.orderBy("m.scheduledAt", orderDirection);
+			}
+			query = query.orderBy("m.id", orderDirection);
 
-			return meetings;
+			const meetings = await query.limit(limit).execute();
+
+			return meetings.map((meeting) => ({
+				id: meeting.id,
+				title: meeting.title,
+				description: meeting.description,
+				scheduledAt: meeting.scheduledAt,
+				duration: meeting.duration,
+				status: meeting.status,
+				meetUrl: meeting.meetUrl,
+				eventId: meeting.eventId,
+				createdAt: meeting.createdAt,
+				lead: meeting.lead_id
+					? {
+							id: meeting.lead_id,
+							name: meeting.lead_name,
+							email: meeting.lead_email,
+						}
+					: null,
+				customer: meeting.customer_id
+					? {
+							id: meeting.customer_id,
+							user: {
+								name: meeting.customer_user_name,
+								email: meeting.customer_user_email,
+							},
+						}
+					: null,
+			}));
 		}),
 
 	updateLeadStatus: adminProcedure
@@ -656,10 +761,19 @@ export const adminRouter = router({
 		.mutation(async ({ input }) => {
 			const { leadId, status } = input;
 
-			const lead = await prisma.lead.update({
-				where: { id: leadId },
-				data: { status },
-			});
+			const lead = await db
+				.updateTable("lead")
+				.set({ status })
+				.where("id", "=", leadId)
+				.returningAll()
+				.executeTakeFirst();
+
+			if (!lead) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Lead not found",
+				});
+			}
 
 			// TODO: Implement activity logging
 			// await logActivity({
@@ -683,10 +797,19 @@ export const adminRouter = router({
 		.mutation(async ({ input }) => {
 			const { meetingId, status } = input;
 
-			const meeting = await prisma.meeting.update({
-				where: { id: meetingId },
-				data: { status },
-			});
+			const meeting = await db
+				.updateTable("meeting")
+				.set({ status })
+				.where("id", "=", meetingId)
+				.returningAll()
+				.executeTakeFirst();
+
+			if (!meeting) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Meeting not found",
+				});
+			}
 
 			// TODO: Implement activity logging
 			// await logActivity({
@@ -750,123 +873,94 @@ export const adminRouter = router({
 				cursor,
 			} = input;
 
-			// Build where conditions
-			const whereConditions: Prisma.ProjectWhereInput[] = [];
+			let query = db
+				.selectFrom("project as p")
+				.innerJoin("customer as c", "c.id", "p.customerId")
+				.innerJoin("user as u", "u.id", "c.userId")
+				.select([
+					"p.id",
+					"p.title",
+					"p.description",
+					"p.status",
+					"p.progress",
+					"p.startDate",
+					"p.endDate",
+					"p.createdAt",
+					"p.updatedAt",
+					"c.id as customer_id",
+					"c.companyName as customer_companyName",
+					"u.id as user_id",
+					"u.name as user_name",
+					"u.email as user_email",
+				]);
 
-			// Text search
-			if (search) {
-				whereConditions.push(buildSearchConditions(search));
-			}
-
-			// Single status filter (backward compatibility)
-			if (status) {
-				whereConditions.push({
-					status: status as
-						| "PENDING"
-						| "IN_PROGRESS"
-						| "ON_HOLD"
-						| "COMPLETED"
-						| "CANCELLED",
-				});
-			}
-
-			// Multi-select statuses
-			if (statuses && statuses.length > 0) {
-				whereConditions.push({
-					status: {
-						in: statuses as (
-							| "PENDING"
-							| "IN_PROGRESS"
-							| "ON_HOLD"
-							| "COMPLETED"
-							| "CANCELLED"
-						)[],
-					},
-				});
-			}
-
-			// Progress range
-			if (progressMin !== undefined || progressMax !== undefined) {
-				whereConditions.push({
-					progress: {
-						...(progressMin !== undefined && { gte: progressMin }),
-						...(progressMax !== undefined && { lte: progressMax }),
-					},
-				});
-			}
-
-			// Date range filters
-			const startDateCond = buildDateRangeConditions(
-				"startDate",
+			query = applyProjectFilters(query, {
+				search,
+				status,
+				statuses,
+				progressMin,
+				progressMax,
 				startDateFrom,
-				startDateTo
-			);
-			if (startDateCond) {
-				whereConditions.push(startDateCond);
-			}
-
-			const endDateCond = buildDateRangeConditions(
-				"endDate",
+				startDateTo,
 				endDateFrom,
-				endDateTo
-			);
-			if (endDateCond) {
-				whereConditions.push(endDateCond);
-			}
-
-			const createdDateCond = buildDateRangeConditions(
-				"createdAt",
+				endDateTo,
 				createdFrom,
-				createdTo
-			);
-			if (createdDateCond) {
-				whereConditions.push(createdDateCond);
-			}
-
-			// Customer filter
-			if (customerId) {
-				whereConditions.push({ customerId });
-			}
-
-			const projects = await prisma.project.findMany({
-				where:
-					whereConditions.length > 0 ? { AND: whereConditions } : undefined,
-				take: limit,
-				skip: cursor ? 1 : 0,
-				cursor: cursor ? { id: cursor } : undefined,
-				orderBy: { [sortBy ?? "createdAt"]: sortOrder ?? "desc" },
-				select: {
-					id: true,
-					title: true,
-					description: true,
-					status: true,
-					progress: true,
-					startDate: true,
-					endDate: true,
-					createdAt: true,
-					updatedAt: true,
-					customer: {
-						select: {
-							id: true,
-							companyName: true,
-							user: {
-								select: {
-									id: true,
-									name: true,
-									email: true,
-								},
-							},
-						},
-					},
-					_count: {
-						select: {
-							updates: true,
-						},
-					},
-				},
+				createdTo,
+				customerId,
 			});
 
-			return projects;
+			const orderDirection = sortOrder ?? "desc";
+			const sortColumn = getProjectSortColumn(sortBy);
+			query = await applyProjectCursor(query, {
+				cursor,
+				sortColumn,
+				orderDirection,
+			});
+
+			query = query
+				.orderBy(sql.ref(sortColumn), orderDirection)
+				.orderBy("p.id", orderDirection);
+
+			const projectRows = await query.limit(limit).execute();
+			const projectIds = projectRows.map((project) => project.id);
+
+			const updateCounts = projectIds.length
+				? await db
+						.selectFrom("project_update")
+						.select(["projectId"])
+						.select((eb) => eb.fn.count("id").as("count"))
+						.where("projectId", "in", projectIds)
+						.groupBy("projectId")
+						.execute()
+				: [];
+
+			const updateCountByProject = new Map(
+				updateCounts.map((row) => [row.projectId, Number(row.count ?? 0)])
+			);
+
+			return projectRows.map((project) => ({
+				id: project.id,
+				title: project.title,
+				description: project.description,
+				status: project.status,
+				progress: project.progress,
+				startDate: project.startDate,
+				endDate: project.endDate,
+				createdAt: project.createdAt,
+				updatedAt: project.updatedAt,
+				customer: {
+					id: project.customer_id,
+					companyName: project.customer_companyName,
+					user: {
+						id: project.user_id,
+						name: project.user_name,
+						email: project.user_email,
+					},
+				},
+				_count: {
+					updates: updateCountByProject.get(project.id) ?? 0,
+				},
+			}));
 		}),
 
 	updateProjectProgress: adminProcedure
@@ -885,24 +979,34 @@ export const adminRouter = router({
 			const { projectId, progress, status, updateTitle, updateContent } = input;
 
 			// Update the project
-			const project = await prisma.project.update({
-				where: { id: projectId },
-				data: {
+			const project = await db
+				.updateTable("project")
+				.set({
 					progress,
 					...(status && { status }),
-				},
-			});
+				})
+				.where("id", "=", projectId)
+				.returningAll()
+				.executeTakeFirst();
+
+			if (!project) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Project not found",
+				});
+			}
 
 			// Create a project update if title and content are provided
 			if (updateTitle && updateContent) {
-				await prisma.projectUpdate.create({
-					data: {
+				await db
+					.insertInto("project_update")
+					.values({
 						projectId,
 						title: updateTitle,
 						content: updateContent,
 						progress,
-					},
-				});
+					})
+					.execute();
 			}
 
 			// TODO: Implement webhook service
@@ -951,9 +1055,11 @@ export const adminRouter = router({
 			let customerId: string | null = null;
 
 			if (attendeeType === "lead") {
-				const lead = await prisma.lead.findUnique({
-					where: { id: attendeeId },
-				});
+				const lead = await db
+					.selectFrom("lead")
+					.select(["id", "name", "email"])
+					.where("id", "=", attendeeId)
+					.executeTakeFirst();
 
 				if (!lead) {
 					throw new TRPCError({
@@ -966,10 +1072,12 @@ export const adminRouter = router({
 				attendeeEmail = lead.email;
 				leadId = lead.id;
 			} else {
-				const customer = await prisma.customer.findUnique({
-					where: { id: attendeeId },
-					include: { user: true },
-				});
+				const customer = await db
+					.selectFrom("customer as c")
+					.innerJoin("user as u", "u.id", "c.userId")
+					.select(["c.id", "u.name", "u.email"])
+					.where("c.id", "=", attendeeId)
+					.executeTakeFirst();
 
 				if (!customer) {
 					throw new TRPCError({
@@ -978,8 +1086,8 @@ export const adminRouter = router({
 					});
 				}
 
-				attendeeName = customer.user.name;
-				attendeeEmail = customer.user.email;
+				attendeeName = customer.name;
+				attendeeEmail = customer.email;
 				customerId = customer.id;
 			}
 
@@ -1043,8 +1151,10 @@ export const adminRouter = router({
 			}
 
 			// Create the meeting
-			const meeting = await prisma.meeting.create({
-				data: {
+			const meeting = await db
+				.insertInto("meeting")
+				.values({
+					id: crypto.randomUUID(),
 					leadId,
 					customerId,
 					eventId,
@@ -1054,15 +1164,19 @@ export const adminRouter = router({
 					scheduledAt,
 					duration,
 					status: "SCHEDULED",
-				},
-			});
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				})
+				.returningAll()
+				.executeTakeFirstOrThrow();
 
 			// Update lead status if applicable
 			if (leadId) {
-				await prisma.lead.update({
-					where: { id: leadId },
-					data: { status: "MEETING_SCHEDULED" },
-				});
+				await db
+					.updateTable("lead")
+					.set({ status: "MEETING_SCHEDULED" })
+					.where("id", "=", leadId)
+					.execute();
 			}
 
 			return {

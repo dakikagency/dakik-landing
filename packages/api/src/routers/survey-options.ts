@@ -1,4 +1,4 @@
-import prisma from "@collab/db";
+import { db } from "@collab/db";
 import { z } from "zod";
 
 import { protectedProcedure, publicProcedure, router } from "../index";
@@ -74,61 +74,103 @@ export const surveyOptionsRouter = router({
 
 	// Admin: Get all questions (including inactive)
 	getAllQuestions: protectedProcedure.query(async () => {
-		const questions = await prisma.surveyQuestion.findMany({
-			include: {
-				options: {
-					orderBy: { order: "asc" },
-				},
-			},
-			orderBy: { order: "asc" },
-		});
+		const questions = await db
+			.selectFrom("survey_question")
+			.selectAll()
+			.orderBy("order", "asc")
+			.execute();
 
-		return questions;
+		const options = await db
+			.selectFrom("survey_option")
+			.selectAll()
+			.orderBy("order", "asc")
+			.execute();
+
+		const optionsByQuestionId = new Map<string, unknown[]>();
+		for (const option of options) {
+			const questionId = (option as { questionId?: string | null }).questionId;
+			if (!questionId) {
+				continue;
+			}
+			const list = optionsByQuestionId.get(questionId) ?? [];
+			list.push(option);
+			optionsByQuestionId.set(questionId, list);
+		}
+
+		return questions.map((question) => ({
+			...question,
+			options: optionsByQuestionId.get((question as { id: string }).id) ?? [],
+		}));
 	}),
 
 	// Public: Get all active questions with their active options
 	getActiveQuestions: publicProcedure.query(async () => {
-		const questions = await prisma.surveyQuestion.findMany({
-			where: { isActive: true },
-			include: {
-				options: {
-					where: { isActive: true },
-					orderBy: { order: "asc" },
-				},
-			},
-			orderBy: { order: "asc" },
-		});
+		const questions = await db
+			.selectFrom("survey_question")
+			.selectAll()
+			.where("isActive", "=", true)
+			.orderBy("order", "asc")
+			.execute();
 
-		return questions;
+		const options = await db
+			.selectFrom("survey_option")
+			.selectAll()
+			.where("isActive", "=", true)
+			.orderBy("order", "asc")
+			.execute();
+
+		const optionsByQuestionId = new Map<string, unknown[]>();
+		for (const option of options) {
+			const questionId = (option as { questionId?: string | null }).questionId;
+			if (!questionId) {
+				continue;
+			}
+			const list = optionsByQuestionId.get(questionId) ?? [];
+			list.push(option);
+			optionsByQuestionId.set(questionId, list);
+		}
+
+		return questions.map((question) => ({
+			...question,
+			options: optionsByQuestionId.get((question as { id: string }).id) ?? [],
+		}));
 	}),
 
 	// Admin: Create new question
 	createQuestion: protectedProcedure
 		.input(createSurveyQuestionSchema)
 		.mutation(async ({ input }) => {
+			const id = crypto.randomUUID();
+
 			// Get the highest order to auto-assign order
-			const maxOrder = await prisma.surveyQuestion.findFirst({
-				orderBy: { order: "desc" },
-				select: { order: true },
-			});
+			const maxOrder = await db
+				.selectFrom("survey_question")
+				.select(["order"])
+				.orderBy("order", "desc")
+				.executeTakeFirst();
 
 			const order = input.order ?? (maxOrder ? maxOrder.order + 1 : 0);
 
-			const question = await prisma.surveyQuestion.create({
-				data: {
+			const question = await db
+				.insertInto("survey_question")
+				.values({
+					id,
 					key: input.key,
 					title: input.title,
 					description: input.description,
 					inputType: input.inputType,
 					order,
 					isActive: input.isActive,
-				},
-				include: {
-					options: true,
-				},
-			});
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				})
+				.returningAll()
+				.executeTakeFirstOrThrow();
 
-			return question;
+			return {
+				...question,
+				options: [],
+			};
 		}),
 
 	// Admin: Update question
@@ -137,24 +179,34 @@ export const surveyOptionsRouter = router({
 		.mutation(async ({ input }) => {
 			const { id, ...data } = input;
 
-			const question = await prisma.surveyQuestion.update({
-				where: { id },
-				data,
-				include: {
-					options: true,
-				},
-			});
+			const question = await db
+				.updateTable("survey_question")
+				.set(data)
+				.where("id", "=", id)
+				.returningAll()
+				.executeTakeFirstOrThrow();
 
-			return question;
+			const options = await db
+				.selectFrom("survey_option")
+				.selectAll()
+				.where("questionId", "=", id)
+				.orderBy("order", "asc")
+				.execute();
+
+			return {
+				...question,
+				options,
+			};
 		}),
 
 	// Admin: Delete question
 	deleteQuestion: protectedProcedure
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ input }) => {
-			await prisma.surveyQuestion.delete({
-				where: { id: input.id },
-			});
+			await db
+				.deleteFrom("survey_question")
+				.where("id", "=", input.id)
+				.execute();
 
 			return { success: true };
 		}),
@@ -163,18 +215,22 @@ export const surveyOptionsRouter = router({
 	toggleQuestionActive: protectedProcedure
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ input }) => {
-			const question = await prisma.surveyQuestion.findUnique({
-				where: { id: input.id },
-			});
+			const question = await db
+				.selectFrom("survey_question")
+				.selectAll()
+				.where("id", "=", input.id)
+				.executeTakeFirst();
 
 			if (!question) {
 				throw new Error("Question not found");
 			}
 
-			const updated = await prisma.surveyQuestion.update({
-				where: { id: input.id },
-				data: { isActive: !question.isActive },
-			});
+			const updated = await db
+				.updateTable("survey_question")
+				.set({ isActive: !question.isActive })
+				.where("id", "=", input.id)
+				.returningAll()
+				.executeTakeFirstOrThrow();
 
 			return updated;
 		}),
@@ -188,10 +244,11 @@ export const surveyOptionsRouter = router({
 			// Update order for each question
 			await Promise.all(
 				orderedIds.map((id, index) =>
-					prisma.surveyQuestion.update({
-						where: { id },
-						data: { order: index },
-					})
+					db
+						.updateTable("survey_question")
+						.set({ order: index })
+						.where("id", "=", id)
+						.execute()
 				)
 			);
 
@@ -206,13 +263,13 @@ export const surveyOptionsRouter = router({
 	getByType: publicProcedure
 		.input(z.object({ questionType: surveyQuestionTypeSchema }))
 		.query(async ({ input }) => {
-			const options = await prisma.surveyOption.findMany({
-				where: {
-					questionType: input.questionType,
-					isActive: true,
-				},
-				orderBy: { order: "asc" },
-			});
+			const options = await db
+				.selectFrom("survey_option")
+				.selectAll()
+				.where("questionType", "=", input.questionType)
+				.where("isActive", "=", true)
+				.orderBy("order", "asc")
+				.execute();
 
 			return options;
 		}),
@@ -221,23 +278,26 @@ export const surveyOptionsRouter = router({
 	getByQuestionId: publicProcedure
 		.input(z.object({ questionId: z.string() }))
 		.query(async ({ input }) => {
-			const options = await prisma.surveyOption.findMany({
-				where: {
-					questionId: input.questionId,
-					isActive: true,
-				},
-				orderBy: { order: "asc" },
-			});
+			const options = await db
+				.selectFrom("survey_option")
+				.selectAll()
+				.where("questionId", "=", input.questionId)
+				.where("isActive", "=", true)
+				.orderBy("order", "asc")
+				.execute();
 
 			return options;
 		}),
 
 	// Public: Get all active options grouped by question type
 	getAllActive: publicProcedure.query(async () => {
-		const options = await prisma.surveyOption.findMany({
-			where: { isActive: true },
-			orderBy: [{ questionType: "asc" }, { order: "asc" }],
-		});
+		const options = await db
+			.selectFrom("survey_option")
+			.selectAll()
+			.where("isActive", "=", true)
+			.orderBy("questionType", "asc")
+			.orderBy("order", "asc")
+			.execute();
 
 		const grouped = {
 			PROJECT_TYPE: options.filter((o) => o.questionType === "PROJECT_TYPE"),
@@ -249,9 +309,12 @@ export const surveyOptionsRouter = router({
 
 	// Admin: Get all options (including inactive)
 	getAll: protectedProcedure.query(async () => {
-		const options = await prisma.surveyOption.findMany({
-			orderBy: [{ questionType: "asc" }, { order: "asc" }],
-		});
+		const options = await db
+			.selectFrom("survey_option")
+			.selectAll()
+			.orderBy("questionType", "asc")
+			.orderBy("order", "asc")
+			.execute();
 
 		return options;
 	}),
@@ -260,10 +323,12 @@ export const surveyOptionsRouter = router({
 	getByTypeAdmin: protectedProcedure
 		.input(z.object({ questionType: surveyQuestionTypeSchema }))
 		.query(async ({ input }) => {
-			const options = await prisma.surveyOption.findMany({
-				where: { questionType: input.questionType },
-				orderBy: { order: "asc" },
-			});
+			const options = await db
+				.selectFrom("survey_option")
+				.selectAll()
+				.where("questionType", "=", input.questionType)
+				.orderBy("order", "asc")
+				.execute();
 
 			return options;
 		}),
@@ -272,21 +337,36 @@ export const surveyOptionsRouter = router({
 	create: protectedProcedure
 		.input(createSurveyOptionSchema)
 		.mutation(async ({ input }) => {
-			// Get the highest order for this question to auto-assign order
-			const whereClause = input.questionId
-				? { questionId: input.questionId }
-				: { questionType: input.questionType };
+			const id = crypto.randomUUID();
 
-			const maxOrder = await prisma.surveyOption.findFirst({
-				where: whereClause,
-				orderBy: { order: "desc" },
-				select: { order: true },
-			});
+			// Get the highest order for this question to auto-assign order
+			let maxOrderQuery = db
+				.selectFrom("survey_option")
+				.select(["order"])
+				.orderBy("order", "desc");
+
+			if (input.questionId) {
+				maxOrderQuery = maxOrderQuery.where(
+					"questionId",
+					"=",
+					input.questionId
+				);
+			} else if (input.questionType) {
+				maxOrderQuery = maxOrderQuery.where(
+					"questionType",
+					"=",
+					input.questionType
+				);
+			}
+
+			const maxOrder = await maxOrderQuery.executeTakeFirst();
 
 			const order = input.order ?? (maxOrder ? maxOrder.order + 1 : 0);
 
-			const option = await prisma.surveyOption.create({
-				data: {
+			const option = await db
+				.insertInto("survey_option")
+				.values({
+					id,
 					questionId: input.questionId,
 					questionType: input.questionType,
 					label: input.label,
@@ -295,8 +375,11 @@ export const surveyOptionsRouter = router({
 					icon: input.icon,
 					order,
 					isActive: input.isActive,
-				},
-			});
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				})
+				.returningAll()
+				.executeTakeFirstOrThrow();
 
 			return option;
 		}),
@@ -307,10 +390,12 @@ export const surveyOptionsRouter = router({
 		.mutation(async ({ input }) => {
 			const { id, ...data } = input;
 
-			const option = await prisma.surveyOption.update({
-				where: { id },
-				data,
-			});
+			const option = await db
+				.updateTable("survey_option")
+				.set(data)
+				.where("id", "=", id)
+				.returningAll()
+				.executeTakeFirstOrThrow();
 
 			return option;
 		}),
@@ -319,9 +404,7 @@ export const surveyOptionsRouter = router({
 	delete: protectedProcedure
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ input }) => {
-			await prisma.surveyOption.delete({
-				where: { id: input.id },
-			});
+			await db.deleteFrom("survey_option").where("id", "=", input.id).execute();
 
 			return { success: true };
 		}),
@@ -330,18 +413,22 @@ export const surveyOptionsRouter = router({
 	toggleActive: protectedProcedure
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ input }) => {
-			const option = await prisma.surveyOption.findUnique({
-				where: { id: input.id },
-			});
+			const option = await db
+				.selectFrom("survey_option")
+				.selectAll()
+				.where("id", "=", input.id)
+				.executeTakeFirst();
 
 			if (!option) {
 				throw new Error("Option not found");
 			}
 
-			const updated = await prisma.surveyOption.update({
-				where: { id: input.id },
-				data: { isActive: !option.isActive },
-			});
+			const updated = await db
+				.updateTable("survey_option")
+				.set({ isActive: !option.isActive })
+				.where("id", "=", input.id)
+				.returningAll()
+				.executeTakeFirstOrThrow();
 
 			return updated;
 		}),
@@ -355,10 +442,11 @@ export const surveyOptionsRouter = router({
 			// Update order for each option
 			await Promise.all(
 				orderedIds.map((id, index) =>
-					prisma.surveyOption.update({
-						where: { id },
-						data: { order: index },
-					})
+					db
+						.updateTable("survey_option")
+						.set({ order: index })
+						.where("id", "=", id)
+						.execute()
 				)
 			);
 
@@ -432,64 +520,72 @@ export const surveyOptionsRouter = router({
 
 		// Upsert project type options
 		for (const option of projectTypeDefaults) {
-			const existing = await prisma.surveyOption.findFirst({
-				where: {
-					questionType: "PROJECT_TYPE",
-					value: option.value,
-				},
-				select: { id: true },
-			});
+			const existing = await db
+				.selectFrom("survey_option")
+				.select(["id"])
+				.where("questionType", "=", "PROJECT_TYPE")
+				.where("value", "=", option.value)
+				.executeTakeFirst();
 
-			if (existing) {
-				await prisma.surveyOption.update({
-					where: { id: existing.id },
-					data: {
+			if (existing?.id) {
+				await db
+					.updateTable("survey_option")
+					.set({
 						label: option.label,
 						description: option.description,
 						icon: option.icon,
 						order: option.order,
-					},
-				});
+					})
+					.where("id", "=", existing.id)
+					.execute();
 				continue;
 			}
 
-			await prisma.surveyOption.create({
-				data: {
+			await db
+				.insertInto("survey_option")
+				.values({
+					id: crypto.randomUUID(),
 					questionType: "PROJECT_TYPE",
 					...option,
-				},
-			});
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				})
+				.execute();
 		}
 
 		// Upsert budget options
 		for (const option of budgetDefaults) {
-			const existing = await prisma.surveyOption.findFirst({
-				where: {
-					questionType: "BUDGET",
-					value: option.value,
-				},
-				select: { id: true },
-			});
+			const existing = await db
+				.selectFrom("survey_option")
+				.select(["id"])
+				.where("questionType", "=", "BUDGET")
+				.where("value", "=", option.value)
+				.executeTakeFirst();
 
-			if (existing) {
-				await prisma.surveyOption.update({
-					where: { id: existing.id },
-					data: {
+			if (existing?.id) {
+				await db
+					.updateTable("survey_option")
+					.set({
 						label: option.label,
 						description: option.description,
 						icon: option.icon,
 						order: option.order,
-					},
-				});
+					})
+					.where("id", "=", existing.id)
+					.execute();
 				continue;
 			}
 
-			await prisma.surveyOption.create({
-				data: {
+			await db
+				.insertInto("survey_option")
+				.values({
+					id: crypto.randomUUID(),
 					questionType: "BUDGET",
 					...option,
-				},
-			});
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				})
+				.execute();
 		}
 
 		return { success: true, message: "Default options seeded successfully" };

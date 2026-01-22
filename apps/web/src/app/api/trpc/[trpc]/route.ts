@@ -16,7 +16,10 @@ function handler(req: NextRequest) {
 			console.error("[tRPC Error] Cause:", error.cause);
 
 			// In production, sanitize the error message
-			if (process.env.NODE_ENV === "production" && error.code === "INTERNAL_SERVER_ERROR") {
+			if (
+				process.env.NODE_ENV === "production" &&
+				error.code === "INTERNAL_SERVER_ERROR"
+			) {
 				error.message = "An internal error occurred";
 			}
 		},

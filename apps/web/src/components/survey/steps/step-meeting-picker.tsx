@@ -25,17 +25,14 @@ interface DayAvailability {
 	slots: TimeSlot[];
 }
 
+const SKELETON_COLUMN_KEYS = ["col-1", "col-2", "col-3"];
+const SKELETON_SLOT_KEYS = Array.from(
+	{ length: 12 },
+	(_unused, index) => `slot-${index + 1}`
+);
+
 // Format date for display
 function formatDate(date: Date): string {
-	return date.toLocaleDateString("en-US", {
-		weekday: "short",
-		month: "short",
-		day: "numeric",
-	});
-}
-
-// Format date for column header (e.g., "Wed, Jan 22")
-function formatColumnHeader(date: Date): string {
 	return date.toLocaleDateString("en-US", {
 		weekday: "short",
 		month: "short",
@@ -257,13 +254,13 @@ export function StepMeetingPicker() {
 					{/* Time Slots Skeleton */}
 					<div className="flex flex-col gap-4">
 						<div className="grid grid-cols-3 gap-4">
-							{[...Array(3)].map((_, colIndex) => (
-								<div key={`col-${colIndex}`} className="flex flex-col gap-2">
+							{SKELETON_COLUMN_KEYS.map((colKey) => (
+								<div className="flex flex-col gap-2" key={colKey}>
 									<Skeleton className="h-8 w-full" />
-									{[...Array(12)].map((_, rowIndex) => (
+									{SKELETON_SLOT_KEYS.map((slotKey) => (
 										<Skeleton
-											key={`slot-${colIndex}-${rowIndex}`}
 											className="h-12 w-full"
+											key={`${colKey}-${slotKey}`}
 										/>
 									))}
 								</div>
@@ -306,59 +303,20 @@ export function StepMeetingPicker() {
 					initial={{ opacity: 0, y: -10 }}
 				>
 					<Globe className="size-4" />
-					<span className="text-sm">({timezone}) {Intl.DateTimeFormat('en-US', { timeZoneName: 'long' }).format(new Date()).split(', ')[1]}</span>
+					<span className="text-sm">
+						({timezone}){" "}
+						{
+							Intl.DateTimeFormat("en-US", { timeZoneName: "long" })
+								.format(new Date())
+								.split(", ")[1]
+						}
+					</span>
 				</motion.div>
 			</div>
 
 			{/* Mobile: Progressive Disclosure */}
 			<div className="block lg:hidden">
-				{!showMobileTimeSlots ? (
-					<motion.div
-						animate={{ opacity: 1, x: 0 }}
-						className="flex flex-col gap-6"
-						initial={{ opacity: 0, x: -20 }}
-					>
-						<Calendar
-							aria-label="Select appointment date"
-							classNames={{
-								months: "flex flex-col",
-								month: "space-y-4",
-								caption:
-									"flex justify-center pt-1 relative items-center mb-4",
-								caption_label: "text-base font-semibold",
-								nav: "space-x-1 flex items-center",
-								nav_button:
-									"h-10 w-10 bg-transparent p-0 opacity-70 hover:opacity-100 border border-border hover:bg-muted inline-flex items-center justify-center rounded-md transition-all",
-								nav_button_previous: "absolute left-1",
-								nav_button_next: "absolute right-1",
-								table: "w-full border-collapse",
-								head_row: "flex",
-								head_cell:
-									"text-muted-foreground w-11 font-medium text-sm text-center py-2",
-								row: "flex w-full mt-1",
-								cell: "relative p-0 text-center focus-within:relative focus-within:z-20",
-								day: cn(
-									"inline-flex h-11 w-11 items-center justify-center p-0 font-normal text-sm transition-all rounded-full",
-									"hover:bg-primary/10 hover:text-foreground",
-									"focus:outline-none focus:ring-2 focus:ring-primary",
-									"aria-disabled:pointer-events-none aria-disabled:opacity-40"
-								),
-								day_selected:
-									"bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground font-semibold",
-								day_today: "border border-primary/50 font-semibold",
-								day_outside: "text-muted-foreground/40 opacity-50",
-								day_disabled: "text-muted-foreground/40 opacity-40",
-								day_hidden: "invisible",
-							}}
-							defaultMonth={selectedDate ?? new Date()}
-							disabled={isDateDisabled}
-							mode="single"
-							onSelect={handleDateSelect}
-							selected={selectedDate ?? undefined}
-							showOutsideDays={false}
-						/>
-					</motion.div>
-				) : (
+				{showMobileTimeSlots ? (
 					<motion.div
 						animate={{ opacity: 1, x: 0 }}
 						className="flex flex-col gap-6"
@@ -370,7 +328,7 @@ export function StepMeetingPicker() {
 							type="button"
 						>
 							<ArrowLeft className="size-5" />
-							<span className="text-sm font-medium">Back to calendar</span>
+							<span className="font-medium text-sm">Back to calendar</span>
 						</button>
 
 						<div className="space-y-4">
@@ -383,10 +341,9 @@ export function StepMeetingPicker() {
 
 							<div className="grid grid-cols-2 gap-3">
 								{selectedDaySlots.map((slot, index) => {
-									const isSelected =
-										selectedDate &&
-										selectedTime === slot.time &&
-										selectedDate.toDateString() === selectedDate.toDateString();
+									const isSelected = Boolean(
+										selectedDate && selectedTime === slot.time
+									);
 
 									return (
 										<motion.button
@@ -395,9 +352,9 @@ export function StepMeetingPicker() {
 											aria-label={`${formatTime(slot.time)}, ${selectedDate && formatDate(selectedDate)}, ${slot.available ? "available" : "unavailable"}`}
 											aria-selected={isSelected || undefined}
 											className={cn(
-												"relative flex h-14 items-center justify-center border-2 px-4 text-center text-base font-medium transition-all rounded-full",
+												"relative flex h-14 items-center justify-center rounded-full border-2 px-4 text-center font-medium text-base transition-all",
 												slot.available
-													? "border-foreground/20 hover:border-primary hover:bg-primary/10 hover:scale-105"
+													? "border-foreground/20 hover:scale-105 hover:border-primary hover:bg-primary/10"
 													: "cursor-not-allowed border-foreground/10 bg-muted/20 text-foreground/30 opacity-50",
 												isSelected &&
 													slot.available &&
@@ -407,7 +364,8 @@ export function StepMeetingPicker() {
 											initial={{ opacity: 0, scale: 0.95 }}
 											key={slot.time}
 											onClick={() =>
-												selectedDate && handleTimeSelect(slot.time, selectedDate)
+												selectedDate &&
+												handleTimeSelect(slot.time, selectedDate)
 											}
 											transition={{ delay: index * 0.02 }}
 											type="button"
@@ -440,6 +398,51 @@ export function StepMeetingPicker() {
 							)}
 						</div>
 					</motion.div>
+				) : (
+					<motion.div
+						animate={{ opacity: 1, x: 0 }}
+						className="flex flex-col gap-6"
+						initial={{ opacity: 0, x: -20 }}
+					>
+						<Calendar
+							aria-label="Select appointment date"
+							classNames={{
+								months: "flex flex-col",
+								month: "space-y-4",
+								caption: "flex justify-center pt-1 relative items-center mb-4",
+								caption_label: "text-base font-semibold",
+								nav: "space-x-1 flex items-center",
+								nav_button:
+									"h-10 w-10 bg-transparent p-0 opacity-70 hover:opacity-100 border border-border hover:bg-muted inline-flex items-center justify-center rounded-md transition-all",
+								nav_button_previous: "absolute left-1",
+								nav_button_next: "absolute right-1",
+								table: "w-full border-collapse",
+								head_row: "flex",
+								head_cell:
+									"text-muted-foreground w-11 font-medium text-sm text-center py-2",
+								row: "flex w-full mt-1",
+								cell: "relative p-0 text-center focus-within:relative focus-within:z-20",
+								day: cn(
+									"inline-flex h-11 w-11 items-center justify-center rounded-full p-0 font-normal text-sm transition-all",
+									"hover:bg-primary/10 hover:text-foreground",
+									"focus:outline-none focus:ring-2 focus:ring-primary",
+									"aria-disabled:pointer-events-none aria-disabled:opacity-40"
+								),
+								day_selected:
+									"bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground font-semibold",
+								day_today: "border border-primary/50 font-semibold",
+								day_outside: "text-muted-foreground/40 opacity-50",
+								day_disabled: "text-muted-foreground/40 opacity-40",
+								day_hidden: "invisible",
+							}}
+							defaultMonth={selectedDate ?? new Date()}
+							disabled={isDateDisabled}
+							mode="single"
+							onSelect={handleDateSelect}
+							selected={selectedDate ?? undefined}
+							showOutsideDays={false}
+						/>
+					</motion.div>
 				)}
 			</div>
 
@@ -470,7 +473,7 @@ export function StepMeetingPicker() {
 							row: "flex w-full mt-1",
 							cell: "relative p-0 text-center focus-within:relative focus-within:z-20",
 							day: cn(
-								"inline-flex h-10 w-10 items-center justify-center p-0 font-normal text-sm transition-all rounded-full",
+								"inline-flex h-10 w-10 items-center justify-center rounded-full p-0 font-normal text-sm transition-all",
 								"hover:bg-primary/10 hover:text-foreground",
 								"focus:outline-none focus:ring-2 focus:ring-primary",
 								"aria-disabled:pointer-events-none aria-disabled:opacity-40"
@@ -502,17 +505,13 @@ export function StepMeetingPicker() {
 							key={selectedDate.toISOString()}
 							transition={{ duration: 0.2 }}
 						>
-							<div
-								aria-live="polite"
-								className="grid grid-cols-3 gap-4"
-								role="region"
-							>
+							<section aria-live="polite" className="grid grid-cols-3 gap-4">
 								{threeDayView.map((day, dayIndex) => {
 									const isToday =
 										day.date.toDateString() === new Date().toDateString();
 
 									return (
-										<div key={day.date.toISOString()} className="flex flex-col">
+										<div className="flex flex-col" key={day.date.toISOString()}>
 											{/* Column Header */}
 											<div
 												className={cn(
@@ -551,9 +550,9 @@ export function StepMeetingPicker() {
 																aria-label={`${formatTime(slot.time)}, ${formatDate(day.date)}, ${slot.available ? "available" : "unavailable"}`}
 																aria-selected={isSelected || undefined}
 																className={cn(
-																	"relative flex h-12 min-h-[44px] items-center justify-center border-2 px-3 text-center text-sm font-medium transition-all rounded-full",
+																	"relative flex h-12 min-h-[44px] items-center justify-center rounded-full border-2 px-3 text-center font-medium text-sm transition-all",
 																	slot.available
-																		? "border-foreground/20 hover:border-primary hover:bg-primary/10 hover:scale-105"
+																		? "border-foreground/20 hover:scale-105 hover:border-primary hover:bg-primary/10"
 																		: "cursor-not-allowed border-foreground/10 bg-muted/20 text-foreground/30 opacity-50",
 																	isSelected &&
 																		slot.available &&
@@ -562,7 +561,9 @@ export function StepMeetingPicker() {
 																disabled={!slot.available}
 																initial={{ opacity: 0, scale: 0.95 }}
 																key={slot.time}
-																onClick={() => handleTimeSelect(slot.time, day.date)}
+																onClick={() =>
+																	handleTimeSelect(slot.time, day.date)
+																}
 																transition={{
 																	delay: dayIndex * 0.05 + slotIndex * 0.02,
 																}}
@@ -590,7 +591,7 @@ export function StepMeetingPicker() {
 										</div>
 									);
 								})}
-							</div>
+							</section>
 
 							{/* Empty State */}
 							{threeDayView.every((day) =>
@@ -620,7 +621,7 @@ export function StepMeetingPicker() {
 							initial={{ opacity: 0 }}
 						>
 							<Clock className="size-16 text-muted-foreground/40" />
-							<p className="text-muted-foreground text-base">
+							<p className="text-base text-muted-foreground">
 								Select a date to view available times
 							</p>
 						</motion.div>
@@ -637,7 +638,7 @@ export function StepMeetingPicker() {
 						exit={{ opacity: 0, y: 10 }}
 						initial={{ opacity: 0, y: 10 }}
 					>
-						<div className="border-2 border-primary/20 bg-primary/5 px-6 py-4 text-center rounded-md">
+						<div className="rounded-md border-2 border-primary/20 bg-primary/5 px-6 py-4 text-center">
 							<p className="text-base">
 								<span className="text-foreground/60">Selected: </span>
 								<span className="font-semibold">
@@ -648,7 +649,7 @@ export function StepMeetingPicker() {
 
 						<Button
 							aria-label="Confirm booking and proceed to next step"
-							className="h-14 min-w-48 border-2 border-foreground bg-foreground text-background text-base font-semibold transition-all hover:bg-background hover:text-foreground rounded-md"
+							className="h-14 min-w-48 rounded-md border-2 border-foreground bg-foreground font-semibold text-background text-base transition-all hover:bg-background hover:text-foreground"
 							disabled={!isSlotSelected || isBooking}
 							onClick={handleConfirm}
 						>

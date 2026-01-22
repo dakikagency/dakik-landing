@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Github, Linkedin, Twitter } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
@@ -16,21 +15,13 @@ const resourceLinks = [
 	{ name: "Privacy", href: "/privacy" },
 ] as const;
 
-const social = [
-	{ name: "Twitter", icon: Twitter, href: "https://twitter.com/dakikstudio" },
-	{
-		name: "LinkedIn",
-		icon: Linkedin,
-		href: "https://linkedin.com/company/dakikstudio",
-	},
-	{ name: "GitHub", icon: Github, href: "https://github.com/dakikstudio" },
-];
-
 export function Footer() {
 	const [hoveredLink, setHoveredLink] = useState<string | null>(null);
 	const currentYear = new Date().getFullYear();
 	const prefersReducedMotion = useReducedMotion();
-	const dakikLetters = "dakik".split("");
+	const dakikLetters = "dakik"
+		.split("")
+		.map((letter, index) => ({ id: `${letter}-${index + 1}`, letter }));
 
 	return (
 		<footer className="relative overflow-hidden bg-black text-white">
@@ -171,9 +162,9 @@ export function Footer() {
 					aria-label="dakik"
 					className="font-black font-display text-[clamp(18px,32vw,620px)] text-white leading-[0.9em] tracking-tight lg:mt-[0.05em] lg:leading-[0.85]"
 				>
-					{dakikLetters.map((letter, i) => (
-						<span aria-hidden="true" className="inline-block" key={i}>
-							{letter}
+					{dakikLetters.map((letter) => (
+						<span aria-hidden="true" className="inline-block" key={letter.id}>
+							{letter.letter}
 						</span>
 					))}
 				</h1>

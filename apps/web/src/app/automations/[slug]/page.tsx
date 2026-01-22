@@ -7,7 +7,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 
-import { AutomationCard, AutomationContent } from "@/components/automations";
+import { AutomationCard } from "@/components/automations/automation-card";
+import { AutomationContent } from "@/components/automations/automation-content";
 import { Footer, Navbar } from "@/components/landing";
 import { Reveal, StaggerContainer, StaggerItem } from "@/components/motion";
 import { trpc } from "@/utils/trpc";
@@ -283,7 +284,11 @@ export default function AutomationPage() {
 									{formattedDate && automation.publishedAt && (
 										<div className="flex items-center gap-2 text-gray-500 text-sm">
 											<Calendar className="h-4 w-4" />
-											<time dateTime={new Date(automation.publishedAt).toISOString()}>
+											<time
+												dateTime={new Date(
+													automation.publishedAt
+												).toISOString()}
+											>
 												{formattedDate}
 											</time>
 										</div>

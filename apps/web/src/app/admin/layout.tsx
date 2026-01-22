@@ -47,7 +47,11 @@ const navItems: {
 		icon: ClipboardListIcon,
 	},
 	{ href: "/admin/blog", label: "Blog", icon: NewspaperIcon },
-	{ href: "/admin/automations" as Route, label: "Automations", icon: WorkflowIcon },
+	{
+		href: "/admin/automations" as Route,
+		label: "Automations",
+		icon: WorkflowIcon,
+	},
 	{ href: "/admin/media", label: "Media", icon: ImageIcon },
 	{ href: "/admin/daicons" as Route, label: "daIcons", icon: ShapesIcon },
 	{ href: "/admin/dacomps" as Route, label: "daComps", icon: BoxIcon },

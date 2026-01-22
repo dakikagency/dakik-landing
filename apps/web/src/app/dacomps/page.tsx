@@ -174,8 +174,8 @@ export default function DaCompsPage() {
 									daComps
 								</h1>
 								<p className="mt-4 text-foreground/80 text-lg leading-relaxed lg:text-xl">
-									Curated UI building blocks with clear usage guidance, built for
-									the Dakik Studio ecosystem.
+									Curated UI building blocks with clear usage guidance, built
+									for the Dakik Studio ecosystem.
 								</p>
 							</div>
 							<div className="flex w-full items-center gap-3 lg:w-auto">
@@ -214,7 +214,7 @@ export default function DaCompsPage() {
 													selectedCategory === category.slug
 														? "bg-muted/50 font-medium text-foreground"
 														: "text-muted-foreground hover:bg-muted/30 hover:text-foreground"
-												)
+												)}
 												key={category.slug}
 												onClick={() => handleCategoryChange(category.slug)}
 												type="button"
@@ -226,7 +226,7 @@ export default function DaCompsPage() {
 														selectedCategory === category.slug
 															? "bg-foreground/10 text-foreground"
 															: "bg-muted text-muted-foreground"
-													)
+													)}
 												>
 													{category.count}
 												</span>
@@ -252,7 +252,7 @@ export default function DaCompsPage() {
 														initialComponent?.slug === component.slug
 															? "bg-muted/50 font-medium text-foreground"
 															: "text-muted-foreground hover:bg-muted/30 hover:text-foreground"
-													)
+													)}
 													key={component.slug}
 													onClick={() => handleSelectComponent(component)}
 													type="button"
@@ -262,7 +262,7 @@ export default function DaCompsPage() {
 															"size-3 transition-transform",
 															initialComponent?.slug === component.slug &&
 																"rotate-90"
-														)
+														)}
 													/>
 													{component.name}
 												</button>

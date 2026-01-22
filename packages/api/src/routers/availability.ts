@@ -1,4 +1,4 @@
-import prisma from "@collab/db";
+import { db } from "@collab/db";
 import { z } from "zod";
 
 import {
@@ -75,38 +75,24 @@ export const availabilityRouter = router({
 			// Fetch all required data in parallel
 			const [workingHours, meetings, availabilityBlocks, googleBusyTimes] =
 				await Promise.all([
-					prisma.workingHours.findMany({
-						where: { isEnabled: true },
-					}),
-					prisma.meeting.findMany({
-						where: {
-							scheduledAt: {
-								gte: start,
-								lte: end,
-							},
-							status: {
-								in: ["SCHEDULED", "COMPLETED"],
-							},
-						},
-						select: {
-							scheduledAt: true,
-							duration: true,
-						},
-					}),
-					prisma.availabilityBlock.findMany({
-						where: {
-							OR: [
-								{
-									startDate: { lte: end },
-									endDate: { gte: start },
-								},
-							],
-						},
-						select: {
-							startDate: true,
-							endDate: true,
-						},
-					}),
+					db
+						.selectFrom("working_hours")
+						.selectAll()
+						.where("isEnabled", "=", true)
+						.execute(),
+					db
+						.selectFrom("meeting")
+						.select(["scheduledAt", "duration"])
+						.where("scheduledAt", ">=", start)
+						.where("scheduledAt", "<=", end)
+						.where("status", "in", ["SCHEDULED", "COMPLETED"])
+						.execute(),
+					db
+						.selectFrom("availability_block")
+						.select(["startDate", "endDate"])
+						.where("startDate", "<=", end)
+						.where("endDate", ">=", start)
+						.execute(),
 					// Fetch Google Calendar busy times if configured
 					isGoogleCalendarConfigured()
 						? getFreeBusyTimes(start, end).catch((error) => {

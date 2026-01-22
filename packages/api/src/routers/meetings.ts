@@ -1,4 +1,4 @@
-import prisma from "@collab/db";
+import { db } from "@collab/db";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
@@ -79,9 +79,11 @@ export const meetingsRouter = router({
 			const { leadId, date, startTime, duration, timezone: _timezone } = input;
 
 			// Verify the lead exists
-			const lead = await prisma.lead.findUnique({
-				where: { id: leadId },
-			});
+			const lead = await db
+				.selectFrom("lead")
+				.selectAll()
+				.where("id", "=", leadId)
+				.executeTakeFirst();
 
 			if (!lead) {
 				throw new TRPCError({
@@ -95,9 +97,11 @@ export const meetingsRouter = router({
 			const dayOfWeek = meetingDate.getDay();
 
 			// Check working hours for this day
-			const workingHours = await prisma.workingHours.findUnique({
-				where: { dayOfWeek },
-			});
+			const workingHours = await db
+				.selectFrom("working_hours")
+				.selectAll()
+				.where("dayOfWeek", "=", dayOfWeek)
+				.executeTakeFirst();
 
 			if (!workingHours?.isEnabled) {
 				throw new TRPCError({
@@ -138,22 +142,17 @@ export const meetingsRouter = router({
 			);
 
 			// Check for conflicting meetings
-			const conflictingMeeting = await prisma.meeting.findFirst({
-				where: {
-					status: { not: "CANCELLED" },
-					OR: [
-						{
-							// New meeting starts during an existing meeting
-							scheduledAt: { lte: scheduledAt },
-							AND: {
-								scheduledAt: {
-									gte: new Date(scheduledAt.getTime() - 480 * 60 * 1000), // Max meeting duration buffer
-								},
-							},
-						},
-					],
-				},
-			});
+			const conflictingMeeting = await db
+				.selectFrom("meeting")
+				.selectAll()
+				.where("status", "<>", "CANCELLED")
+				.where("scheduledAt", "<=", scheduledAt)
+				.where(
+					"scheduledAt",
+					">=",
+					new Date(scheduledAt.getTime() - 480 * 60 * 1000)
+				)
+				.executeTakeFirst();
 
 			// More precise conflict check
 			if (conflictingMeeting) {
@@ -177,14 +176,12 @@ export const meetingsRouter = router({
 			}
 
 			// Check for availability blocks that conflict with this slot
-			const conflictingBlock = await prisma.availabilityBlock.findFirst({
-				where: {
-					AND: [
-						{ startDate: { lte: meetingEndTime } },
-						{ endDate: { gt: scheduledAt } },
-					],
-				},
-			});
+			const conflictingBlock = await db
+				.selectFrom("availability_block")
+				.selectAll()
+				.where("startDate", "<=", meetingEndTime)
+				.where("endDate", ">", scheduledAt)
+				.executeTakeFirst();
 
 			if (conflictingBlock) {
 				throw new TRPCError({
@@ -225,8 +222,10 @@ export const meetingsRouter = router({
 			}
 
 			// Create the meeting
-			const meeting = await prisma.meeting.create({
-				data: {
+			const meeting = await db
+				.insertInto("meeting")
+				.values({
+					id: crypto.randomUUID(),
 					leadId,
 					eventId,
 					meetUrl,
@@ -234,14 +233,18 @@ export const meetingsRouter = router({
 					scheduledAt,
 					duration,
 					status: "SCHEDULED",
-				},
-			});
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				})
+				.returningAll()
+				.executeTakeFirstOrThrow();
 
 			// Update lead status to MEETING_SCHEDULED
-			await prisma.lead.update({
-				where: { id: leadId },
-				data: { status: "MEETING_SCHEDULED" },
-			});
+			await db
+				.updateTable("lead")
+				.set({ status: "MEETING_SCHEDULED" })
+				.where("id", "=", leadId)
+				.execute();
 
 			return {
 				success: true as const,
@@ -264,9 +267,11 @@ export const meetingsRouter = router({
 		.mutation(async ({ input }) => {
 			const { meetingId } = input;
 
-			const meeting = await prisma.meeting.findUnique({
-				where: { id: meetingId },
-			});
+			const meeting = await db
+				.selectFrom("meeting")
+				.selectAll()
+				.where("id", "=", meetingId)
+				.executeTakeFirst();
 
 			if (!meeting) {
 				throw new TRPCError({
@@ -290,10 +295,12 @@ export const meetingsRouter = router({
 			}
 
 			// Update meeting status
-			const updatedMeeting = await prisma.meeting.update({
-				where: { id: meetingId },
-				data: { status: "CANCELLED" },
-			});
+			const updatedMeeting = await db
+				.updateTable("meeting")
+				.set({ status: "CANCELLED" })
+				.where("id", "=", meetingId)
+				.returningAll()
+				.executeTakeFirstOrThrow();
 
 			return {
 				success: true as const,
@@ -316,10 +323,21 @@ export const meetingsRouter = router({
 		.mutation(async ({ input }) => {
 			const { meetingId, date, startTime, duration, timezone } = input;
 
-			const meeting = await prisma.meeting.findUnique({
-				where: { id: meetingId },
-				include: { lead: true },
-			});
+			const meeting = await db
+				.selectFrom("meeting as m")
+				.innerJoin("lead as l", "m.leadId", "l.id")
+				.select([
+					"m.id",
+					"m.eventId",
+					"m.meetUrl",
+					"m.duration",
+					"m.scheduledAt",
+					"l.id as lead_id",
+					"l.name as lead_name",
+					"l.email as lead_email",
+				])
+				.where("m.id", "=", meetingId)
+				.executeTakeFirst();
 
 			if (!meeting) {
 				throw new TRPCError({
@@ -364,15 +382,17 @@ export const meetingsRouter = router({
 			}
 
 			// Update meeting in database
-			const updatedMeeting = await prisma.meeting.update({
-				where: { id: meetingId },
-				data: {
+			const updatedMeeting = await db
+				.updateTable("meeting")
+				.set({
 					scheduledAt: newScheduledAt,
 					duration: newDuration,
 					eventId: newEventId,
 					meetUrl: newMeetUrl,
-				},
-			});
+				})
+				.where("id", "=", meetingId)
+				.returningAll()
+				.executeTakeFirstOrThrow();
 
 			return {
 				success: true as const,

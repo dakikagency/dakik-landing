@@ -1,2 +1,1 @@
-export { AutomationCard } from "./automation-card";
-export { AutomationContent } from "./automation-content";
+// Intentionally empty. Use direct component imports instead of barrel files.

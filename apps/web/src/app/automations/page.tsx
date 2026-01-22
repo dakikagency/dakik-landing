@@ -5,7 +5,7 @@ import { ArrowLeft, ArrowRight, Search } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
-import { AutomationCard } from "@/components/automations";
+import { AutomationCard } from "@/components/automations/automation-card";
 import { Footer, Navbar } from "@/components/landing";
 import { Reveal, StaggerContainer, StaggerItem } from "@/components/motion";
 import { cn } from "@/lib/utils";
@@ -72,7 +72,12 @@ const sampleAutomations = [
 const sampleTags = [
 	{ id: "1", name: "Email", slug: "email", _count: { automations: 1 } },
 	{ id: "2", name: "Marketing", slug: "marketing", _count: { automations: 1 } },
-	{ id: "3", name: "Onboarding", slug: "onboarding", _count: { automations: 1 } },
+	{
+		id: "3",
+		name: "Onboarding",
+		slug: "onboarding",
+		_count: { automations: 1 },
+	},
 ];
 
 function AutomationsListContent() {
@@ -99,7 +104,8 @@ function AutomationsListContent() {
 
 	// Use sample data if database is empty or query failed
 	const automations =
-		automationsQuery.data?.automations && automationsQuery.data.automations.length > 0
+		automationsQuery.data?.automations &&
+		automationsQuery.data.automations.length > 0
 			? automationsQuery.data.automations
 			: sampleAutomations;
 	const pagination = automationsQuery.data?.pagination ?? {
@@ -142,8 +148,8 @@ function AutomationsListContent() {
 						</Reveal>
 						<Reveal delay={0.2} direction="up">
 							<p className="max-w-2xl text-gray-600 text-lg leading-relaxed">
-								Discover powerful automation workflows that streamline your business
-								processes and boost productivity.
+								Discover powerful automation workflows that streamline your
+								business processes and boost productivity.
 							</p>
 						</Reveal>
 					</div>
@@ -232,7 +238,9 @@ function AutomationsListContent() {
 						{!automationsQuery.isLoading && automations.length === 0 && (
 							<div className="py-20 text-center">
 								<Search className="mx-auto mb-4 h-12 w-12 text-gray-300" />
-								<h3 className="mb-2 font-semibold text-lg">No automations found</h3>
+								<h3 className="mb-2 font-semibold text-lg">
+									No automations found
+								</h3>
 								<p className="text-gray-500">
 									{selectedTag
 										? "No automations match the selected tag. Try a different filter."

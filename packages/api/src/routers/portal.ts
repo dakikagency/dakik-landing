@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import prisma from "@collab/db";
+import { db } from "@collab/db";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
@@ -16,9 +16,11 @@ function generateSignatureHash(signatureData: string): string {
 
 // Customer-only procedure that ensures the user has a customer record
 const customerProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-	const customer = await prisma.customer.findUnique({
-		where: { userId: ctx.session.user.id },
-	});
+	const customer = await db
+		.selectFrom("customer")
+		.selectAll()
+		.where("userId", "=", ctx.session.user.id)
+		.executeTakeFirst();
 
 	if (!customer) {
 		throw new TRPCError({
@@ -50,84 +52,82 @@ export const portalRouter = router({
 			recentContracts,
 		] = await Promise.all([
 			// Active projects count
-			prisma.project.count({
-				where: {
-					customerId: ctx.customer.id,
-					status: { in: ["PENDING", "IN_PROGRESS"] },
-				},
-			}),
+			db
+				.selectFrom("project")
+				.select((eb) => eb.fn.count("id").as("count"))
+				.where("customerId", "=", ctx.customer.id)
+				.where("status", "in", ["PENDING", "IN_PROGRESS"])
+				.executeTakeFirst(),
 
 			// Upcoming meetings count (within next week)
-			prisma.meeting.count({
-				where: {
-					customerId: ctx.customer.id,
-					status: "SCHEDULED",
-					scheduledAt: {
-						gte: now,
-						lte: oneWeekFromNow,
-					},
-				},
-			}),
+			db
+				.selectFrom("meeting")
+				.select((eb) => eb.fn.count("id").as("count"))
+				.where("customerId", "=", ctx.customer.id)
+				.where("status", "=", "SCHEDULED")
+				.where("scheduledAt", ">=", now)
+				.where("scheduledAt", "<=", oneWeekFromNow)
+				.executeTakeFirst(),
 
 			// Pending contracts count
-			prisma.contract.count({
-				where: {
-					customerId: ctx.customer.id,
-					status: { in: ["SENT", "VIEWED"] },
-				},
-			}),
+			db
+				.selectFrom("contract")
+				.select((eb) => eb.fn.count("id").as("count"))
+				.where("customerId", "=", ctx.customer.id)
+				.where("status", "in", ["SENT", "VIEWED"])
+				.executeTakeFirst(),
 
 			// Recent projects (for activity feed)
-			prisma.project.findMany({
-				where: { customerId: ctx.customer.id },
-				take: 5,
-				orderBy: { updatedAt: "desc" },
-				select: {
-					id: true,
-					title: true,
-					status: true,
-					progress: true,
-					updatedAt: true,
-					updates: {
-						take: 1,
-						orderBy: { createdAt: "desc" },
-						select: {
-							title: true,
-							createdAt: true,
-						},
-					},
-				},
-			}),
+			db
+				.selectFrom("project")
+				.select(["id", "title", "status", "progress", "updatedAt"])
+				.where("customerId", "=", ctx.customer.id)
+				.orderBy("updatedAt", "desc")
+				.limit(5)
+				.execute(),
 
 			// Recent meetings
-			prisma.meeting.findMany({
-				where: {
-					customerId: ctx.customer.id,
-					scheduledAt: { gte: now },
-				},
-				take: 5,
-				orderBy: { scheduledAt: "asc" },
-				select: {
-					id: true,
-					title: true,
-					scheduledAt: true,
-					status: true,
-				},
-			}),
+			db
+				.selectFrom("meeting")
+				.select(["id", "title", "scheduledAt", "status"])
+				.where("customerId", "=", ctx.customer.id)
+				.where("scheduledAt", ">=", now)
+				.orderBy("scheduledAt", "asc")
+				.limit(5)
+				.execute(),
 
 			// Recent contracts
-			prisma.contract.findMany({
-				where: { customerId: ctx.customer.id },
-				take: 5,
-				orderBy: { createdAt: "desc" },
-				select: {
-					id: true,
-					title: true,
-					status: true,
-					createdAt: true,
-				},
-			}),
+			db
+				.selectFrom("contract")
+				.select(["id", "title", "status", "createdAt"])
+				.where("customerId", "=", ctx.customer.id)
+				.orderBy("createdAt", "desc")
+				.limit(5)
+				.execute(),
 		]);
+
+		const recentProjectIds = recentProjects.map((p) => p.id);
+		const updates = recentProjectIds.length
+			? await db
+					.selectFrom("project_update")
+					.select(["projectId", "title", "createdAt"])
+					.where("projectId", "in", recentProjectIds)
+					.orderBy("createdAt", "desc")
+					.execute()
+			: [];
+
+		const latestUpdateByProject = new Map<
+			string,
+			{ title: string; createdAt: Date }
+		>();
+		for (const update of updates) {
+			if (!latestUpdateByProject.has(update.projectId)) {
+				latestUpdateByProject.set(update.projectId, {
+					title: update.title,
+					createdAt: update.createdAt,
+				});
+			}
+		}
 
 		// Build recent activity
 		interface ActivityItem {
@@ -141,7 +141,7 @@ export const portalRouter = router({
 		const recentActivity: ActivityItem[] = [];
 
 		for (const project of recentProjects) {
-			const latestUpdate = project.updates[0];
+			const latestUpdate = latestUpdateByProject.get(project.id);
 			recentActivity.push({
 				id: `project-${project.id}`,
 				type: "project",
@@ -182,32 +182,31 @@ export const portalRouter = router({
 		const topActivity = recentActivity.slice(0, 10);
 
 		return {
-			activeProjects: activeProjectsCount,
-			upcomingMeetings: upcomingMeetingsCount,
-			pendingContracts: pendingContractsCount,
+			activeProjects: Number(activeProjectsCount?.count ?? 0),
+			upcomingMeetings: Number(upcomingMeetingsCount?.count ?? 0),
+			pendingContracts: Number(pendingContractsCount?.count ?? 0),
 			recentActivity: topActivity,
 		};
 	}),
 
 	// Get all projects for the customer
 	getProjects: customerProcedure.query(async ({ ctx }) => {
-		const projects = await prisma.project.findMany({
-			where: { customerId: ctx.customer.id },
-			orderBy: { createdAt: "desc" },
-			select: {
-				id: true,
-				title: true,
-				description: true,
-				status: true,
-				progress: true,
-				startDate: true,
-				endDate: true,
-				createdAt: true,
-				updatedAt: true,
-			},
-		});
-
-		return projects;
+		return await db
+			.selectFrom("project")
+			.select([
+				"id",
+				"title",
+				"description",
+				"status",
+				"progress",
+				"startDate",
+				"endDate",
+				"createdAt",
+				"updatedAt",
+			])
+			.where("customerId", "=", ctx.customer.id)
+			.orderBy("createdAt", "desc")
+			.execute();
 	}),
 
 	// Get project updates for a specific project
@@ -215,12 +214,12 @@ export const portalRouter = router({
 		.input(z.object({ projectId: z.string() }))
 		.query(async ({ ctx, input }) => {
 			// Verify the project belongs to this customer
-			const project = await prisma.project.findFirst({
-				where: {
-					id: input.projectId,
-					customerId: ctx.customer.id,
-				},
-			});
+			const project = await db
+				.selectFrom("project")
+				.select(["id"])
+				.where("id", "=", input.projectId)
+				.where("customerId", "=", ctx.customer.id)
+				.executeTakeFirst();
 
 			if (!project) {
 				throw new TRPCError({
@@ -229,39 +228,31 @@ export const portalRouter = router({
 				});
 			}
 
-			const updates = await prisma.projectUpdate.findMany({
-				where: { projectId: input.projectId },
-				orderBy: { createdAt: "desc" },
-				select: {
-					id: true,
-					title: true,
-					content: true,
-					progress: true,
-					createdAt: true,
-				},
-			});
-
-			return updates;
+			return db
+				.selectFrom("project_update")
+				.select(["id", "title", "content", "progress", "createdAt"])
+				.where("projectId", "=", input.projectId)
+				.orderBy("createdAt", "desc")
+				.execute();
 		}),
 
 	// Get all contracts for the customer
 	getContracts: customerProcedure.query(async ({ ctx }) => {
-		const contracts = await prisma.contract.findMany({
-			where: { customerId: ctx.customer.id },
-			orderBy: { createdAt: "desc" },
-			select: {
-				id: true,
-				title: true,
-				fileUrl: true,
-				status: true,
-				signedAt: true,
-				signerName: true,
-				createdAt: true,
-				updatedAt: true,
-			},
-		});
-
-		return contracts;
+		return await db
+			.selectFrom("contract")
+			.select([
+				"id",
+				"title",
+				"fileUrl",
+				"status",
+				"signedAt",
+				"signerName",
+				"createdAt",
+				"updatedAt",
+			])
+			.where("customerId", "=", ctx.customer.id)
+			.orderBy("createdAt", "desc")
+			.execute();
 	}),
 
 	// Mark a contract as viewed
@@ -269,12 +260,12 @@ export const portalRouter = router({
 		.input(z.object({ contractId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			// Verify the contract belongs to this customer
-			const contract = await prisma.contract.findFirst({
-				where: {
-					id: input.contractId,
-					customerId: ctx.customer.id,
-				},
-			});
+			const contract = await db
+				.selectFrom("contract")
+				.selectAll()
+				.where("id", "=", input.contractId)
+				.where("customerId", "=", ctx.customer.id)
+				.executeTakeFirst();
 
 			if (!contract) {
 				throw new TRPCError({
@@ -285,10 +276,11 @@ export const portalRouter = router({
 
 			// Only update if currently in SENT status
 			if (contract.status === "SENT") {
-				await prisma.contract.update({
-					where: { id: input.contractId },
-					data: { status: "VIEWED" },
-				});
+				await db
+					.updateTable("contract")
+					.set({ status: "VIEWED" })
+					.where("id", "=", input.contractId)
+					.execute();
 			}
 
 			return { success: true };
@@ -298,22 +290,21 @@ export const portalRouter = router({
 	getContractById: customerProcedure
 		.input(z.object({ contractId: z.string() }))
 		.query(async ({ ctx, input }) => {
-			const contract = await prisma.contract.findFirst({
-				where: {
-					id: input.contractId,
-					customerId: ctx.customer.id,
-				},
-				select: {
-					id: true,
-					title: true,
-					fileUrl: true,
-					status: true,
-					signedAt: true,
-					signerName: true,
-					createdAt: true,
-					updatedAt: true,
-				},
-			});
+			const contract = await db
+				.selectFrom("contract")
+				.select([
+					"id",
+					"title",
+					"fileUrl",
+					"status",
+					"signedAt",
+					"signerName",
+					"createdAt",
+					"updatedAt",
+				])
+				.where("id", "=", input.contractId)
+				.where("customerId", "=", ctx.customer.id)
+				.executeTakeFirst();
 
 			if (!contract) {
 				throw new TRPCError({
@@ -348,12 +339,12 @@ export const portalRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			// Verify the contract belongs to this customer
-			const contract = await prisma.contract.findFirst({
-				where: {
-					id: input.contractId,
-					customerId: ctx.customer.id,
-				},
-			});
+			const contract = await db
+				.selectFrom("contract")
+				.selectAll()
+				.where("id", "=", input.contractId)
+				.where("customerId", "=", ctx.customer.id)
+				.executeTakeFirst();
 
 			if (!contract) {
 				throw new TRPCError({
@@ -380,25 +371,18 @@ export const portalRouter = router({
 			const signedAt = new Date();
 
 			// Update contract with signature data
-			const updatedContract = await prisma.contract.update({
-				where: { id: input.contractId },
-				data: {
+			const updatedContract = await db
+				.updateTable("contract")
+				.set({
 					status: "SIGNED",
 					signedAt,
 					signatureData: input.signatureData,
 					signerName: input.signerName,
 					signatureHash,
-					// Note: signerIp would typically be captured from request headers
-					// For now, we'll leave it null as accessing headers in tRPC requires context setup
-				},
-				select: {
-					id: true,
-					title: true,
-					status: true,
-					signedAt: true,
-					signerName: true,
-				},
-			});
+				})
+				.where("id", "=", input.contractId)
+				.returning(["id", "title", "status", "signedAt", "signerName"])
+				.executeTakeFirstOrThrow();
 
 			return {
 				success: true,
@@ -409,49 +393,52 @@ export const portalRouter = router({
 
 	// Get all meetings for the customer
 	getMeetings: customerProcedure.query(async ({ ctx }) => {
-		const meetings = await prisma.meeting.findMany({
-			where: { customerId: ctx.customer.id },
-			orderBy: { scheduledAt: "desc" },
-			select: {
-				id: true,
-				title: true,
-				description: true,
-				status: true,
-				scheduledAt: true,
-				duration: true,
-				meetUrl: true,
-				createdAt: true,
-			},
-		});
-
-		return meetings;
+		return await db
+			.selectFrom("meeting")
+			.select([
+				"id",
+				"title",
+				"description",
+				"status",
+				"scheduledAt",
+				"duration",
+				"meetUrl",
+				"createdAt",
+			])
+			.where("customerId", "=", ctx.customer.id)
+			.orderBy("scheduledAt", "desc")
+			.execute();
 	}),
 
 	// Get Q&A for all customer's projects
 	getQandA: customerProcedure.query(async ({ ctx }) => {
-		const qAndAs = await prisma.qAndA.findMany({
-			where: {
-				project: {
-					customerId: ctx.customer.id,
-				},
-			},
-			orderBy: { askedAt: "desc" },
-			select: {
-				id: true,
-				question: true,
-				answer: true,
-				askedAt: true,
-				answeredAt: true,
-				project: {
-					select: {
-						id: true,
-						title: true,
-					},
-				},
-			},
-		});
+		const rows = await db
+			.selectFrom("q_and_a as qa")
+			.innerJoin("project as p", "qa.projectId", "p.id")
+			.select([
+				"qa.id",
+				"qa.question",
+				"qa.answer",
+				"qa.askedAt",
+				"qa.answeredAt",
+				"p.id as project_id",
+				"p.title as project_title",
+			])
+			.where("p.customerId", "=", ctx.customer.id)
+			.orderBy("qa.askedAt", "desc")
+			.execute();
 
-		return qAndAs;
+		return rows.map((row) => ({
+			id: row.id,
+			question: row.question,
+			answer: row.answer,
+			askedAt: row.askedAt,
+			answeredAt: row.answeredAt,
+			project: {
+				id: row.project_id,
+				title: row.project_title,
+			},
+		}));
 	}),
 
 	// Submit a new question
@@ -464,12 +451,12 @@ export const portalRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			// Verify the project belongs to this customer
-			const project = await prisma.project.findFirst({
-				where: {
-					id: input.projectId,
-					customerId: ctx.customer.id,
-				},
-			});
+			const project = await db
+				.selectFrom("project")
+				.select(["id", "title"])
+				.where("id", "=", input.projectId)
+				.where("customerId", "=", ctx.customer.id)
+				.executeTakeFirst();
 
 			if (!project) {
 				throw new TRPCError({
@@ -478,79 +465,87 @@ export const portalRouter = router({
 				});
 			}
 
-			const qAndA = await prisma.qAndA.create({
-				data: {
+			const qAndA = await db
+				.insertInto("q_and_a")
+				.values({
+					id: crypto.randomUUID(),
 					projectId: input.projectId,
 					question: input.question,
-				},
-				select: {
-					id: true,
-					question: true,
-					askedAt: true,
-					project: {
-						select: {
-							id: true,
-							title: true,
-						},
-					},
-				},
-			});
+					askedAt: new Date(),
+				})
+				.returning(["id", "question", "askedAt", "projectId"])
+				.executeTakeFirstOrThrow();
 
-			return qAndA;
+			return {
+				id: qAndA.id,
+				question: qAndA.question,
+				askedAt: qAndA.askedAt,
+				project: {
+					id: project.id,
+					title: project.title,
+				},
+			};
 		}),
 
 	getInvoices: customerProcedure.query(async ({ ctx }) => {
-		const invoices = await prisma.invoice.findMany({
-			where: { customerId: ctx.customer.id },
-			orderBy: { invoiceDate: "desc" },
-			select: {
-				id: true,
-				invoiceDate: true,
-				dueDate: true,
-				amount: true,
-				description: true,
-				status: true,
-				fileUrl: true,
-				paidAt: true,
-				createdAt: true,
-				project: {
-					select: {
-						id: true,
-						title: true,
-					},
-				},
-			},
-		});
+		const rows = await db
+			.selectFrom("invoice as i")
+			.leftJoin("project as p", "i.projectId", "p.id")
+			.select([
+				"i.id",
+				"i.invoiceDate",
+				"i.dueDate",
+				"i.amount",
+				"i.description",
+				"i.status",
+				"i.fileUrl",
+				"i.paidAt",
+				"i.createdAt",
+				"p.id as project_id",
+				"p.title as project_title",
+			])
+			.where("i.customerId", "=", ctx.customer.id)
+			.orderBy("i.invoiceDate", "desc")
+			.execute();
 
-		return invoices;
+		return rows.map((row) => ({
+			id: row.id,
+			invoiceDate: row.invoiceDate,
+			dueDate: row.dueDate,
+			amount: row.amount,
+			description: row.description,
+			status: row.status,
+			fileUrl: row.fileUrl,
+			paidAt: row.paidAt,
+			createdAt: row.createdAt,
+			project: row.project_id
+				? { id: row.project_id, title: row.project_title }
+				: null,
+		}));
 	}),
 
 	getInvoiceById: customerProcedure
 		.input(z.object({ invoiceId: z.string() }))
 		.query(async ({ ctx, input }) => {
-			const invoice = await prisma.invoice.findFirst({
-				where: {
-					id: input.invoiceId,
-					customerId: ctx.customer.id,
-				},
-				select: {
-					id: true,
-					invoiceDate: true,
-					dueDate: true,
-					amount: true,
-					description: true,
-					status: true,
-					fileUrl: true,
-					paidAt: true,
-					createdAt: true,
-					project: {
-						select: {
-							id: true,
-							title: true,
-						},
-					},
-				},
-			});
+			const invoice = await db
+				.selectFrom("invoice as i")
+				.leftJoin("project as p", "i.projectId", "p.id")
+				.select([
+					"i.id",
+					"i.invoiceDate",
+					"i.dueDate",
+					"i.amount",
+					"i.description",
+					"i.status",
+					"i.fileUrl",
+					"i.paidAt",
+					"i.createdAt",
+					"p.id as project_id",
+					"p.title as project_title",
+				])
+				.where("i.id", "=", input.invoiceId)
+				.where("i.customerId", "=", ctx.customer.id)
+				.executeTakeFirst();
 
 			if (!invoice) {
 				throw new TRPCError({
@@ -559,18 +554,31 @@ export const portalRouter = router({
 				});
 			}
 
-			return invoice;
+			return {
+				id: invoice.id,
+				invoiceDate: invoice.invoiceDate,
+				dueDate: invoice.dueDate,
+				amount: invoice.amount,
+				description: invoice.description,
+				status: invoice.status,
+				fileUrl: invoice.fileUrl,
+				paidAt: invoice.paidAt,
+				createdAt: invoice.createdAt,
+				project: invoice.project_id
+					? { id: invoice.project_id, title: invoice.project_title }
+					: null,
+			};
 		}),
 
 	createPaymentIntent: customerProcedure
 		.input(z.object({ invoiceId: z.string() }))
 		.mutation(async ({ ctx, input }) => {
-			const invoice = await prisma.invoice.findFirst({
-				where: {
-					id: input.invoiceId,
-					customerId: ctx.customer.id,
-				},
-			});
+			const invoice = await db
+				.selectFrom("invoice")
+				.selectAll()
+				.where("id", "=", input.invoiceId)
+				.where("customerId", "=", ctx.customer.id)
+				.executeTakeFirst();
 
 			if (!invoice) {
 				throw new TRPCError({
@@ -613,10 +621,11 @@ export const portalRouter = router({
 				},
 			});
 
-			await prisma.invoice.update({
-				where: { id: invoice.id },
-				data: { stripePaymentIntentId: paymentIntent.id },
-			});
+			await db
+				.updateTable("invoice")
+				.set({ stripePaymentIntentId: paymentIntent.id })
+				.where("id", "=", invoice.id)
+				.execute();
 
 			return {
 				clientSecret: paymentIntent.client_secret,

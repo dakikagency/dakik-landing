@@ -1,5 +1,4 @@
-import type { Prisma } from "@collab/db";
-import prisma from "@collab/db";
+import { db } from "@collab/db";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { publicProcedure, router } from "../index";
@@ -58,9 +57,11 @@ export const surveyRouter = router({
 	submit: publicProcedure
 		.input(submitInputSchema)
 		.mutation(async ({ input }) => {
-			const existingLead = await prisma.lead.findUnique({
-				where: { email: input.email },
-			});
+			const existingLead = await db
+				.selectFrom("lead")
+				.select(["id"])
+				.where("email", "=", input.email)
+				.executeTakeFirst();
 
 			if (existingLead) {
 				throw new TRPCError({
@@ -78,16 +79,21 @@ export const surveyRouter = router({
 				budget: input.budget,
 			};
 
-			const lead = await prisma.lead.create({
-				data: {
+			const lead = await db
+				.insertInto("lead")
+				.values({
+					id: crypto.randomUUID(),
 					email: input.email,
 					name: input.name,
 					projectType: input.projectType ?? undefined,
 					budget: input.budget ?? undefined,
 					details: input.details,
-					surveyProgress: surveyData as Prisma.InputJsonValue,
-				},
-			});
+					surveyProgress: surveyData,
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				})
+				.returning(["id"])
+				.executeTakeFirstOrThrow();
 
 			// TODO: Implement webhook service
 			// webhookService.dispatch("lead.created", {
@@ -108,9 +114,11 @@ export const surveyRouter = router({
 	checkEmail: publicProcedure
 		.input(checkEmailInputSchema)
 		.query(async ({ input }) => {
-			const existingLead = await prisma.lead.findUnique({
-				where: { email: input.email },
-			});
+			const existingLead = await db
+				.selectFrom("lead")
+				.select(["id"])
+				.where("email", "=", input.email)
+				.executeTakeFirst();
 
 			return {
 				exists: existingLead !== null,
@@ -120,13 +128,15 @@ export const surveyRouter = router({
 	updateProgress: publicProcedure
 		.input(updateProgressInputSchema)
 		.mutation(async ({ input }) => {
-			const lead = await prisma.lead.update({
-				where: { id: input.leadId },
-				data: {
+			const lead = await db
+				.updateTable("lead")
+				.set({
 					currentStep: input.currentStep,
-					surveyProgress: input.surveyData as Prisma.InputJsonValue,
-				},
-			});
+					surveyProgress: input.surveyData,
+				})
+				.where("id", "=", input.leadId)
+				.returning(["id"])
+				.executeTakeFirstOrThrow();
 
 			return {
 				success: true as const,

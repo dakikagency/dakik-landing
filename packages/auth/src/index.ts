@@ -1,16 +1,16 @@
-import prisma from "@collab/db";
+import { db } from "@collab/db/kysely";
 import { env } from "@collab/env/server";
 import { betterAuth } from "better-auth";
-import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 
 // Admin email addresses that should automatically receive ADMIN role
 const ADMIN_EMAILS = ["erdeniz@dakik.co.uk"];
 
 export const auth = betterAuth({
-	database: prismaAdapter(prisma, {
-		provider: "postgresql",
-	}),
+	database: {
+		db,
+		type: "postgres",
+	},
 	baseURL: env.BETTER_AUTH_URL,
 	trustedOrigins: [env.CORS_ORIGIN],
 	advanced: {
@@ -39,7 +39,7 @@ export const auth = betterAuth({
 	databaseHooks: {
 		user: {
 			create: {
-				before: async (user) => {
+				before: (user, _context) => {
 					// Auto-assign ADMIN role to specific email addresses
 					if (ADMIN_EMAILS.includes(user.email.toLowerCase())) {
 						return {

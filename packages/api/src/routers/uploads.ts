@@ -1,5 +1,6 @@
-import prisma from "@collab/db";
+import { db } from "@collab/db";
 import { TRPCError } from "@trpc/server";
+import { sql } from "kysely";
 import { z } from "zod";
 
 import { protectedProcedure, router } from "../index";
@@ -95,8 +96,10 @@ export const uploadsRouter = router({
 			})
 		)
 		.mutation(async ({ input }) => {
-			const asset = await prisma.asset.create({
-				data: {
+			const asset = await db
+				.insertInto("asset")
+				.values({
+					id: crypto.randomUUID(),
 					publicId: input.publicId,
 					url: input.url,
 					secureUrl: input.secureUrl,
@@ -106,8 +109,10 @@ export const uploadsRouter = router({
 					height: input.height,
 					bytes: input.bytes,
 					folder: input.folder,
-				},
-			});
+					createdAt: new Date(),
+				})
+				.returningAll()
+				.executeTakeFirstOrThrow();
 
 			return asset;
 		}),
@@ -129,37 +134,40 @@ export const uploadsRouter = router({
 			const { page, limit, folder, search, resourceType } = input;
 			const skip = (page - 1) * limit;
 
-			const where = {
-				AND: [
-					folder ? { folder: { equals: folder } } : {},
-					resourceType ? { resourceType: { equals: resourceType } } : {},
-					search
-						? {
-								OR: [
-									{
-										publicId: {
-											contains: search,
-											mode: "insensitive" as const,
-										},
-									},
-									{
-										folder: { contains: search, mode: "insensitive" as const },
-									},
-								],
-							}
-						: {},
-				],
-			};
+			let query = db.selectFrom("asset").selectAll();
 
-			const [assets, total] = await Promise.all([
-				prisma.asset.findMany({
-					where,
-					skip,
-					take: limit,
-					orderBy: { createdAt: "desc" },
-				}),
-				prisma.asset.count({ where }),
+			if (folder) {
+				query = query.where("folder", "=", folder);
+			}
+
+			if (resourceType) {
+				query = query.where("resourceType", "=", resourceType);
+			}
+
+			if (search) {
+				query = query.where(
+					sql<boolean>`("publicId" ILIKE ${`%${search}%`} OR "folder" ILIKE ${`%${search}%`})`
+				);
+			}
+
+			const [assets, totalRow] = await Promise.all([
+				query.orderBy("createdAt", "desc").limit(limit).offset(skip).execute(),
+				db
+					.selectFrom("asset")
+					.select((eb) => eb.fn.count("id").as("count"))
+					.$if(!!folder, (qb) => qb.where("folder", "=", folder))
+					.$if(!!resourceType, (qb) =>
+						qb.where("resourceType", "=", resourceType)
+					)
+					.$if(!!search, (qb) =>
+						qb.where(
+							sql<boolean>`("publicId" ILIKE ${`%${search}%`} OR "folder" ILIKE ${`%${search}%`})`
+						)
+					)
+					.executeTakeFirst(),
 			]);
+
+			const total = Number(totalRow?.count ?? 0);
 
 			const totalPages = Math.ceil(total / limit);
 
@@ -180,14 +188,13 @@ export const uploadsRouter = router({
 	 * Get unique folders for filtering
 	 */
 	getFolders: adminProcedure.query(async () => {
-		const folders = await prisma.asset.findMany({
-			select: { folder: true },
-			distinct: ["folder"],
-			where: {
-				folder: { not: null },
-			},
-			orderBy: { folder: "asc" },
-		});
+		const folders = await db
+			.selectFrom("asset")
+			.select(["folder"])
+			.where("folder", "is not", null)
+			.distinct()
+			.orderBy("folder", "asc")
+			.execute();
 
 		return folders.map((f) => f.folder).filter(Boolean) as string[];
 	}),
@@ -207,9 +214,11 @@ export const uploadsRouter = router({
 			const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
 			// Find the asset first
-			const asset = await prisma.asset.findUnique({
-				where: { id: input.id },
-			});
+			const asset = await db
+				.selectFrom("asset")
+				.selectAll()
+				.where("id", "=", input.id)
+				.executeTakeFirst();
 
 			if (!asset) {
 				throw new TRPCError({
@@ -245,9 +254,7 @@ export const uploadsRouter = router({
 			}
 
 			// Delete from database
-			await prisma.asset.delete({
-				where: { id: input.id },
-			});
+			await db.deleteFrom("asset").where("id", "=", input.id).execute();
 
 			return { success: true };
 		}),
@@ -267,9 +274,11 @@ export const uploadsRouter = router({
 			const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
 			// Find all assets
-			const assets = await prisma.asset.findMany({
-				where: { id: { in: input.ids } },
-			});
+			const assets = await db
+				.selectFrom("asset")
+				.selectAll()
+				.where("id", "in", input.ids)
+				.execute();
 
 			// Delete from Cloudinary if configured
 			if (cloudName && apiKey && apiSecret) {
@@ -299,9 +308,7 @@ export const uploadsRouter = router({
 			}
 
 			// Delete from database
-			await prisma.asset.deleteMany({
-				where: { id: { in: input.ids } },
-			});
+			await db.deleteFrom("asset").where("id", "in", input.ids).execute();
 
 			return { success: true, count: assets.length };
 		}),

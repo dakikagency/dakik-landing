@@ -1,4 +1,4 @@
-import prisma from "@collab/db";
+import { db } from "@collab/db";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
@@ -22,9 +22,11 @@ const webhookEvents = [
 
 export const webhooksRouter = router({
 	list: adminProcedure.query(() => {
-		return prisma.webhook.findMany({
-			orderBy: { createdAt: "desc" },
-		});
+		return db
+			.selectFrom("webhook")
+			.selectAll()
+			.orderBy("createdAt", "desc")
+			.execute();
 	}),
 
 	create: adminProcedure
@@ -36,13 +38,18 @@ export const webhooksRouter = router({
 			})
 		)
 		.mutation(({ input }) => {
-			return prisma.webhook.create({
-				data: {
+			return db
+				.insertInto("webhook")
+				.values({
+					id: crypto.randomUUID(),
 					url: input.url,
 					secret: input.secret,
 					events: input.events,
-				},
-			});
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				})
+				.returningAll()
+				.executeTakeFirstOrThrow();
 		}),
 
 	update: adminProcedure
@@ -57,17 +64,21 @@ export const webhooksRouter = router({
 		)
 		.mutation(({ input }) => {
 			const { id, ...data } = input;
-			return prisma.webhook.update({
-				where: { id },
-				data,
-			});
+			return db
+				.updateTable("webhook")
+				.set(data)
+				.where("id", "=", id)
+				.returningAll()
+				.executeTakeFirstOrThrow();
 		}),
 
 	delete: adminProcedure
 		.input(z.object({ id: z.string() }))
 		.mutation(({ input }) => {
-			return prisma.webhook.delete({
-				where: { id: input.id },
-			});
+			return db
+				.deleteFrom("webhook")
+				.where("id", "=", input.id)
+				.returningAll()
+				.executeTakeFirstOrThrow();
 		}),
 });

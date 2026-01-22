@@ -1,5 +1,6 @@
-import prisma from "@collab/db";
+import { db } from "@collab/db";
 import { TRPCError } from "@trpc/server";
+import { sql } from "kysely";
 import { z } from "zod";
 
 import { protectedProcedure, publicProcedure, router } from "../index";
@@ -101,26 +102,42 @@ export const componentsRouter = router({
 		const { page, limit, category, search } = input;
 		const skip = (page - 1) * limit;
 
-		const where = {
-			published: true,
-			...(category && { category }),
-			...(search && {
-				OR: [
-					{ name: { contains: search, mode: "insensitive" as const } },
-					{ description: { contains: search, mode: "insensitive" as const } },
-				],
-			}),
-		};
+		let query = db
+			.selectFrom("component_doc")
+			.selectAll()
+			.where("published", "=", true);
 
-		const [components, total] = await Promise.all([
-			prisma.componentDoc.findMany({
-				where,
-				orderBy: [{ category: "asc" }, { name: "asc" }],
-				skip,
-				take: limit,
-			}),
-			prisma.componentDoc.count({ where }),
+		if (category) {
+			query = query.where("category", "=", category);
+		}
+
+		if (search) {
+			query = query.where(
+				sql<boolean>`("name" ILIKE ${`%${search}%`} OR "description" ILIKE ${`%${search}%`})`
+			);
+		}
+
+		const [components, totalRow] = await Promise.all([
+			query
+				.orderBy("category", "asc")
+				.orderBy("name", "asc")
+				.limit(limit)
+				.offset(skip)
+				.execute(),
+			db
+				.selectFrom("component_doc")
+				.select((eb) => eb.fn.count("id").as("count"))
+				.where("published", "=", true)
+				.$if(!!category, (qb) => qb.where("category", "=", category))
+				.$if(!!search, (qb) =>
+					qb.where(
+						sql<boolean>`("name" ILIKE ${`%${search}%`} OR "description" ILIKE ${`%${search}%`})`
+					)
+				)
+				.executeTakeFirst(),
 		]);
+
+		const total = Number(totalRow?.count ?? 0);
 
 		return {
 			components,
@@ -138,14 +155,12 @@ export const componentsRouter = router({
 	getBySlug: publicProcedure
 		.input(z.object({ slug: z.string().min(1) }))
 		.query(async ({ input }) => {
-			const component = await prisma.componentDoc.findFirst({
-				where: {
-					slug: input.slug,
-					published: true,
-				},
-			});
-
-			return component;
+			return await db
+				.selectFrom("component_doc")
+				.selectAll()
+				.where("slug", "=", input.slug)
+				.where("published", "=", true)
+				.executeTakeFirst();
 		}),
 
 	getCategories: publicProcedure.query(() => {
@@ -157,27 +172,40 @@ export const componentsRouter = router({
 		const { page, limit, category, search, status } = input;
 		const skip = (page - 1) * limit;
 
-		const where = {
-			...(status === "published" && { published: true }),
-			...(status === "draft" && { published: false }),
-			...(category && { category }),
-			...(search && {
-				OR: [
-					{ name: { contains: search, mode: "insensitive" as const } },
-					{ description: { contains: search, mode: "insensitive" as const } },
-				],
-			}),
-		};
+		let query = db.selectFrom("component_doc").selectAll();
 
-		const [components, total] = await Promise.all([
-			prisma.componentDoc.findMany({
-				where,
-				orderBy: { createdAt: "desc" },
-				skip,
-				take: limit,
-			}),
-			prisma.componentDoc.count({ where }),
+		if (status === "published") {
+			query = query.where("published", "=", true);
+		}
+		if (status === "draft") {
+			query = query.where("published", "=", false);
+		}
+		if (category) {
+			query = query.where("category", "=", category);
+		}
+		if (search) {
+			query = query.where(
+				sql<boolean>`("name" ILIKE ${`%${search}%`} OR "description" ILIKE ${`%${search}%`})`
+			);
+		}
+
+		const [components, totalRow] = await Promise.all([
+			query.orderBy("createdAt", "desc").limit(limit).offset(skip).execute(),
+			db
+				.selectFrom("component_doc")
+				.select((eb) => eb.fn.count("id").as("count"))
+				.$if(status === "published", (qb) => qb.where("published", "=", true))
+				.$if(status === "draft", (qb) => qb.where("published", "=", false))
+				.$if(!!category, (qb) => qb.where("category", "=", category))
+				.$if(!!search, (qb) =>
+					qb.where(
+						sql<boolean>`("name" ILIKE ${`%${search}%`} OR "description" ILIKE ${`%${search}%`})`
+					)
+				)
+				.executeTakeFirst(),
 		]);
+
+		const total = Number(totalRow?.count ?? 0);
 
 		return {
 			components,
@@ -195,9 +223,11 @@ export const componentsRouter = router({
 	getById: adminProcedure
 		.input(z.object({ id: z.string() }))
 		.query(async ({ input }) => {
-			const component = await prisma.componentDoc.findUnique({
-				where: { id: input.id },
-			});
+			const component = await db
+				.selectFrom("component_doc")
+				.selectAll()
+				.where("id", "=", input.id)
+				.executeTakeFirst();
 
 			if (!component) {
 				throw new TRPCError({
@@ -213,9 +243,11 @@ export const componentsRouter = router({
 		.input(createInputSchema)
 		.mutation(async ({ input }) => {
 			// Check if slug is unique
-			const existingComponent = await prisma.componentDoc.findUnique({
-				where: { slug: input.slug },
-			});
+			const existingComponent = await db
+				.selectFrom("component_doc")
+				.select(["id"])
+				.where("slug", "=", input.slug)
+				.executeTakeFirst();
 
 			if (existingComponent) {
 				throw new TRPCError({
@@ -224,8 +256,10 @@ export const componentsRouter = router({
 				});
 			}
 
-			const component = await prisma.componentDoc.create({
-				data: {
+			const component = await db
+				.insertInto("component_doc")
+				.values({
+					id: crypto.randomUUID(),
 					name: input.name,
 					slug: input.slug,
 					category: input.category,
@@ -234,8 +268,11 @@ export const componentsRouter = router({
 					code: input.code,
 					preview: input.preview ?? null,
 					published: input.published,
-				},
-			});
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				})
+				.returningAll()
+				.executeTakeFirstOrThrow();
 
 			return component;
 		}),
@@ -246,9 +283,11 @@ export const componentsRouter = router({
 			const { id, ...data } = input;
 
 			// Find the existing component
-			const existingComponent = await prisma.componentDoc.findUnique({
-				where: { id },
-			});
+			const existingComponent = await db
+				.selectFrom("component_doc")
+				.selectAll()
+				.where("id", "=", id)
+				.executeTakeFirst();
 
 			if (!existingComponent) {
 				throw new TRPCError({
@@ -259,9 +298,11 @@ export const componentsRouter = router({
 
 			// Check if slug is unique (if changing)
 			if (data.slug && data.slug !== existingComponent.slug) {
-				const componentWithSlug = await prisma.componentDoc.findUnique({
-					where: { slug: data.slug },
-				});
+				const componentWithSlug = await db
+					.selectFrom("component_doc")
+					.select(["id"])
+					.where("slug", "=", data.slug)
+					.executeTakeFirst();
 
 				if (componentWithSlug) {
 					throw new TRPCError({
@@ -271,10 +312,12 @@ export const componentsRouter = router({
 				}
 			}
 
-			const component = await prisma.componentDoc.update({
-				where: { id },
-				data,
-			});
+			const component = await db
+				.updateTable("component_doc")
+				.set(data)
+				.where("id", "=", id)
+				.returningAll()
+				.executeTakeFirstOrThrow();
 
 			return component;
 		}),
@@ -282,9 +325,11 @@ export const componentsRouter = router({
 	delete: adminProcedure
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ input }) => {
-			const existingComponent = await prisma.componentDoc.findUnique({
-				where: { id: input.id },
-			});
+			const existingComponent = await db
+				.selectFrom("component_doc")
+				.select(["id"])
+				.where("id", "=", input.id)
+				.executeTakeFirst();
 
 			if (!existingComponent) {
 				throw new TRPCError({
@@ -293,9 +338,7 @@ export const componentsRouter = router({
 				});
 			}
 
-			await prisma.componentDoc.delete({
-				where: { id: input.id },
-			});
+			await db.deleteFrom("component_doc").where("id", "=", input.id).execute();
 
 			return { success: true };
 		}),
@@ -306,20 +349,23 @@ export const componentsRouter = router({
 	getFiles: adminProcedure
 		.input(z.object({ componentId: z.string() }))
 		.query(async ({ input }) => {
-			const files = await prisma.componentFile.findMany({
-				where: { componentId: input.componentId },
-				orderBy: { order: "asc" },
-			});
-			return files;
+			return await db
+				.selectFrom("component_file")
+				.selectAll()
+				.where("componentId", "=", input.componentId)
+				.orderBy("order", "asc")
+				.execute();
 		}),
 
 	// Get a single file
 	getFile: adminProcedure
 		.input(z.object({ id: z.string() }))
 		.query(async ({ input }) => {
-			const file = await prisma.componentFile.findUnique({
-				where: { id: input.id },
-			});
+			const file = await db
+				.selectFrom("component_file")
+				.selectAll()
+				.where("id", "=", input.id)
+				.executeTakeFirst();
 
 			if (!file) {
 				throw new TRPCError({
@@ -336,9 +382,11 @@ export const componentsRouter = router({
 		.input(fileInputSchema)
 		.mutation(async ({ input }) => {
 			// Verify component exists
-			const component = await prisma.componentDoc.findUnique({
-				where: { id: input.componentId },
-			});
+			const component = await db
+				.selectFrom("component_doc")
+				.select(["id"])
+				.where("id", "=", input.componentId)
+				.executeTakeFirst();
 
 			if (!component) {
 				throw new TRPCError({
@@ -348,14 +396,12 @@ export const componentsRouter = router({
 			}
 
 			// Check if filename is unique for this component
-			const existingFile = await prisma.componentFile.findUnique({
-				where: {
-					componentId_filename: {
-						componentId: input.componentId,
-						filename: input.filename,
-					},
-				},
-			});
+			const existingFile = await db
+				.selectFrom("component_file")
+				.select(["id"])
+				.where("componentId", "=", input.componentId)
+				.where("filename", "=", input.filename)
+				.executeTakeFirst();
 
 			if (existingFile) {
 				throw new TRPCError({
@@ -364,9 +410,16 @@ export const componentsRouter = router({
 				});
 			}
 
-			const file = await prisma.componentFile.create({
-				data: input,
-			});
+			const file = await db
+				.insertInto("component_file")
+				.values({
+					id: crypto.randomUUID(),
+					...input,
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				})
+				.returningAll()
+				.executeTakeFirstOrThrow();
 
 			return file;
 		}),
@@ -378,9 +431,11 @@ export const componentsRouter = router({
 			const { id, ...data } = input;
 
 			// Verify file exists
-			const existingFile = await prisma.componentFile.findUnique({
-				where: { id },
-			});
+			const existingFile = await db
+				.selectFrom("component_file")
+				.selectAll()
+				.where("id", "=", id)
+				.executeTakeFirst();
 
 			if (!existingFile) {
 				throw new TRPCError({
@@ -391,14 +446,12 @@ export const componentsRouter = router({
 
 			// If filename is being changed, check for conflicts
 			if (data.filename && data.filename !== existingFile.filename) {
-				const conflictFile = await prisma.componentFile.findUnique({
-					where: {
-						componentId_filename: {
-							componentId: existingFile.componentId,
-							filename: data.filename,
-						},
-					},
-				});
+				const conflictFile = await db
+					.selectFrom("component_file")
+					.select(["id"])
+					.where("componentId", "=", existingFile.componentId)
+					.where("filename", "=", data.filename)
+					.executeTakeFirst();
 
 				if (conflictFile) {
 					throw new TRPCError({
@@ -408,10 +461,12 @@ export const componentsRouter = router({
 				}
 			}
 
-			const file = await prisma.componentFile.update({
-				where: { id },
-				data,
-			});
+			const file = await db
+				.updateTable("component_file")
+				.set(data)
+				.where("id", "=", id)
+				.returningAll()
+				.executeTakeFirstOrThrow();
 
 			return file;
 		}),
@@ -420,9 +475,11 @@ export const componentsRouter = router({
 	deleteFile: adminProcedure
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ input }) => {
-			const existingFile = await prisma.componentFile.findUnique({
-				where: { id: input.id },
-			});
+			const existingFile = await db
+				.selectFrom("component_file")
+				.select(["id"])
+				.where("id", "=", input.id)
+				.executeTakeFirst();
 
 			if (!existingFile) {
 				throw new TRPCError({
@@ -431,9 +488,10 @@ export const componentsRouter = router({
 				});
 			}
 
-			await prisma.componentFile.delete({
-				where: { id: input.id },
-			});
+			await db
+				.deleteFrom("component_file")
+				.where("id", "=", input.id)
+				.execute();
 
 			return { success: true };
 		}),
@@ -451,14 +509,17 @@ export const componentsRouter = router({
 			})
 		)
 		.mutation(async ({ input }) => {
-			const updates = input.files.map((file) =>
-				prisma.componentFile.update({
-					where: { id: file.id },
-					data: { order: file.order },
-				})
-			);
-
-			await prisma.$transaction(updates);
+			await db.transaction().execute(async (trx) => {
+				await Promise.all(
+					input.files.map((file) =>
+						trx
+							.updateTable("component_file")
+							.set({ order: file.order })
+							.where("id", "=", file.id)
+							.execute()
+					)
+				);
+			});
 
 			return { success: true };
 		}),

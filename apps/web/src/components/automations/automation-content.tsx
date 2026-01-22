@@ -104,7 +104,10 @@ function parseMarkdown(markdown: string): string {
 	return html;
 }
 
-export function AutomationContent({ content, className }: AutomationContentProps) {
+export function AutomationContent({
+	content,
+	className,
+}: AutomationContentProps) {
 	const htmlContent = parseMarkdown(content);
 
 	return (

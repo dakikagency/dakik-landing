@@ -1,12 +1,11 @@
 import { env } from "@collab/env/server";
 import { neonConfig } from "@neondatabase/serverless";
 import { PrismaNeon } from "@prisma/adapter-neon";
+import { PrismaClient } from "@prisma/client";
 import ws from "ws";
 
-import { PrismaClient } from "@prisma/client";
-
-// biome-ignore lint/performance/noBarrelFile: Necessary for Prisma client type exports
-export * from "@prisma/client";
+export type { Prisma } from "@prisma/client";
+export { db } from "./kysely";
 
 // Get DATABASE_URL from env package (which handles loading from .env)
 const databaseUrl = env.DATABASE_URL;
@@ -30,7 +29,12 @@ if (!databaseUrl) {
 	);
 }
 
-if (!databaseUrl.startsWith("postgresql://") && !databaseUrl.startsWith("postgres://")) {
+if (
+	!(
+		databaseUrl.startsWith("postgresql://") ||
+		databaseUrl.startsWith("postgres://")
+	)
+) {
 	throw new Error(
 		"DATABASE_URL must be a valid PostgreSQL connection string starting with 'postgresql://' or 'postgres://'"
 	);
