@@ -9,17 +9,17 @@ function handler(req: NextRequest) {
 		req,
 		router: appRouter,
 		createContext: () => createContext(req),
-		onError:
-			process.env.NODE_ENV === "production"
-				? ({ error }) => {
-						// Log error server-side but sanitize for client
-						console.error("tRPC error:", error.message);
-						// Don't expose internal error details to client
-						if (error.code === "INTERNAL_SERVER_ERROR") {
-							error.message = "An internal error occurred";
-						}
-					}
-				: undefined,
+		onError: ({ error, path }) => {
+			// Always log errors in development for debugging
+			console.error(`[tRPC Error] ${path}:`, error.message || error);
+			console.error("[tRPC Error] Stack:", error.stack);
+			console.error("[tRPC Error] Cause:", error.cause);
+
+			// In production, sanitize the error message
+			if (process.env.NODE_ENV === "production" && error.code === "INTERNAL_SERVER_ERROR") {
+				error.message = "An internal error occurred";
+			}
+		},
 	});
 }
 export { handler as GET, handler as POST };

@@ -1,11 +1,24 @@
 import { existsSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createEnv } from "@t3-oss/env-core";
 import { config } from "dotenv";
 import { z } from "zod";
 
+// Get the directory of this file (ESM compatible)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 // Find and load .env from the monorepo root
 function findMonorepoRoot(): string {
+	// First, try walking up from this file's location (most reliable)
+	// packages/env/src/server.ts -> packages/env/src -> packages/env -> packages -> root
+	const fromFileLocation = resolve(__dirname, "../../..");
+	if (existsSync(join(fromFileLocation, "turbo.json"))) {
+		return fromFileLocation;
+	}
+
+	// Second, try walking up from cwd
 	let currentDir = process.cwd();
 	const maxDepth = 10;
 	let depth = 0;
@@ -41,6 +54,7 @@ if (existsSync(envPath)) {
 }
 
 if (process.env.NODE_ENV === "development") {
+	console.log(`[ENV] Monorepo root: ${monorepoRoot}`);
 	console.log(`[ENV] Loading from: ${envPath}`);
 	console.log(`[ENV] DATABASE_URL exists: ${!!process.env.DATABASE_URL}`);
 }
