@@ -27,6 +27,62 @@
 			height: 0;
 		}
 	}
+
+	/* Landing UI animations */
+	@keyframes spotlight {
+		0% {
+			opacity: 0;
+			transform: translate(-50%, -45%) scale(0.6);
+		}
+		100% {
+			opacity: 0.12;
+			transform: translate(-50%, -45%) scale(1);
+		}
+	}
+
+	@keyframes shimmer-slide {
+		to {
+			transform: translateX(160%);
+		}
+	}
+
+	@keyframes infinite-scroll {
+		to {
+			transform: translateX(calc(-50% - 0.5rem));
+		}
+	}
+
+	@keyframes marquee {
+		0% {
+			transform: translateX(0);
+		}
+		100% {
+			transform: translateX(-100%);
+		}
+	}
+
+	@keyframes gradient {
+		to {
+			background-position: 200% 0;
+		}
+	}
+}
+
+.animate-spotlight {
+	animation: spotlight 1.8s ease-out 0.2s 1 forwards;
+}
+
+.animate-shimmer-slide {
+	animation: shimmer-slide 2.2s infinite linear;
+}
+
+.animate-infinite-scroll {
+	animation: infinite-scroll var(--animation-duration, 40s)
+		var(--animation-direction, forwards) linear infinite;
+}
+
+.animate-gradient {
+	animation: gradient 6s linear infinite;
 }
 
 /* shadcn/ui variants fixed for Tailwind v4 */
