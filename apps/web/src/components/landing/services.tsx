@@ -87,7 +87,7 @@ export function ServicesSection() {
 									className="animate-float-y object-cover"
 									fill
 									priority={false}
-									src="/landing/services-art.svg"
+									src="/landing/services-art.png"
 								/>
 							</div>
 							<div className="mt-3 flex items-center justify-between gap-4">
