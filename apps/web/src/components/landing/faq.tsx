@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Minus, Plus } from "lucide-react";
 import { useState } from "react";
 import { Reveal, StaggerContainer, StaggerItem } from "@/components/motion";
+import { GridBackdrop } from "@/components/ui/reactbits/grid-backdrop";
 import Noise from "../noise";
 
 const faqs = [
@@ -88,72 +89,77 @@ export function FAQ() {
 
 	return (
 		<section
-			className="relative z-10 mx-auto w-full px-[clamp(1rem,5vw,4rem)] pt-16 md:pt-24 lg:px-[clamp(4rem,32vw,23rem)]"
+			className="relative z-10 mx-auto w-full bg-white px-[clamp(1rem,5vw,4rem)] pt-16 md:pt-24"
 			id="faq"
 		>
-			<div className="relative top-0 mx-auto flex w-full">
-				<video
-					autoPlay
-					className="pointer-events-auto absolute z-10 aspect-video h-auto w-full lg:h-96 lg:w-auto"
-					loop
-					muted
-					src="/faq.mp4"
-				/>
-				<div className="pointer-events-auto relative z-50 aspect-video h-auto w-full lg:h-96 lg:w-auto">
-					<Noise
-						patternAlpha={25}
-						patternRefreshInterval={2}
-						patternScaleX={1}
-						patternScaleY={1}
-						patternSize={500}
+			<GridBackdrop className="opacity-90" />
+			<div className="relative">
+				<div className="relative top-0 mx-auto flex w-full">
+					<video
+						autoPlay
+						className="pointer-events-auto absolute z-10 aspect-video h-auto w-full lg:h-96 lg:w-auto"
+						loop
+						muted
+						src="/faq.mp4"
 					/>
-				</div>
-			</div>
-			<div className="mx-auto mt-20 w-full lg:px-[clamp(2rem,16vw,12.5rem)]">
-				<Reveal direction="up">
-					<div className="mb-4 text-left lg:mb-16">
-						<span className="mb-4 inline-block font-medium text-gray-500 text-sm uppercase tracking-widest">
-							FAQ
-						</span>
-						<h2 className="font-bold text-display-md tracking-tight">
-							Common questions
-						</h2>
+					<div className="pointer-events-auto relative z-50 aspect-video h-auto w-full lg:h-96 lg:w-auto">
+						<Noise
+							patternAlpha={25}
+							patternRefreshInterval={2}
+							patternScaleX={1}
+							patternScaleY={1}
+							patternSize={500}
+						/>
 					</div>
-				</Reveal>
-
-				<div className="mx-auto">
-					<StaggerContainer>
-						{faqs.map((faq, index) => (
-							<StaggerItem key={faq.question}>
-								<AccordionItem
-									answer={faq.answer}
-									isOpen={openIndex === index}
-									onToggle={() =>
-										setOpenIndex(openIndex === index ? null : index)
-									}
-									question={faq.question}
-								/>
-							</StaggerItem>
-						))}
-					</StaggerContainer>
 				</div>
-			</div>
-			<div className="relative top-0 right-0 mt-12 mb-32 ml-auto flex w-fit">
-				<video
-					autoPlay
-					className="pointer-events-auto absolute z-10 aspect-video h-auto w-full lg:h-96 lg:w-auto"
-					loop
-					muted
-					src="/faq3.mp4"
-				/>
-				<div className="pointer-events-auto relative z-50 aspect-video h-auto w-full lg:h-96 lg:w-auto">
-					<Noise
-						patternAlpha={25}
-						patternRefreshInterval={2}
-						patternScaleX={1}
-						patternScaleY={1}
-						patternSize={500}
+
+				<div className="mx-auto mt-20 w-full">
+					<Reveal direction="up">
+						<div className="mb-4 text-left lg:mb-16">
+							<span className="mb-4 inline-block font-medium text-gray-500 text-sm uppercase tracking-widest">
+								FAQ
+							</span>
+							<h2 className="font-bold text-display-md tracking-tight">
+								Common questions
+							</h2>
+						</div>
+					</Reveal>
+
+					<div className="mx-auto">
+						<StaggerContainer>
+							{faqs.map((faq, index) => (
+								<StaggerItem key={faq.question}>
+									<AccordionItem
+										answer={faq.answer}
+										isOpen={openIndex === index}
+										onToggle={() =>
+											setOpenIndex(openIndex === index ? null : index)
+										}
+										question={faq.question}
+									/>
+								</StaggerItem>
+							))}
+						</StaggerContainer>
+					</div>
+				</div>
+
+				<div className="relative top-0 right-0 mt-12 mb-32 ml-auto flex w-fit">
+					<video
+						autoPlay
+						className="pointer-events-auto absolute z-10 aspect-video h-auto w-full lg:h-96 lg:w-auto"
+						loop
+						muted
+						src="/faq3.mp4"
 					/>
+					<div className="pointer-events-auto relative z-50 aspect-video h-auto w-full lg:h-96 lg:w-auto">
+						<Noise
+							patternAlpha={25}
+							patternRefreshInterval={2}
+							patternScaleX={1}
+							patternScaleY={1}
+							patternSize={500}
+						/>
+					</div>
 				</div>
 			</div>
 		</section>

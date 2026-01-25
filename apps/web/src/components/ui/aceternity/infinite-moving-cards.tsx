@@ -1,13 +1,25 @@
 "use client";
 
-import * as React from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 
-type Item = {
+interface Item {
 	name: string;
 	title?: string;
 	quote: string;
-};
+}
+
+type CssVars = CSSProperties & Record<string, string>;
+
+interface Props {
+	items: Item[];
+	className?: string;
+	speed?: "slow" | "normal" | "fast";
+	direction?: "left" | "right";
+	pauseOnHover?: boolean;
+	renderCard?: (item: Item) => ReactNode;
+}
 
 export function InfiniteMovingCards({
 	items,
@@ -15,18 +27,18 @@ export function InfiniteMovingCards({
 	speed = "normal",
 	direction = "left",
 	pauseOnHover = true,
-}: {
-	items: Item[];
-	className?: string;
-	speed?: "slow" | "normal" | "fast";
-	direction?: "left" | "right";
-	pauseOnHover?: boolean;
-}) {
-	const duration = speed === "slow" ? "60s" : speed === "fast" ? "25s" : "40s";
-	const dir = direction === "left" ? "forwards" : "reverse";
+	renderCard,
+}: Props) {
+	let duration = "40s";
+	if (speed === "slow") {
+		duration = "60s";
+	}
+	if (speed === "fast") {
+		duration = "25s";
+	}
 
-	// Duplicate list for seamless loop
-	const loopItems = React.useMemo(() => [...items, ...items], [items]);
+	const dir = direction === "left" ? "forwards" : "reverse";
+	const loopItems = useMemo(() => [...items, ...items], [items]);
 
 	return (
 		<div
@@ -43,26 +55,33 @@ export function InfiniteMovingCards({
 				)}
 				style={
 					{
-						["--animation-duration" as any]: duration,
-						["--animation-direction" as any]: dir,
-					} as React.CSSProperties
+						"--animation-duration": duration,
+						"--animation-direction": dir,
+					} as CssVars
 				}
 			>
-				{loopItems.map((item, i) => (
-					<div
-						// biome-ignore lint/suspicious/noArrayIndexKey: deterministic duplicated list
-						key={i}
-						className="w-[280px] shrink-0 rounded-2xl border border-black/10 bg-white p-5 shadow-[0_8px_30px_rgba(0,0,0,0.06)]"
-					>
-						<p className="text-balance text-sm text-black/80">“{item.quote}”</p>
-						<div className="mt-4">
-							<div className="font-medium text-black">{item.name}</div>
-							{item.title ? (
-								<div className="text-xs text-black/50">{item.title}</div>
-							) : null}
+				{loopItems.map((item, i) => {
+					const key = `${item.name}-${item.title ?? ""}-${i}`;
+					return (
+						<div key={key}>
+							{renderCard ? (
+								renderCard(item)
+							) : (
+								<div className="w-[280px] shrink-0 border border-black/10 bg-white p-5 shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
+									<p className="text-balance text-black/80 text-sm">
+										“{item.quote}”
+									</p>
+									<div className="mt-4">
+										<div className="font-medium text-black">{item.name}</div>
+										{item.title ? (
+											<div className="text-black/50 text-xs">{item.title}</div>
+										) : null}
+									</div>
+								</div>
+							)}
 						</div>
-					</div>
-				))}
+					);
+				})}
 			</div>
 		</div>
 	);

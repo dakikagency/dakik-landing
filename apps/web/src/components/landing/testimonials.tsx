@@ -1,6 +1,7 @@
 "use client";
 
 import { InfiniteMovingCards } from "@/components/ui/aceternity/infinite-moving-cards";
+import { GridBackdrop } from "@/components/ui/reactbits/grid-backdrop";
 
 const testimonials = [
 	{
@@ -29,10 +30,11 @@ const testimonials = [
 export function Testimonials() {
 	return (
 		<section
-			className="relative relative z-30 mx-auto px-[clamp(1rem,5vw,4rem)] py-16 text-black md:py-24"
+			className="relative mx-auto bg-white px-[clamp(1rem,5vw,4rem)] py-16 text-black md:py-24"
 			id="testimonials"
 		>
-			<div className="mx-auto max-w-6xl">
+			<GridBackdrop className="opacity-90" />
+			<div className="relative mx-auto max-w-6xl">
 				<div className="mb-10">
 					<span className="mb-3 inline-block font-medium text-black/50 text-sm uppercase tracking-widest">
 						Testimonials

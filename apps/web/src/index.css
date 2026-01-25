@@ -66,6 +66,20 @@
 			background-position: 200% 0;
 		}
 	}
+
+	@keyframes float-y {
+		0%,
+		100% {
+			transform: translateY(0);
+		}
+		50% {
+			transform: translateY(-10px);
+		}
+	}
+}
+
+.animate-float-y {
+	animation: float-y 6s ease-in-out infinite;
 }
 
 .animate-spotlight {

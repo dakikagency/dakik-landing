@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="800" viewBox="0 0 1200 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="800" fill="#FFFFFF"/>
+
+  <!-- subtle grid -->
+  <g opacity="0.18" stroke="#000000" stroke-width="1">
+    <path d="M0 80H1200"/>
+    <path d="M0 160H1200"/>
+    <path d="M0 240H1200"/>
+    <path d="M0 320H1200"/>
+    <path d="M0 400H1200"/>
+    <path d="M0 480H1200"/>
+    <path d="M0 560H1200"/>
+    <path d="M0 640H1200"/>
+    <path d="M0 720H1200"/>
+
+    <path d="M120 0V800"/>
+    <path d="M240 0V800"/>
+    <path d="M360 0V800"/>
+    <path d="M480 0V800"/>
+    <path d="M600 0V800"/>
+    <path d="M720 0V800"/>
+    <path d="M840 0V800"/>
+    <path d="M960 0V800"/>
+    <path d="M1080 0V800"/>
+  </g>
+
+  <!-- main frame -->
+  <rect x="190" y="150" width="820" height="500" stroke="#000000" stroke-width="10"/>
+  <rect x="215" y="175" width="770" height="450" stroke="#000000" stroke-width="2" opacity="0.35"/>
+
+  <!-- UI blocks -->
+  <rect x="260" y="220" width="520" height="70" stroke="#000000" stroke-width="6"/>
+  <rect x="260" y="320" width="400" height="60" stroke="#000000" stroke-width="6"/>
+  <rect x="260" y="410" width="600" height="70" stroke="#000000" stroke-width="6"/>
+
+  <!-- code-ish lines -->
+  <g opacity="0.6" stroke="#000000" stroke-width="4">
+    <path d="M830 235H955"/>
+    <path d="M830 265H930"/>
+    <path d="M690 340H955"/>
+    <path d="M690 370H915"/>
+    <path d="M880 425H955"/>
+    <path d="M880 455H935"/>
+  </g>
+
+  <!-- arrows / flow -->
+  <g stroke="#000000" stroke-width="6" fill="none">
+    <path d="M310 520H780"/>
+    <path d="M780 520L745 495"/>
+    <path d="M780 520L745 545"/>
+
+    <path d="M950 520V285"/>
+    <path d="M950 285L925 320"/>
+    <path d="M950 285L975 320"/>
+  </g>
+
+  <!-- accent (CTA red) -->
+  <rect x="260" y="520" width="40" height="40" fill="#D2141C"/>
+
+  <!-- vignette -->
+  <defs>
+    <radialGradient id="v" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(600 200) rotate(90) scale(700 1100)">
+      <stop stop-color="#000000" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="0" y="0" width="1200" height="800" fill="url(#v)"/>
+</svg>
