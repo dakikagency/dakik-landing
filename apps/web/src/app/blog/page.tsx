@@ -11,127 +11,6 @@ import { Reveal, StaggerContainer, StaggerItem } from "@/components/motion";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-// Sample blog data for when database is empty
-const samplePosts = [
-	{
-		id: "1",
-		slug: "crafting-digital-experiences",
-		title: "Crafting Digital Experiences That Matter",
-		excerpt:
-			"How thoughtful design and development can transform your business presence in the digital landscape.",
-		content: "",
-		coverImage:
-			"https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
-		published: true,
-		publishedAt: new Date("2025-01-10"),
-		createdAt: new Date(),
-		updatedAt: new Date(),
-		tags: [
-			{ id: "1", name: "Design", slug: "design" },
-			{ id: "2", name: "Development", slug: "development" },
-		],
-	},
-	{
-		id: "2",
-		slug: "ai-automation-future",
-		title: "The Future of AI Automation in Business",
-		excerpt:
-			"Exploring how artificial intelligence is reshaping workflows and creating new opportunities for growth.",
-		content: "",
-		coverImage:
-			"https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=80",
-		published: true,
-		publishedAt: new Date("2025-01-08"),
-		createdAt: new Date(),
-		updatedAt: new Date(),
-		tags: [
-			{ id: "3", name: "AI", slug: "ai" },
-			{ id: "4", name: "Automation", slug: "automation" },
-		],
-	},
-	{
-		id: "3",
-		slug: "brand-identity-guide",
-		title: "Building a Brand Identity That Resonates",
-		excerpt:
-			"A comprehensive guide to creating a cohesive brand presence that connects with your audience.",
-		content: "",
-		coverImage:
-			"https://images.unsplash.com/photo-1634942537034-2531766767d1?w=800&q=80",
-		published: true,
-		publishedAt: new Date("2025-01-05"),
-		createdAt: new Date(),
-		updatedAt: new Date(),
-		tags: [
-			{ id: "5", name: "Branding", slug: "branding" },
-			{ id: "1", name: "Design", slug: "design" },
-		],
-	},
-	{
-		id: "4",
-		slug: "minimalist-web-design",
-		title: "The Power of Minimalist Web Design",
-		excerpt:
-			"Why less is more when it comes to creating impactful digital experiences.",
-		content: "",
-		coverImage:
-			"https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=800&q=80",
-		published: true,
-		publishedAt: new Date("2025-01-02"),
-		createdAt: new Date(),
-		updatedAt: new Date(),
-		tags: [
-			{ id: "1", name: "Design", slug: "design" },
-			{ id: "6", name: "Web", slug: "web" },
-		],
-	},
-	{
-		id: "5",
-		slug: "mobile-first-approach",
-		title: "Why Mobile-First Design is Non-Negotiable",
-		excerpt:
-			"Understanding the importance of prioritizing mobile experiences in modern web development.",
-		content: "",
-		coverImage:
-			"https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=800&q=80",
-		published: true,
-		publishedAt: new Date("2024-12-28"),
-		createdAt: new Date(),
-		updatedAt: new Date(),
-		tags: [
-			{ id: "6", name: "Web", slug: "web" },
-			{ id: "7", name: "Mobile", slug: "mobile" },
-		],
-	},
-	{
-		id: "6",
-		slug: "product-development-process",
-		title: "Our Product Development Process",
-		excerpt:
-			"A behind-the-scenes look at how we transform ideas into successful digital products.",
-		content: "",
-		coverImage:
-			"https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=800&q=80",
-		published: true,
-		publishedAt: new Date("2024-12-20"),
-		createdAt: new Date(),
-		updatedAt: new Date(),
-		tags: [
-			{ id: "8", name: "Process", slug: "process" },
-			{ id: "2", name: "Development", slug: "development" },
-		],
-	},
-];
-
-const sampleTags = [
-	{ id: "1", name: "Design", slug: "design", _count: { posts: 3 } },
-	{ id: "2", name: "Development", slug: "development", _count: { posts: 2 } },
-	{ id: "3", name: "AI", slug: "ai", _count: { posts: 1 } },
-	{ id: "4", name: "Automation", slug: "automation", _count: { posts: 1 } },
-	{ id: "5", name: "Branding", slug: "branding", _count: { posts: 1 } },
-	{ id: "6", name: "Web", slug: "web", _count: { posts: 2 } },
-];
-
 function BlogListContent() {
 	const searchParams = useSearchParams();
 	const pageParam = searchParams.get("page");
@@ -158,17 +37,17 @@ function BlogListContent() {
 	const posts =
 		postsQuery.data?.posts && postsQuery.data.posts.length > 0
 			? postsQuery.data.posts
-			: samplePosts;
+			: [];
 	const pagination = postsQuery.data?.pagination ?? {
 		page: 1,
 		limit: 12,
-		total: samplePosts.length,
+		total: 0,
 		totalPages: 1,
 		hasNext: false,
 		hasPrev: false,
 	};
 	const tags =
-		tagsQuery.data && tagsQuery.data.length > 0 ? tagsQuery.data : sampleTags;
+		tagsQuery.data && tagsQuery.data.length > 0 ? tagsQuery.data : [];
 
 	const handleTagClick = (tagSlug: string | undefined) => {
 		setSelectedTag(tagSlug);
@@ -250,37 +129,37 @@ function BlogListContent() {
 						{postsQuery.isLoading ? (
 							<div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
 								<div className="animate-pulse">
-									<div className="mb-4 aspect-[16/10] rounded bg-gray-200" />
+									<div className="mb-4 aspect-16/10 rounded bg-gray-200" />
 									<div className="mb-2 h-4 w-20 rounded bg-gray-200" />
 									<div className="mb-2 h-6 w-3/4 rounded bg-gray-200" />
 									<div className="h-4 w-full rounded bg-gray-200" />
 								</div>
 								<div className="animate-pulse">
-									<div className="mb-4 aspect-[16/10] rounded bg-gray-200" />
+									<div className="mb-4 aspect-16/10 rounded bg-gray-200" />
 									<div className="mb-2 h-4 w-20 rounded bg-gray-200" />
 									<div className="mb-2 h-6 w-3/4 rounded bg-gray-200" />
 									<div className="h-4 w-full rounded bg-gray-200" />
 								</div>
 								<div className="animate-pulse">
-									<div className="mb-4 aspect-[16/10] rounded bg-gray-200" />
+									<div className="mb-4 aspect-16/10 rounded bg-gray-200" />
 									<div className="mb-2 h-4 w-20 rounded bg-gray-200" />
 									<div className="mb-2 h-6 w-3/4 rounded bg-gray-200" />
 									<div className="h-4 w-full rounded bg-gray-200" />
 								</div>
 								<div className="hidden animate-pulse md:block">
-									<div className="mb-4 aspect-[16/10] rounded bg-gray-200" />
+									<div className="mb-4 aspect-16/10 rounded bg-gray-200" />
 									<div className="mb-2 h-4 w-20 rounded bg-gray-200" />
 									<div className="mb-2 h-6 w-3/4 rounded bg-gray-200" />
 									<div className="h-4 w-full rounded bg-gray-200" />
 								</div>
 								<div className="hidden animate-pulse lg:block">
-									<div className="mb-4 aspect-[16/10] rounded bg-gray-200" />
+									<div className="mb-4 aspect-16/10 rounded bg-gray-200" />
 									<div className="mb-2 h-4 w-20 rounded bg-gray-200" />
 									<div className="mb-2 h-6 w-3/4 rounded bg-gray-200" />
 									<div className="h-4 w-full rounded bg-gray-200" />
 								</div>
 								<div className="hidden animate-pulse lg:block">
-									<div className="mb-4 aspect-[16/10] rounded bg-gray-200" />
+									<div className="mb-4 aspect-16/10 rounded bg-gray-200" />
 									<div className="mb-2 h-4 w-20 rounded bg-gray-200" />
 									<div className="mb-2 h-6 w-3/4 rounded bg-gray-200" />
 									<div className="h-4 w-full rounded bg-gray-200" />
