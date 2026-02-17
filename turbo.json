@@ -3,6 +3,9 @@
   "ui": "tui",
   "globalEnv": [
     "NODE_ENV",
+    "DATABASE_URL",
+    "POSTGRES_PRISMA_URL",
+    "POSTGRES_URL_NON_POOLING",
     "BETTER_AUTH_SECRET",
     "BETTER_AUTH_URL",
     "CORS_ORIGIN",
@@ -31,13 +34,11 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "dist/**", "node_modules/.prisma/**"],
-      "outputLogs": "new-only",
-      "env": ["DATABASE_URL", "POSTGRES_PRISMA_URL", "POSTGRES_URL_NON_POOLING"]
+      "outputs": [".next/**", "dist/**"],
+      "outputLogs": "new-only"
     },
     "@collab/db#build": {
-      "outputs": ["node_modules/.prisma/**"],
-      "cache": true
+      "cache": false
     },
     "lint": {
       "dependsOn": ["^lint"]
