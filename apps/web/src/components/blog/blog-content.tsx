@@ -7,21 +7,64 @@ interface BlogContentProps {
 	className?: string;
 }
 
+function slugify(text: string): string {
+	return text
+		.toLowerCase()
+		.replace(/[^\w\s-]/g, "")
+		.replace(/\s+/g, "-")
+		.replace(/-+/g, "-")
+		.trim();
+}
+
+export function extractHeadings(
+	content: string
+): { id: string; text: string; level: 2 | 3 }[] {
+	const headings: { id: string; text: string; level: 2 | 3 }[] = [];
+	const h2Regex = /^## (.+)$/gm;
+	const h3Regex = /^### (.+)$/gm;
+
+	let match: RegExpExecArray | null = null;
+
+	match = h2Regex.exec(content);
+	while (match !== null) {
+		headings.push({ id: slugify(match[1]), text: match[1], level: 2 });
+		match = h2Regex.exec(content);
+	}
+
+	match = h3Regex.exec(content);
+	while (match !== null) {
+		headings.push({ id: slugify(match[1]), text: match[1], level: 3 });
+		match = h3Regex.exec(content);
+	}
+
+	// Sort by position in original content
+	headings.sort((a, b) => {
+		const aIndex = content.indexOf(`${"#".repeat(a.level)} ${a.text}`);
+		const bIndex = content.indexOf(`${"#".repeat(b.level)} ${b.text}`);
+		return aIndex - bIndex;
+	});
+
+	return headings;
+}
+
 function parseMarkdown(markdown: string): string {
 	let html = markdown;
 
-	// Headers
+	// Headers (order matters: h3 before h2 before h1)
 	html = html.replace(
 		/^### (.*$)/gim,
-		'<h3 class="mt-8 mb-4 font-semibold text-xl">$1</h3>'
+		(_match, text) =>
+			`<h3 id="${slugify(text)}" class="mt-8 mb-4 font-semibold text-xl">${text}</h3>`
 	);
 	html = html.replace(
 		/^## (.*$)/gim,
-		'<h2 class="mt-10 mb-4 font-bold text-2xl">$1</h2>'
+		(_match, text) =>
+			`<h2 id="${slugify(text)}" class="mt-10 mb-4 font-bold text-2xl">${text}</h2>`
 	);
 	html = html.replace(
 		/^# (.*$)/gim,
-		'<h1 class="mt-12 mb-6 font-bold text-3xl">$1</h1>'
+		(_match, text) =>
+			`<h1 id="${slugify(text)}" class="mt-12 mb-6 font-bold text-3xl">${text}</h1>`
 	);
 
 	// Bold and italic
