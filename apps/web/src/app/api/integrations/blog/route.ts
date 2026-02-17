@@ -12,9 +12,16 @@ const createBlogPostSchema = z.object({
 	slug: z.string().min(1, "Slug is required"),
 	content: z.string().min(1, "Content is required"),
 	excerpt: z.string().optional(),
+	// Canonical field
 	coverImage: z.string().url().optional().nullable(),
+	// Backward-compatible aliases
+	image: z.string().url().optional().nullable(),
+	imageUrl: z.string().url().optional().nullable(),
+	coverImageUrl: z.string().url().optional().nullable(),
 	tags: z.array(z.string()).optional().default([]),
-	published: z.boolean().optional().default(false),
+	published: z.boolean().optional(),
+	// Integration-friendly status toggle
+	status: z.enum(["draft", "published"]).optional(),
 });
 
 /**
@@ -102,11 +109,25 @@ export async function POST(request: Request) {
 			);
 		}
 
-		const { tags, ...postData } = validationResult.data;
+		const {
+			tags,
+			coverImage,
+			image,
+			imageUrl,
+			coverImageUrl,
+			published,
+			status,
+			...restPostData
+		} = validationResult.data;
+
+		const normalizedCoverImage =
+			coverImage ?? coverImageUrl ?? imageUrl ?? image ?? null;
+		const normalizedPublished =
+			typeof published === "boolean" ? published : status === "published";
 
 		// Check if slug already exists
 		const existingPost = await prisma.blogPost.findUnique({
-			where: { slug: postData.slug },
+			where: { slug: restPostData.slug },
 		});
 
 		if (existingPost) {
@@ -119,8 +140,10 @@ export async function POST(request: Request) {
 		// Create the post with tags
 		const post = await prisma.blogPost.create({
 			data: {
-				...postData,
-				publishedAt: postData.published ? new Date() : null,
+				...restPostData,
+				coverImage: normalizedCoverImage,
+				published: normalizedPublished,
+				publishedAt: normalizedPublished ? new Date() : null,
 				tags: {
 					connectOrCreate: tags.map((tag) => ({
 						where: { slug: tag.toLowerCase().replaceAll(" ", "-") },

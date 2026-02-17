@@ -9,13 +9,35 @@ const updateBlogPostSchema = z.object({
 	slug: z.string().min(1, "Slug is required").optional(),
 	content: z.string().min(1, "Content is required").optional(),
 	excerpt: z.string().optional().nullable(),
+	// Canonical field
 	coverImage: z.string().url().optional().nullable(),
+	// Backward-compatible aliases
+	image: z.string().url().optional().nullable(),
+	imageUrl: z.string().url().optional().nullable(),
+	coverImageUrl: z.string().url().optional().nullable(),
 	tags: z.array(z.string()).optional(),
 	published: z.boolean().optional(),
+	status: z.enum(["draft", "published"]).optional(),
 });
 
 interface RouteContext {
 	params: Promise<{ id: string }>;
+}
+
+function normalizePublished(
+	published: boolean | undefined,
+	status: "draft" | "published" | undefined
+): boolean | undefined {
+	if (typeof published === "boolean") {
+		return published;
+	}
+	if (status === "published") {
+		return true;
+	}
+	if (status === "draft") {
+		return false;
+	}
+	return undefined;
 }
 
 /**
@@ -98,12 +120,30 @@ export async function PUT(request: Request, context: RouteContext) {
 			);
 		}
 
-		const { tags, ...postData } = validationResult.data;
+		const {
+			tags,
+			coverImage,
+			image,
+			imageUrl,
+			coverImageUrl,
+			published,
+			status,
+			...restPostData
+		} = validationResult.data;
+
+		const hasCoverImagePatch =
+			"coverImage" in validationResult.data ||
+			"coverImageUrl" in validationResult.data ||
+			"imageUrl" in validationResult.data ||
+			"image" in validationResult.data;
+		const normalizedCoverImage =
+			coverImage ?? coverImageUrl ?? imageUrl ?? image ?? null;
+		const normalizedPublished = normalizePublished(published, status);
 
 		// Check if new slug already exists (if slug is being changed)
-		if (postData.slug && postData.slug !== existingPost.slug) {
+		if (restPostData.slug && restPostData.slug !== existingPost.slug) {
 			const slugExists = await prisma.blogPost.findUnique({
-				where: { slug: postData.slug },
+				where: { slug: restPostData.slug },
 			});
 
 			if (slugExists) {
@@ -115,11 +155,17 @@ export async function PUT(request: Request, context: RouteContext) {
 		}
 
 		// Handle publishedAt timestamp
-		const updateData: Record<string, unknown> = { ...postData };
-		if (postData.published === true && !existingPost.publishedAt) {
-			updateData.publishedAt = new Date();
-		} else if (postData.published === false) {
-			updateData.publishedAt = null;
+		const updateData: Record<string, unknown> = { ...restPostData };
+		if (hasCoverImagePatch) {
+			updateData.coverImage = normalizedCoverImage;
+		}
+		if (normalizedPublished !== undefined) {
+			updateData.published = normalizedPublished;
+			if (normalizedPublished === true && !existingPost.publishedAt) {
+				updateData.publishedAt = new Date();
+			} else if (normalizedPublished === false) {
+				updateData.publishedAt = null;
+			}
 		}
 
 		// Update the post
