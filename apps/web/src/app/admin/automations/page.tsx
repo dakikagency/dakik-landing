@@ -522,7 +522,7 @@ function AutomationFileCard({
 	selectedFile,
 	uploadingFile,
 }: {
-	fileInputRef: React.RefObject<HTMLInputElement>;
+	fileInputRef: React.RefObject<HTMLInputElement | null>;
 	fileUrl: string;
 	onFileSelect: (event: React.ChangeEvent<HTMLInputElement>) => void;
 	onRemoveFile: () => void;

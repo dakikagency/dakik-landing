@@ -261,8 +261,20 @@ export interface Lead {
 	id: string;
 	name: string | null;
 	projectType: Projecttype | null;
+	source: string | null;
 	status: Generated<Leadstatus>;
 	surveyProgress: Json | null;
+	updatedAt: Timestamp;
+}
+
+export interface LeadMagnet {
+	assetId: string;
+	createdAt: Generated<Timestamp>;
+	description: string | null;
+	id: string;
+	isActive: Generated<boolean>;
+	name: string;
+	slug: string;
 	updatedAt: Timestamp;
 }
 
@@ -410,6 +422,7 @@ export interface DB {
 	icon: Icon;
 	invoice: Invoice;
 	lead: Lead;
+	lead_magnet: LeadMagnet;
 	meeting: Meeting;
 	project: Project;
 	project_update: ProjectUpdate;

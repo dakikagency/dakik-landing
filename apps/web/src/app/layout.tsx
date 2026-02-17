@@ -1,3 +1,4 @@
+import { GoogleTagManager } from "@next/third-parties/google";
 import type { Metadata } from "next";
 
 import "../index.css";
@@ -75,7 +76,11 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en" suppressHydrationWarning>
+			<head />
 			<body className="antialiased">
+				{/** biome-ignore lint/style/noNonNullAssertion: no explanation */}
+				<GoogleTagManager gtmId={process.env.NEXT_PUBLIC_GTM_ID!} />
+
 				<Providers>{children}</Providers>
 			</body>
 		</html>

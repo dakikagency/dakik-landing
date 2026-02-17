@@ -25,7 +25,7 @@ export function Footer() {
 
 	return (
 		<footer className="relative overflow-hidden bg-black text-white">
-			<div className="relative z-10 mx-auto w-full px-[clamp(1rem,5vw,4rem)] pt-16 md:pt-24 lg:px-[clamp(4rem,32vw,23rem)]">
+			<div className="relative z-10 mx-auto w-full px-[clamp(1rem,5vw,4rem)] pt-16 md:pt-24">
 				{/* Big CTA Row */}
 				<motion.div
 					className="mb-8 border-white/10 border-b pb-8"

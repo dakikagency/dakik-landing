@@ -7,6 +7,15 @@ import { z } from "zod";
 import { protectedProcedure, router } from "../index";
 import { stripe } from "../stripe";
 
+// Activity item type for recent activity feed
+export interface ActivityItem {
+	id: string;
+	type: "project" | "meeting" | "contract";
+	title: string;
+	description: string;
+	date: Date;
+}
+
 // Generate a hash of signature data for verification purposes
 function generateSignatureHash(signatureData: string): string {
 	const hash = createHash("sha256");
@@ -130,14 +139,6 @@ export const portalRouter = router({
 		}
 
 		// Build recent activity
-		interface ActivityItem {
-			id: string;
-			type: "project" | "meeting" | "contract";
-			title: string;
-			description: string;
-			date: Date;
-		}
-
 		const recentActivity: ActivityItem[] = [];
 
 		for (const project of recentProjects) {

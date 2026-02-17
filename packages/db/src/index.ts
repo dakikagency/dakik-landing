@@ -42,9 +42,8 @@ if (
 
 // Configure Neon WebSocket for Node.js environment
 neonConfig.webSocketConstructor = ws;
-neonConfig.poolQueryViaFetch = false;
 
-// Create the Prisma adapter with connection string directly (per Prisma docs)
+// Create the Prisma adapter with connection pool config
 const adapter = new PrismaNeon({ connectionString: databaseUrl });
 
 // Initialize Prisma Client with singleton pattern

@@ -9,6 +9,7 @@ import { contractsRouter } from "./contracts";
 import { emailRouter } from "./email";
 import { iconsRouter } from "./icons";
 import { invoicesRouter } from "./invoices";
+import { leadMagnetRouter } from "./lead-magnets";
 import { meetingsRouter } from "./meetings";
 import { portalRouter } from "./portal";
 import { surveyRouter } from "./survey";
@@ -42,5 +43,6 @@ export const appRouter = router({
 	surveyOptions: surveyOptionsRouter,
 	uploads: uploadsRouter,
 	webhooks: webhooksRouter,
+	leadMagnets: leadMagnetRouter,
 });
 export type AppRouter = typeof appRouter;

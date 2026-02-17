@@ -176,7 +176,7 @@ export const emailRouter = router({
 				]);
 
 			if (status) {
-				query = query.where("e.status", "=", status);
+				query = query.where("e.status", "=", status as any);
 			}
 
 			if (cursor) {

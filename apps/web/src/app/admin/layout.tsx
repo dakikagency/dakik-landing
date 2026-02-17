@@ -53,6 +53,11 @@ const navItems: {
 		icon: WorkflowIcon,
 	},
 	{ href: "/admin/media", label: "Media", icon: ImageIcon },
+	{
+		href: "/admin/lead-magnets" as Route,
+		label: "Lead Magnets",
+		icon: InboxIcon,
+	},
 	{ href: "/admin/daicons" as Route, label: "daIcons", icon: ShapesIcon },
 	{ href: "/admin/dacomps" as Route, label: "daComps", icon: BoxIcon },
 ];

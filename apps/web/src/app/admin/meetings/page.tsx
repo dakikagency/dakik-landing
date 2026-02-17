@@ -832,9 +832,20 @@ export default function MeetingsPage() {
 		return params;
 	}, [filterValues]);
 
-	const { data: meetings, isLoading } = useQuery(
+	const { data: rawMeetings, isLoading } = useQuery(
 		trpc.admin.getMeetings.queryOptions(apiParams)
 	);
+
+	const meetings = rawMeetings?.map((m) => ({
+		...m,
+		lead: m.lead ? { ...m.lead, email: m.lead.email ?? "" } : null,
+		customer: m.customer
+			? {
+					...m.customer,
+					user: { ...m.customer.user, email: m.customer.user.email ?? "" },
+				}
+			: null,
+	}));
 
 	const hasFilters = Object.values(filterValues).some((v) => {
 		if (v === undefined || v === "") {

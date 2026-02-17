@@ -51,8 +51,8 @@ const getProjectSortColumn = (sortBy?: ProjectSortBy): string => {
 	}
 };
 
-const applyProjectFilters = (
-	query: ReturnType<typeof db.selectFrom>,
+const applyProjectFilters = <T>(
+	query: T,
 	filters: {
 		search?: string;
 		status?: string;
@@ -67,7 +67,7 @@ const applyProjectFilters = (
 		createdTo?: Date;
 		customerId?: string;
 	}
-) => {
+): T => {
 	const {
 		search,
 		status,
@@ -83,37 +83,64 @@ const applyProjectFilters = (
 		customerId,
 	} = filters;
 
-	return query
-		.$if(!!search, (qb) =>
-			qb.where(
-				sql<boolean>`("p"."title" ILIKE ${`%${search}%`} OR "p"."description" ILIKE ${`%${search}%`} OR "u"."name" ILIKE ${`%${search}%`} OR "c"."companyName" ILIKE ${`%${search}%`})`
-			)
-		)
-		.$if(!!status, (qb) => qb.where("p.status", "=", status))
-		.$if(!!statuses?.length, (qb) => qb.where("p.status", "in", statuses))
-		.$if(progressMin !== undefined, (qb) =>
-			qb.where("p.progress", ">=", progressMin)
-		)
-		.$if(progressMax !== undefined, (qb) =>
-			qb.where("p.progress", "<=", progressMax)
-		)
-		.$if(!!startDateFrom, (qb) => qb.where("p.startDate", ">=", startDateFrom))
-		.$if(!!startDateTo, (qb) => qb.where("p.startDate", "<=", startDateTo))
-		.$if(!!endDateFrom, (qb) => qb.where("p.endDate", ">=", endDateFrom))
-		.$if(!!endDateTo, (qb) => qb.where("p.endDate", "<=", endDateTo))
-		.$if(!!createdFrom, (qb) => qb.where("p.createdAt", ">=", createdFrom))
-		.$if(!!createdTo, (qb) => qb.where("p.createdAt", "<=", createdTo))
-		.$if(!!customerId, (qb) => qb.where("p.customerId", "=", customerId));
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	let q = query as any;
+
+	if (search) {
+		q = q.where((eb: any) =>
+			eb.or([
+				eb("p.title", "ilike", `%${search}%`),
+				eb("p.description", "ilike", `%${search}%`),
+				eb("u.name", "ilike", `%${search}%`),
+				eb("c.companyName", "ilike", `%${search}%`),
+			])
+		);
+	}
+	if (status) {
+		q = q.where("p.status", "=", status);
+	}
+	if (statuses?.length) {
+		q = q.where("p.status", "in", statuses);
+	}
+	if (progressMin !== undefined) {
+		q = q.where("p.progress", ">=", progressMin);
+	}
+	if (progressMax !== undefined) {
+		q = q.where("p.progress", "<=", progressMax);
+	}
+	if (startDateFrom) {
+		q = q.where("p.startDate", ">=", startDateFrom);
+	}
+	if (startDateTo) {
+		q = q.where("p.startDate", "<=", startDateTo);
+	}
+	if (endDateFrom) {
+		q = q.where("p.endDate", ">=", endDateFrom);
+	}
+	if (endDateTo) {
+		q = q.where("p.endDate", "<=", endDateTo);
+	}
+	if (createdFrom) {
+		q = q.where("p.createdAt", ">=", createdFrom);
+	}
+	if (createdTo) {
+		q = q.where("p.createdAt", "<=", createdTo);
+	}
+	if (customerId) {
+		q = q.where("p.customerId", "=", customerId);
+	}
+
+	return q as T;
 };
 
-const applyProjectCursor = async (
-	query: ReturnType<typeof db.selectFrom>,
+const applyProjectCursor = async <T>(
+	query: T,
 	params: {
 		cursor?: string;
 		sortColumn: string;
 		orderDirection: "asc" | "desc";
 	}
-) => {
+): Promise<T> => {
 	const { cursor, sortColumn, orderDirection } = params;
 	if (!cursor) {
 		return query;
@@ -130,7 +157,8 @@ const applyProjectCursor = async (
 		return query;
 	}
 
-	return query.where((eb) =>
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	return (query as any).where((eb: any) =>
 		eb.or([
 			eb(
 				sql.ref(sortColumn),
@@ -142,7 +170,7 @@ const applyProjectCursor = async (
 				eb("p.id", orderDirection === "asc" ? ">" : "<", cursor),
 			]),
 		])
-	);
+	) as T;
 };
 
 export const adminRouter = router({
@@ -336,46 +364,22 @@ export const adminRouter = router({
 			}
 
 			if (hasProjects === true) {
-				query = query.where((eb) =>
-					eb.exists(
-						db
-							.selectFrom("project")
-							.select("id")
-							.whereRef("project.customerId", "=", "c.id")
-					)
+				query = query.where(
+					sql<boolean>`EXISTS (SELECT 1 FROM "project" WHERE "project"."customerId" = "c"."id")`
 				);
 			} else if (hasProjects === false) {
-				query = query.where((eb) =>
-					eb.not(
-						eb.exists(
-							db
-								.selectFrom("project")
-								.select("id")
-								.whereRef("project.customerId", "=", "c.id")
-						)
-					)
+				query = query.where(
+					sql<boolean>`NOT EXISTS (SELECT 1 FROM "project" WHERE "project"."customerId" = "c"."id")`
 				);
 			}
 
 			if (hasContracts === true) {
-				query = query.where((eb) =>
-					eb.exists(
-						db
-							.selectFrom("contract")
-							.select("id")
-							.whereRef("contract.customerId", "=", "c.id")
-					)
+				query = query.where(
+					sql<boolean>`EXISTS (SELECT 1 FROM "contract" WHERE "contract"."customerId" = "c"."id")`
 				);
 			} else if (hasContracts === false) {
-				query = query.where((eb) =>
-					eb.not(
-						eb.exists(
-							db
-								.selectFrom("contract")
-								.select("id")
-								.whereRef("contract.customerId", "=", "c.id")
-						)
-					)
+				query = query.where(
+					sql<boolean>`NOT EXISTS (SELECT 1 FROM "contract" WHERE "contract"."customerId" = "c"."id")`
 				);
 			}
 
@@ -552,19 +556,19 @@ export const adminRouter = router({
 			}
 
 			if (status) {
-				query = query.where("status", "=", status);
+				query = query.where("status", "=", status as any);
 			}
 
 			if (statuses && statuses.length > 0) {
-				query = query.where("status", "in", statuses);
+				query = query.where("status", "in", statuses as any);
 			}
 
 			if (projectTypes && projectTypes.length > 0) {
-				query = query.where("projectType", "in", projectTypes);
+				query = query.where("projectType", "in", projectTypes as any);
 			}
 
 			if (budgets && budgets.length > 0) {
-				query = query.where("budget", "in", budgets);
+				query = query.where("budget", "in", budgets as any);
 			}
 
 			if (dateFrom) {
@@ -674,11 +678,11 @@ export const adminRouter = router({
 			}
 
 			if (status) {
-				query = query.where("m.status", "=", status);
+				query = query.where("m.status", "=", status as any);
 			}
 
 			if (statuses && statuses.length > 0) {
-				query = query.where("m.status", "in", statuses);
+				query = query.where("m.status", "in", statuses as any);
 			}
 
 			if (startDate) {
@@ -1001,6 +1005,7 @@ export const adminRouter = router({
 				await db
 					.insertInto("project_update")
 					.values({
+						id: crypto.randomUUID(),
 						projectId,
 						title: updateTitle,
 						content: updateContent,

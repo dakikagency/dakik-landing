@@ -1,10 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { GridBackdrop } from "@/components/ui/reactbits/grid-backdrop";
 import { HoverReveal } from "@/components/ui/reactbits/hover-reveal";
-import { LogoStrip } from "@/components/ui/reactbits/logo-strip";
 
 const steps = [
 	{
@@ -68,36 +66,6 @@ export function ServicesSection() {
 							>
 								Start a project
 							</Link>
-							<Link
-								className="inline-flex border-2 border-black/30 bg-white px-4 py-3 font-mono text-black text-xs uppercase tracking-widest hover:border-black"
-								href="#faq"
-							>
-								See FAQs
-							</Link>
-						</div>
-
-						<div className="mt-8">
-							<LogoStrip />
-						</div>
-
-						<div className="mt-6 border-2 border-black bg-white p-3">
-							<div className="relative aspect-[3/2] w-full overflow-hidden border-2 border-black bg-white">
-								<Image
-									alt="Dakik process illustration"
-									className="animate-float-y object-cover"
-									fill
-									priority={false}
-									src="/landing/services-art.png"
-								/>
-							</div>
-							<div className="mt-3 flex items-center justify-between gap-4">
-								<span className="font-mono text-[11px] text-black/60 uppercase tracking-widest">
-									Blueprint mode
-								</span>
-								<span className="font-mono text-[11px] text-black/40 uppercase tracking-widest">
-									Square / mono / fast
-								</span>
-							</div>
 						</div>
 					</div>
 

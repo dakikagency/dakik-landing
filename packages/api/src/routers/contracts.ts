@@ -56,7 +56,7 @@ export const contractsRouter = router({
 			}
 
 			if (status) {
-				query = query.where("c.status", "=", status);
+				query = query.where("c.status", "=", status as any);
 			}
 
 			if (customerId) {

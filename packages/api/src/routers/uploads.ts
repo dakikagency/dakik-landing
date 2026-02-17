@@ -155,9 +155,9 @@ export const uploadsRouter = router({
 				db
 					.selectFrom("asset")
 					.select((eb) => eb.fn.count("id").as("count"))
-					.$if(!!folder, (qb) => qb.where("folder", "=", folder))
+					.$if(!!folder, (qb) => qb.where("folder", "=", folder as any))
 					.$if(!!resourceType, (qb) =>
-						qb.where("resourceType", "=", resourceType)
+						qb.where("resourceType", "=", resourceType as any)
 					)
 					.$if(!!search, (qb) =>
 						qb.where(

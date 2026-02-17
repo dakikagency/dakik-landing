@@ -375,7 +375,7 @@ function EmailDetail({ emailId, onClose }: EmailDetailProps) {
 						<div className="flex items-start gap-2">
 							<span className="text-muted-foreground text-xs">To:</span>
 							<div className="flex flex-wrap gap-1">
-								{email.to.map((recipient) => (
+								{(email.to ?? []).map((recipient) => (
 									<Badge key={recipient} variant="outline">
 										{recipient}
 									</Badge>
@@ -385,7 +385,8 @@ function EmailDetail({ emailId, onClose }: EmailDetailProps) {
 						<div className="flex items-center gap-2 text-xs">
 							<span className="text-muted-foreground">From:</span>
 							<span>
-								{email.user.name} ({email.user.email})
+								{email.user?.name ?? "Unknown"} (
+								{email.user?.email ?? "No email"})
 							</span>
 						</div>
 					</div>
@@ -480,13 +481,15 @@ function EmailTableContent({
 						</TableCell>
 						<TableCell className="hidden md:table-cell">
 							<div className="flex flex-wrap gap-1">
-								{email.to.slice(0, 2).map((recipient) => (
+								{(email.to ?? []).slice(0, 2).map((recipient) => (
 									<Badge key={recipient} variant="outline">
 										{recipient.split("@")[0]}
 									</Badge>
 								))}
-								{email.to.length > 2 && (
-									<Badge variant="secondary">+{email.to.length - 2}</Badge>
+								{(email.to ?? []).length > 2 && (
+									<Badge variant="secondary">
+										+{(email.to ?? []).length - 2}
+									</Badge>
 								)}
 							</div>
 						</TableCell>
@@ -521,7 +524,16 @@ function EmailList({ onCompose, onViewEmail }: EmailListProps) {
 		trpc.email.getHistory.queryOptions({ limit: 50 })
 	);
 
-	const emails = data?.emails ?? [];
+	const emails =
+		data?.emails.map((email) => ({
+			...email,
+			to: email.to ?? [],
+			user: {
+				id: email.user?.id ?? "",
+				name: email.user?.name ?? "Unknown",
+				email: email.user?.email ?? "no-email",
+			},
+		})) ?? [];
 
 	const renderContent = () => {
 		if (isLoading) {
@@ -580,7 +592,7 @@ function EmailList({ onCompose, onViewEmail }: EmailListProps) {
 												{email.subject}
 											</p>
 											<p className="line-clamp-1 text-muted-foreground text-xs">
-												To: {email.to.join(", ")}
+												To: {(email.to ?? []).join(", ")}
 											</p>
 										</div>
 										<Badge variant={getStatusBadgeVariant(email.status)}>

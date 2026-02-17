@@ -39,7 +39,8 @@ export const auth = betterAuth({
 	databaseHooks: {
 		user: {
 			create: {
-				before: (user, _context) => {
+				// biome-ignore lint/suspicious/useAwait: better-auth requires async hook even without await
+				before: async (user, _context) => {
 					// Auto-assign ADMIN role to specific email addresses
 					if (ADMIN_EMAILS.includes(user.email.toLowerCase())) {
 						return {

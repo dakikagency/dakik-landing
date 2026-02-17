@@ -96,6 +96,7 @@ model Lead {
   budget          BudgetRange?
   details         String?
   status          LeadStatus  @default(NEW)
+  source          String?     // e.g. "starter-kit", "contact-form"
   currentStep     Int         @default(1)
   surveyProgress  Json?
   createdAt       DateTime    @default(now())
@@ -447,6 +448,9 @@ model Asset {
   folder       String?
   createdAt    DateTime @default(now())
 
+  // Relations
+  leadMagnets LeadMagnet[]
+
   @@index([publicId])
   @@index([folder])
   @@map("asset")
@@ -517,4 +521,26 @@ model SurveyOption {
   @@index([questionType])
   @@index([isActive])
   @@map("survey_option")
+}
+
+// =============================================================================
+// Lead Magnets
+// =============================================================================
+
+model LeadMagnet {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique // e.g., "starter-kit"
+  description String?
+  assetId     String   // Points to an Asset record
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  asset Asset @relation(fields: [assetId], references: [id])
+
+  @@index([slug])
+  @@index([isActive])
+  @@map("lead_magnet")
 }

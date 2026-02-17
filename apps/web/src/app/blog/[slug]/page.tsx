@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Calendar, Tag } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, Tag, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
@@ -286,14 +286,35 @@ export default function BlogPostPage() {
 								</h1>
 
 								{/* Meta */}
-								{formattedDate && post.publishedAt && (
-									<div className="flex items-center gap-2 text-gray-500 text-sm">
-										<Calendar className="h-4 w-4" />
-										<time dateTime={new Date(post.publishedAt).toISOString()}>
-											{formattedDate}
-										</time>
+								<div className="flex flex-wrap items-center gap-6 text-gray-500 text-sm">
+									{formattedDate && post.publishedAt && (
+										<div className="flex items-center gap-2">
+											<Calendar className="h-4 w-4" />
+											<time dateTime={new Date(post.publishedAt).toISOString()}>
+												{formattedDate}
+											</time>
+										</div>
+									)}
+
+									<div className="flex items-center gap-2">
+										<User className="h-4 w-4" />
+										<span>Erdeniz Korkmaz</span>
 									</div>
-								)}
+
+									{post.updatedAt &&
+										new Date(post.updatedAt) >
+											new Date(post.publishedAt || 0) && (
+											<div className="text-muted-foreground text-xs">
+												(Updated:{" "}
+												{new Intl.DateTimeFormat("en-US", {
+													month: "short",
+													day: "numeric",
+													year: "numeric",
+												}).format(new Date(post.updatedAt))}
+												)
+											</div>
+										)}
+								</div>
 							</motion.div>
 
 							{/* Content */}

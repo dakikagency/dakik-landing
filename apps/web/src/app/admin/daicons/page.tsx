@@ -1054,7 +1054,9 @@ function IconsList({
 		}
 	};
 
-	const icons = data?.icons ?? [];
+	const icons =
+		data?.icons.map((icon) => ({ ...icon, keywords: icon.keywords ?? [] })) ??
+		[];
 	const hasFilters = Boolean(search || categoryFilter !== "all");
 
 	const renderContent = () => {

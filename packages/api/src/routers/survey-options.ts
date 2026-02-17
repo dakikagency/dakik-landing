@@ -86,9 +86,10 @@ export const surveyOptionsRouter = router({
 			.orderBy("order", "asc")
 			.execute();
 
-		const optionsByQuestionId = new Map<string, unknown[]>();
+		type SurveyOptionRow = (typeof options)[number];
+		const optionsByQuestionId = new Map<string, SurveyOptionRow[]>();
 		for (const option of options) {
-			const questionId = (option as { questionId?: string | null }).questionId;
+			const questionId = option.questionId;
 			if (!questionId) {
 				continue;
 			}
@@ -99,7 +100,7 @@ export const surveyOptionsRouter = router({
 
 		return questions.map((question) => ({
 			...question,
-			options: optionsByQuestionId.get((question as { id: string }).id) ?? [],
+			options: optionsByQuestionId.get(question.id) ?? [],
 		}));
 	}),
 
@@ -119,9 +120,10 @@ export const surveyOptionsRouter = router({
 			.orderBy("order", "asc")
 			.execute();
 
-		const optionsByQuestionId = new Map<string, unknown[]>();
+		type SurveyOptionRow = (typeof options)[number];
+		const optionsByQuestionId = new Map<string, SurveyOptionRow[]>();
 		for (const option of options) {
-			const questionId = (option as { questionId?: string | null }).questionId;
+			const questionId = option.questionId;
 			if (!questionId) {
 				continue;
 			}
@@ -132,7 +134,7 @@ export const surveyOptionsRouter = router({
 
 		return questions.map((question) => ({
 			...question,
-			options: optionsByQuestionId.get((question as { id: string }).id) ?? [],
+			options: optionsByQuestionId.get(question.id) ?? [],
 		}));
 	}),
 

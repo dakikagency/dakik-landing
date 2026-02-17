@@ -71,7 +71,7 @@ export const invoicesRouter = router({
 			}
 
 			if (status) {
-				query = query.where("i.status", "=", status);
+				query = query.where("i.status", "=", status as any);
 			}
 
 			if (customerId) {

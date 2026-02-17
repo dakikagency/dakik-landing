@@ -128,7 +128,7 @@ export const componentsRouter = router({
 				.selectFrom("component_doc")
 				.select((eb) => eb.fn.count("id").as("count"))
 				.where("published", "=", true)
-				.$if(!!category, (qb) => qb.where("category", "=", category))
+				.$if(!!category, (qb) => qb.where("category", "=", category as any))
 				.$if(!!search, (qb) =>
 					qb.where(
 						sql<boolean>`("name" ILIKE ${`%${search}%`} OR "description" ILIKE ${`%${search}%`})`
@@ -196,7 +196,7 @@ export const componentsRouter = router({
 				.select((eb) => eb.fn.count("id").as("count"))
 				.$if(status === "published", (qb) => qb.where("published", "=", true))
 				.$if(status === "draft", (qb) => qb.where("published", "=", false))
-				.$if(!!category, (qb) => qb.where("category", "=", category))
+				.$if(!!category, (qb) => qb.where("category", "=", category as any))
 				.$if(!!search, (qb) =>
 					qb.where(
 						sql<boolean>`("name" ILIKE ${`%${search}%`} OR "description" ILIKE ${`%${search}%`})`

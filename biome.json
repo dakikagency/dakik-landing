@@ -79,6 +79,42 @@
           }
         }
       }
+    },
+    {
+      "includes": ["apps/web/src/components/ui/form.tsx"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noNamespaceImport": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/db/src/index.ts"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noBarrelFile": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/db/src/db.types.ts"],
+      "formatter": {
+        "enabled": false
+      }
+    },
+    {
+      "includes": ["packages/api/src/routers/**/*.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
     }
   ],
   "javascript": {
