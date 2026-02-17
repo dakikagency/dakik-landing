@@ -1,8 +1,9 @@
+import { db } from "@collab/db";
 import type { MetadataRoute } from "next";
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://dakik.co.uk";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 	// Static pages with their priorities and change frequencies
 	const staticPages: MetadataRoute.Sitemap = [
 		{
@@ -67,8 +68,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
 		},
 	];
 
-	// Note: Blog posts can be added dynamically via API route if needed
-	// For now, the /blog page will handle individual post discovery
+	// Dynamic blog post pages
+	const posts = await db
+		.selectFrom("blog_post")
+		.select(["slug", "updatedAt", "publishedAt"])
+		.where("published", "=", true)
+		.where("publishedAt", "is not", null)
+		.execute();
 
-	return staticPages;
+	const blogPages: MetadataRoute.Sitemap = posts.map((post) => ({
+		url: `${BASE_URL}/blog/${post.slug}`,
+		lastModified: post.updatedAt ?? post.publishedAt ?? new Date(),
+		changeFrequency: "monthly",
+		priority: 0.6,
+	}));
+
+	return [...staticPages, ...blogPages];
 }
