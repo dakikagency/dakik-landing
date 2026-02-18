@@ -49,7 +49,7 @@ export function Navbar() {
 					>
 						<Image
 							alt="Dakik Studio"
-							className="h-12"
+							className="h-12 invert"
 							height={61}
 							src="/dakik_logo.svg"
 							width={83}
