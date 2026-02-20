@@ -47,13 +47,11 @@
         "useExhaustiveDependencies": "info"
       },
       "nursery": {
-        "useSortedClasses": {
-          "level": "warn",
-          "fix": "safe",
-          "options": {
-            "functions": ["clsx", "cva", "cn"]
-          }
-        }
+        "useSortedClasses": "off"
+      },
+      "a11y": {
+        "useSortedAttributes": "off",
+        "noSvgWithoutTitle": "off"
       },
       "style": {
         "noParameterAssign": "error",
@@ -71,7 +69,9 @@
   },
   "overrides": [
     {
-      "includes": ["apps/web/src/components/ui/label.tsx"],
+      "includes": [
+        "apps/web/src/components/ui/label.tsx"
+      ],
       "linter": {
         "rules": {
           "a11y": {
@@ -97,5 +97,8 @@
       "enabled": false
     }
   },
-  "extends": ["ultracite/biome/core", "ultracite/biome/next"]
+  "extends": [
+    "ultracite/biome/core",
+    "ultracite/biome/next"
+  ]
 }
