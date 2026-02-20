@@ -3,10 +3,9 @@ import { neonConfig } from "@neondatabase/serverless";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import ws from "ws";
 
-import { PrismaClient } from "../prisma/generated/client.ts";
+import { PrismaClient } from "@prisma/client";
 
-// biome-ignore lint/performance/noBarrelFile: Necessary for Prisma client type exports
-export * from "../prisma/generated/client.ts";
+export type { Prisma } from "@prisma/client";
 
 // CRITICAL: Set DATABASE_URL in process.env unconditionally
 // Prisma 7's query compiler requires this even when using driver adapters

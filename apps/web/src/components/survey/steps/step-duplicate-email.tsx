@@ -6,13 +6,13 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 
-import { SurveyStep, useSurvey } from "../survey-context";
+import { useSurvey } from "../survey-context";
 
 export function StepDuplicateEmail() {
-	const { goToStep } = useSurvey();
+	const { currentStep, goToStep } = useSurvey();
 
 	const handleUseDifferentEmail = () => {
-		goToStep(SurveyStep.CONTACT);
+		goToStep(Math.floor(currentStep));
 	};
 
 	return (

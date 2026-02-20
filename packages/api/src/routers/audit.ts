@@ -1,4 +1,4 @@
-import prisma, { Prisma } from "@collab/db";
+import prisma, { type Prisma } from "@collab/db";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { protectedProcedure, router } from "../index";

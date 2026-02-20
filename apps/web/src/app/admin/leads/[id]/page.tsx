@@ -119,10 +119,10 @@ export default function LeadDetailsPage() {
 				});
 				toast.success("Lead status updated");
 			},
-			onError: (error) => {
+			onError: (error: { message?: string }) => {
 				toast.error(error.message || "Failed to update status");
 			},
-		})
+		}) as any
 	);
 
 	const handleStatusChange = (newStatus: string | null) => {
@@ -138,7 +138,7 @@ export default function LeadDetailsPage() {
 				| "MEETING_COMPLETED"
 				| "CONVERTED"
 				| "CLOSED",
-		});
+		} as any);
 	};
 
 	if (isLoading) {
