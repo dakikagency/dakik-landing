@@ -1,0 +1,7 @@
+<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<style>
+  svg { transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1); }
+  @media (hover: hover) { svg:hover { transform: scale(1.1); } }
+  * { fill: currentColor !important; stroke: none !important; }
+</style>
+<title>NameMC</title><path d="M0 0v24h24V0Zm4.8 4.8H16V8h3.2v11.2H16V8H8v11.2H4.8V8Z"/></svg>
