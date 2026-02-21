@@ -10,6 +10,22 @@ export const metadata: Metadata = {
 		title: "Blog | Dakik Studio",
 		description:
 			"Thoughts, insights, and perspectives on design, development, and the digital landscape.",
+		type: "website",
+	},
+	keywords: [
+		"software engineering blog",
+		"AI agency insights",
+		"startup tech stacks",
+		"Next.js tutorials",
+		"fullstack development",
+		"React design patterns",
+		"digital product growth",
+	],
+	twitter: {
+		card: "summary_large_image",
+		title: "Blog | Dakik Studio",
+		description:
+			"Thoughts, insights, and perspectives on design, development, and the digital landscape.",
 	},
 };
 

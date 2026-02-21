@@ -1,8 +1,5 @@
 "use client";
 
-import type { IconWeight, Icon as PhosphorIcon } from "@phosphor-icons/react";
-// biome-ignore lint/performance/noNamespaceImport: Need namespace import to iterate all icons dynamically
-import * as PhosphorIcons from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -13,8 +10,7 @@ import {
 	SearchIcon,
 	XIcon,
 } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -28,202 +24,53 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/utils/trpc";
 
-const ICON_WEIGHTS: IconWeight[] = [
-	"thin",
-	"light",
-	"regular",
-	"bold",
-	"fill",
-	"duotone",
-];
-
-const WEIGHT_LABELS: Record<IconWeight, string> = {
-	thin: "Thin",
-	light: "Light",
-	regular: "Regular",
-	bold: "Bold",
-	fill: "Filled",
-	duotone: "Duotone",
-};
-
-// Mapping from backend categories to Phosphor Icon keywords for filtering
-const CATEGORY_KEYWORDS: Record<string, string[]> = {
-	General: [],
-	Interface: [
-		"Menu",
-		"Grid",
-		"Settings",
-		"Gear",
-		"Sliders",
-		"Toggle",
-		"Check",
-		"X",
-		"Plus",
-		"Minus",
-	],
-	Arrows: [
-		"Arrow",
-		"Caret",
-		"CaretCircle",
-		"Direction",
-		"Navigation",
-		"Pointer",
-	],
-	Social: [
-		"Twitter",
-		"Facebook",
-		"Instagram",
-		"Linkedin",
-		"Github",
-		"Discord",
-		"Youtube",
-		"Tiktok",
-	],
-	Commerce: [
-		"Bag",
-		"Cart",
-		"Credit",
-		"Currency",
-		"Money",
-		"Wallet",
-		"Receipt",
-		"Percent",
-		"Tag",
-		"Barcode",
-	],
-	Media: [
-		"Play",
-		"Pause",
-		"Stop",
-		"Record",
-		"Camera",
-		"Microphone",
-		"Speaker",
-		"Volume",
-	],
-	Communication: [
-		"Chat",
-		"Envelope",
-		"Mail",
-		"Message",
-		"Phone",
-		"Video",
-		"Voicemail",
-		"Megaphone",
-	],
-	Files: [
-		"File",
-		"Folder",
-		"Document",
-		"Archive",
-		"Clipboard",
-		"Copy",
-		"Image",
-	],
-	Weather: ["Sun", "Moon", "Cloud", "Rain", "Snow", "Wind", "Thermometer"],
-	Maps: [
-		"Map",
-		"Pin",
-		"Compass",
-		"Globe",
-		"Navigation",
-		"Path",
-		"Route",
-		"Location",
-	],
-	Development: [
-		"Code",
-		"Terminal",
-		"Bug",
-		"Git",
-		"Database",
-		"Server",
-		"Cloud",
-		"Api",
-		"Brackets",
-	],
-	Design: [
-		"Brush",
-		"Paint",
-		"Palette",
-		"Pencil",
-		"Ruler",
-		"Scissors",
-		"Selection",
-		"Crop",
-		"Gradient",
-	],
-	Health: ["Heart", "Pill", "Syringe", "FirstAid", "Hospital", "Tooth"],
-	Finance: [
-		"Bank",
-		"Coin",
-		"CurrencyDollar",
-		"CurrencyEur",
-		"ChartLine",
-		"TrendUp",
-		"TrendDown",
-		"Percent",
-	],
-	Education: [
-		"Book",
-		"BookOpen",
-		"GraduationCap",
-		"Student",
-		"Chalkboard",
-		"Certificate",
-	],
-	Other: [],
-};
-
-interface IconData {
+interface Icon {
+	id: string;
 	name: string;
-	displayName: string;
-	component: PhosphorIcon;
+	slug: string;
+	category: string;
+	svgContent: string;
+	keywords: string[] | null;
 }
 
-function getPhosphorIcons(): IconData[] {
-	const icons: IconData[] = [];
-	const iconEntries = Object.entries(PhosphorIcons);
+// Regex patterns for SVG sanitization
+const SCRIPT_TAG_REGEX = /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi;
+const EVENT_HANDLER_REGEX = /on\w+="[^"]*"/gi;
 
-	for (const [name, component] of iconEntries) {
-		if (
-			typeof component === "function" &&
-			name !== "IconContext" &&
-			name !== "IconBase" &&
-			!name.startsWith("Ssr") &&
-			!name.includes("Ssr")
-		) {
-			const displayName = name.replace(/([A-Z])/g, " $1").trim();
-			icons.push({
-				name,
-				displayName,
-				component: component as PhosphorIcon,
-			});
-		}
-	}
-
-	return icons.sort((a, b) => a.name.localeCompare(b.name));
+function sanitizeSvg(svgContent: string): string {
+	return svgContent
+		.replace(SCRIPT_TAG_REGEX, "")
+		.replace(EVENT_HANDLER_REGEX, "");
 }
 
-function matchesCategory(
-	iconName: string,
-	categoryKeywords: string[]
-): boolean {
-	if (categoryKeywords.length === 0) {
-		return true;
-	}
-
-	const lowerName = iconName.toLowerCase();
-	return categoryKeywords.some((keyword) =>
-		lowerName.includes(keyword.toLowerCase())
+function IconSvg({
+	svgContent,
+	className,
+}: {
+	svgContent: string;
+	className?: string;
+}) {
+	const sanitized = sanitizeSvg(svgContent);
+	return (
+		<div
+			className={cn("flex items-center justify-center", className)}
+			// biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized SVG content from our database
+			dangerouslySetInnerHTML={{ __html: sanitized }}
+		/>
 	);
 }
 
 export function IconGrid() {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedCategory, setSelectedCategory] = useState("All");
-	const [selectedWeight, setSelectedWeight] = useState<IconWeight>("regular");
 	const [copiedIcon, setCopiedIcon] = useState<string | null>(null);
+
+	// Fetch icons from the API
+	const { data: iconsData, isLoading: isIconsLoading } = useQuery(
+		trpc.icons.listPublic.queryOptions({
+			limit: 200,
+		})
+	);
 
 	// Fetch categories from the backend
 	const { data: backendCategories, isLoading: isCategoriesLoading } = useQuery(
@@ -238,8 +85,12 @@ export function IconGrid() {
 		return ["All", ...backendCategories];
 	}, [backendCategories]);
 
-	const allIcons = useMemo(() => getPhosphorIcons(), []);
+	// Get all icons from API response
+	const allIcons = useMemo(() => {
+		return iconsData?.icons ?? [];
+	}, [iconsData]);
 
+	// Filter icons by search and category
 	const filteredIcons = useMemo(() => {
 		let icons = allIcons;
 
@@ -249,69 +100,48 @@ export function IconGrid() {
 			icons = icons.filter(
 				(icon) =>
 					icon.name.toLowerCase().includes(query) ||
-					icon.displayName.toLowerCase().includes(query)
+					icon.slug.toLowerCase().includes(query) ||
+					(icon.keywords ?? []).some((kw) => kw.toLowerCase().includes(query))
 			);
 		}
 
 		// Filter by category
 		if (selectedCategory !== "All") {
-			const categoryKeywords = CATEGORY_KEYWORDS[selectedCategory] ?? [];
-			icons = icons.filter((icon) =>
-				matchesCategory(icon.name, categoryKeywords)
-			);
+			icons = icons.filter((icon) => icon.category === selectedCategory);
 		}
 
 		return icons;
 	}, [allIcons, searchQuery, selectedCategory]);
 
-	const getSvgString = useCallback(
-		(IconComponent: PhosphorIcon, iconName: string): string => {
-			const svgMarkup = renderToStaticMarkup(
-				<IconComponent size={24} weight={selectedWeight} />
-			);
-			return svgMarkup.replace(
-				"<svg",
-				`<svg xmlns="http://www.w3.org/2000/svg" aria-label="${iconName}"`
-			);
-		},
-		[selectedWeight]
-	);
+	const handleCopySvg = async (icon: Icon) => {
+		try {
+			const svgString = sanitizeSvg(icon.svgContent);
+			await navigator.clipboard.writeText(svgString);
+			setCopiedIcon(icon.id);
+			toast.success(`Copied ${icon.name} SVG to clipboard`);
+			setTimeout(() => setCopiedIcon(null), 2000);
+		} catch {
+			toast.error("Failed to copy SVG");
+		}
+	};
 
-	const handleCopySvg = useCallback(
-		async (icon: IconData) => {
-			try {
-				const svgString = getSvgString(icon.component, icon.name);
-				await navigator.clipboard.writeText(svgString);
-				setCopiedIcon(icon.name);
-				toast.success(`Copied ${icon.displayName} SVG to clipboard`);
-				setTimeout(() => setCopiedIcon(null), 2000);
-			} catch {
-				toast.error("Failed to copy SVG");
-			}
-		},
-		[getSvgString]
-	);
+	const handleDownload = (icon: Icon) => {
+		const svgString = sanitizeSvg(icon.svgContent);
+		const blob = new Blob([svgString], { type: "image/svg+xml" });
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = `${icon.slug}.svg`;
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		URL.revokeObjectURL(url);
+		toast.success(`Downloaded ${icon.name} SVG`);
+	};
 
-	const handleDownload = useCallback(
-		(icon: IconData) => {
-			const svgString = getSvgString(icon.component, icon.name);
-			const blob = new Blob([svgString], { type: "image/svg+xml" });
-			const url = URL.createObjectURL(blob);
-			const link = document.createElement("a");
-			link.href = url;
-			link.download = `${icon.name.toLowerCase()}-${selectedWeight}.svg`;
-			document.body.appendChild(link);
-			link.click();
-			document.body.removeChild(link);
-			URL.revokeObjectURL(url);
-			toast.success(`Downloaded ${icon.displayName} SVG`);
-		},
-		[getSvgString, selectedWeight]
-	);
-
-	const clearSearch = useCallback(() => {
+	const clearSearch = () => {
 		setSearchQuery("");
-	}, []);
+	};
 
 	return (
 		<div className="flex flex-col gap-8">
@@ -367,37 +197,42 @@ export function IconGrid() {
 							))}
 						</DropdownMenuContent>
 					</DropdownMenu>
-
-					{/* Weight Toggle */}
-					<div className="flex rounded-none border border-border">
-						{ICON_WEIGHTS.map((weight) => (
-							<button
-								className={cn(
-									"px-3 py-1.5 text-xs transition-colors",
-									selectedWeight === weight
-										? "bg-foreground text-background"
-										: "text-muted-foreground hover:bg-muted hover:text-foreground"
-								)}
-								key={weight}
-								onClick={() => setSelectedWeight(weight)}
-								type="button"
-							>
-								{WEIGHT_LABELS[weight]}
-							</button>
-						))}
-					</div>
 				</div>
 			</div>
 
 			{/* Results Count */}
 			<div className="text-muted-foreground text-sm">
-				{filteredIcons.length} icon{filteredIcons.length !== 1 ? "s" : ""}{" "}
-				{searchQuery || selectedCategory !== "All" ? "found" : "available"}
+				{isIconsLoading ? (
+					<span className="flex items-center gap-2">
+						<Loader2Icon className="size-3 animate-spin" />
+						Loading icons...
+					</span>
+				) : (
+					<>
+						{filteredIcons.length} icon
+						{filteredIcons.length !== 1 ? "s" : ""}{" "}
+						{searchQuery || selectedCategory !== "All" ? "found" : "available"}
+					</>
+				)}
 			</div>
 
 			{/* Icon Grid */}
 			<AnimatePresence mode="wait">
-				{filteredIcons.length > 0 ? (
+				{isIconsLoading ? (
+					<motion.div
+						animate={{ opacity: 1 }}
+						className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10"
+						initial={{ opacity: 0 }}
+						key="loading"
+					>
+						{Array.from({ length: 20 }).map((_, index) => (
+							<div
+								className="flex aspect-square animate-pulse flex-col items-center justify-center gap-2 border border-border bg-muted p-3"
+								key={index}
+							/>
+						))}
+					</motion.div>
+				) : filteredIcons.length > 0 ? (
 					<motion.div
 						animate={{ opacity: 1 }}
 						className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10"
@@ -407,22 +242,21 @@ export function IconGrid() {
 						transition={{ duration: 0.2 }}
 					>
 						{filteredIcons.map((icon, index) => {
-							const IconComponent = icon.component;
-							const isCopied = copiedIcon === icon.name;
+							const isCopied = copiedIcon === icon.id;
 
 							return (
 								<motion.div
 									animate={{ opacity: 1, y: 0 }}
 									className="group relative"
 									initial={{ opacity: 0, y: 10 }}
-									key={icon.name}
+									key={icon.id}
 									transition={{
 										duration: 0.2,
 										delay: Math.min(index * 0.01, 0.3),
 									}}
 								>
 									<button
-										aria-label={`Copy ${icon.displayName} SVG`}
+										aria-label={`Copy ${icon.name} SVG`}
 										className={cn(
 											"flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-none border border-border bg-background p-3 transition-all",
 											"hover:border-foreground/30 hover:bg-muted",
@@ -435,9 +269,9 @@ export function IconGrid() {
 											{isCopied ? (
 												<CheckIcon className="size-6 text-success" />
 											) : (
-												<IconComponent
-													className="size-6 text-foreground transition-transform group-hover:scale-110"
-													weight={selectedWeight}
+												<IconSvg
+													className="size-6 text-foreground transition-transform group-hover:scale-110 [&>svg]:size-6 [&>svg]:text-foreground"
+													svgContent={icon.svgContent}
 												/>
 											)}
 										</div>
@@ -450,7 +284,7 @@ export function IconGrid() {
 
 									{/* Download button */}
 									<button
-										aria-label={`Download ${icon.displayName} SVG`}
+										aria-label={`Download ${icon.name} SVG`}
 										className="absolute top-1 right-1 rounded-none bg-background/80 p-1 opacity-0 transition-opacity hover:bg-muted group-hover:opacity-100"
 										onClick={(e) => {
 											e.stopPropagation();

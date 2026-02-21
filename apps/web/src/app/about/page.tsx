@@ -6,6 +6,27 @@ export const metadata: Metadata = {
 	title: "About Dakik Agency | The Bloody Work of Growth",
 	description:
 		"We don't just build software. We solve the messy, complex business problems that others ignore.",
+	openGraph: {
+		title: "About Dakik Agency | The Bloody Work of Growth",
+		description:
+			"We don't just build software. We solve the messy, complex business problems that others ignore.",
+		type: "website",
+	},
+	keywords: [
+		"boutique software agency",
+		"technical audit london",
+		"london development agency",
+		"scalable tech stack builders",
+		"startup CTO services",
+		"agency manifesto",
+		"high performance teams",
+	],
+	twitter: {
+		card: "summary",
+		title: "About Dakik Agency | The Bloody Work of Growth",
+		description:
+			"We don't just build software. We solve the messy, complex business problems that others ignore.",
+	},
 };
 
 export default function AboutPage() {

@@ -463,7 +463,14 @@ function ProjectsTable({
 										Update Progress
 									</DropdownMenuItem>
 									<DropdownMenuSeparator />
-									<DropdownMenuItem variant="destructive">
+									<DropdownMenuItem
+										onClick={() =>
+											toast.info(
+												"Project cancellation not yet implemented in backend"
+											)
+										}
+										variant="destructive"
+									>
 										Cancel Project
 									</DropdownMenuItem>
 								</DropdownMenuContent>
@@ -550,6 +557,18 @@ function MobileProjectCards({
 								>
 									<TrendingUpIcon className="mr-1.5 size-3" />
 									Update
+								</Button>
+								<Button
+									onClick={() =>
+										toast.info(
+											"Project cancellation not yet implemented in backend"
+										)
+									}
+									size="xs"
+									variant="outline"
+								>
+									<MoreHorizontalIcon className="mr-1.5 size-3" />
+									Cancel
 								</Button>
 							</div>
 						</div>

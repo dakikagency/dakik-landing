@@ -8,6 +8,27 @@ export const metadata: Metadata = {
 	title: "Our Work | Dakik Agency Case Studies",
 	description:
 		"See how we solve complex business problems with high-performance software.",
+	openGraph: {
+		title: "Our Work | Dakik Agency Case Studies",
+		description:
+			"See how we solve complex business problems with high-performance software.",
+		type: "website",
+	},
+	keywords: [
+		"fintech migration case study",
+		"AI support agent portfolio",
+		"custom logistics software",
+		"NextJS migration examples",
+		"startup scaleup case studies",
+		"legacy code rewrite",
+		"development portfolio",
+	],
+	twitter: {
+		card: "summary",
+		title: "Our Work | Dakik Agency Case Studies",
+		description:
+			"See how we solve complex business problems with high-performance software.",
+	},
 };
 
 const caseStudies = [

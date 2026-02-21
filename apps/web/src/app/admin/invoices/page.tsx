@@ -1,20 +1,25 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { EyeIcon, MailIcon, MoreHorizontalIcon } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+import {
+	EyeIcon,
+	FileTextIcon,
+	MoreHorizontalIcon,
+	PlusIcon,
+} from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { toast } from "sonner";
-
 import {
 	AdvancedFilters,
 	type FilterConfig,
 	type FilterPreset,
 	type FilterValues,
 } from "@/components/admin/advanced-filters";
-import { Badge } from "@/components/ui/badge";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -39,68 +44,62 @@ import { trpc } from "@/utils/trpc";
 // Constants
 // =============================================================================
 
-const HAS_PROJECTS_OPTIONS = [
-	{ value: "true", label: "Has Projects" },
-	{ value: "false", label: "No Projects" },
+const STATUS_OPTIONS = [
+	{ value: "UNPAID", label: "Unpaid" },
+	{ value: "PENDING", label: "Pending" },
+	{ value: "PAID", label: "Paid" },
+	{ value: "OVERDUE", label: "Overdue" },
 ];
 
-const HAS_CONTRACTS_OPTIONS = [
-	{ value: "true", label: "Has Contracts" },
-	{ value: "false", label: "No Contracts" },
-];
-
-// Filter configuration
 const FILTER_CONFIG: FilterConfig[] = [
 	{
 		key: "search",
 		label: "Search",
 		type: "text",
-		placeholder: "Search customers...",
+		placeholder: "Search invoices...",
 	},
 	{
-		key: "hasProjects",
-		label: "Projects",
-		type: "select",
-		options: HAS_PROJECTS_OPTIONS,
-		placeholder: "Project status",
-	},
-	{
-		key: "hasContracts",
-		label: "Contracts",
-		type: "select",
-		options: HAS_CONTRACTS_OPTIONS,
-		placeholder: "Contract status",
+		key: "statuses",
+		label: "Status",
+		type: "multiselect",
+		options: STATUS_OPTIONS,
+		placeholder: "Filter by status",
 	},
 	{
 		key: "dateRange",
-		label: "Joined Date",
+		label: "Date Range",
 		type: "dateRange",
 		placeholder: "Select date range",
 	},
 ];
 
-// Default presets
 const DEFAULT_PRESETS: FilterPreset[] = [
 	{
-		id: "with-projects",
-		name: "With Projects",
-		filters: { hasProjects: "true" },
+		id: "pending-invoices",
+		name: "Pending",
+		filters: { statuses: ["PENDING"] },
 	},
 	{
-		id: "no-projects",
-		name: "No Projects",
-		filters: { hasProjects: "false" },
-	},
-	{
-		id: "with-contracts",
-		name: "With Contracts",
-		filters: { hasContracts: "true" },
+		id: "overdue-invoices",
+		name: "Overdue",
+		filters: { statuses: ["OVERDUE"] },
 	},
 ];
 
-// =============================================================================
-// Components
-// =============================================================================
+function getInvoiceStatusVariant(status: string): BadgeProps["variant"] {
+	switch (status) {
+		case "PAID":
+			return "success";
+		case "PENDING":
+			return "warning";
+		case "OVERDUE":
+			return "destructive";
+		case "UNPAID":
+			return "secondary";
+		default:
+			return "outline";
+	}
+}
 
 function LoadingSkeletons() {
 	return (
@@ -108,7 +107,7 @@ function LoadingSkeletons() {
 			{Array.from({ length: 5 }, (_, i) => i).map((index) => (
 				<div
 					className="flex items-center justify-between py-3"
-					key={`customer-skeleton-${index}`}
+					key={`invoice-skeleton-${index}`}
 				>
 					<div className="flex items-center gap-4">
 						<Skeleton className="size-10 rounded-full" />
@@ -129,23 +128,32 @@ function EmptyState({ hasFilters }: { hasFilters: boolean }) {
 		<div className="py-8 text-center">
 			<p className="text-muted-foreground text-sm">
 				{hasFilters
-					? "No customers found matching your criteria."
-					: "No customers yet."}
+					? "No invoices found matching your criteria."
+					: "No invoices yet."}
 			</p>
 		</div>
 	);
 }
 
-// =============================================================================
-// Main Component
-// =============================================================================
+export default function InvoicesPage() {
+	const queryClient = useQueryClient();
 
-export default function CustomersPage() {
+	const updateInvoice = useMutation({
+		...trpc.invoices.update.mutationOptions(),
+		onSuccess: () => {
+			toast.success("Invoice status updated successfully");
+			queryClient.invalidateQueries({ queryKey: trpc.admin.getInvoices.queryKey() });
+		},
+		onError: (error) => {
+			toast.error(error.message || "Failed to update invoice");
+		},
+	});
+
 	const [filterValues, setFilterValues] = useState<FilterValues>({});
 	const [presets, setPresets] = useState<FilterPreset[]>(() => {
 		if (typeof window !== "undefined") {
 			try {
-				const saved = localStorage.getItem("customers-filter-presets");
+				const saved = localStorage.getItem("invoices-filter-presets");
 				if (saved) {
 					return [...DEFAULT_PRESETS, ...JSON.parse(saved)];
 				}
@@ -156,12 +164,10 @@ export default function CustomersPage() {
 		return DEFAULT_PRESETS;
 	});
 
-	// Convert filter values to API params
 	const apiParams = useMemo(() => {
 		const params: {
 			search?: string;
-			hasProjects?: boolean;
-			hasContracts?: boolean;
+			statuses?: string[];
 			dateFrom?: Date;
 			dateTo?: Date;
 		} = {};
@@ -169,12 +175,12 @@ export default function CustomersPage() {
 		if (filterValues.search) {
 			params.search = filterValues.search as string;
 		}
-		if (filterValues.hasProjects && filterValues.hasProjects !== "all") {
-			params.hasProjects = filterValues.hasProjects === "true";
+		if (filterValues.statuses && Array.isArray(filterValues.statuses)) {
+			params.statuses = filterValues.statuses as string[];
+		} else if (filterValues.status && filterValues.status !== "all") {
+			params.statuses = [filterValues.status as string];
 		}
-		if (filterValues.hasContracts && filterValues.hasContracts !== "all") {
-			params.hasContracts = filterValues.hasContracts === "true";
-		}
+
 		if (filterValues.dateRange) {
 			const dateRange = filterValues.dateRange as DateRange;
 			if (dateRange.from) {
@@ -188,8 +194,8 @@ export default function CustomersPage() {
 		return params;
 	}, [filterValues]);
 
-	const { data: customers, isLoading } = useQuery(
-		trpc.admin.getCustomers.queryOptions(apiParams)
+	const { data: invoices, isLoading } = useQuery(
+		trpc.admin.getInvoices.queryOptions(apiParams)
 	);
 
 	const hasFilters = Object.values(filterValues).some((v) => {
@@ -215,7 +221,7 @@ export default function CustomersPage() {
 			const updated = [...DEFAULT_PRESETS, ...customPresets, newPreset];
 			setPresets(updated);
 			localStorage.setItem(
-				"customers-filter-presets",
+				"invoices-filter-presets",
 				JSON.stringify(
 					updated.filter((p) => !DEFAULT_PRESETS.some((d) => d.id === p.id))
 				)
@@ -232,7 +238,7 @@ export default function CustomersPage() {
 			const updated = presets.filter((p) => p.id !== id);
 			setPresets(updated);
 			localStorage.setItem(
-				"customers-filter-presets",
+				"invoices-filter-presets",
 				JSON.stringify(
 					updated.filter((p) => !DEFAULT_PRESETS.some((d) => d.id === p.id))
 				)
@@ -247,29 +253,32 @@ export default function CustomersPage() {
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<div>
 					<h1 className="font-bold font-display text-2xl tracking-tight">
-						Customers
+						Invoices
 					</h1>
 					<p className="mt-1 text-muted-foreground text-sm">
-						Manage your customer accounts and their projects.
+						Manage your customer invoices.
 					</p>
 				</div>
+				<Button>
+					<PlusIcon className="mr-2 size-4" />
+					Create Invoice
+				</Button>
 			</div>
 
 			{/* Search and Filters */}
 			<Card>
 				<CardHeader className="pb-3">
 					<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-						<CardTitle className="text-sm">All Customers</CardTitle>
-						{customers && (
+						<CardTitle className="text-sm">All Invoices</CardTitle>
+						{invoices && (
 							<span className="text-muted-foreground text-xs">
-								{customers.length} customer{customers.length !== 1 ? "s" : ""}{" "}
+								{invoices.length} invoice{invoices.length !== 1 ? "s" : ""}{" "}
 								found
 							</span>
 						)}
 					</div>
 				</CardHeader>
 				<CardContent>
-					{/* Advanced Filters */}
 					<AdvancedFilters
 						className="mb-4"
 						filters={FILTER_CONFIG}
@@ -277,70 +286,54 @@ export default function CustomersPage() {
 						onDeletePreset={handleDeletePreset}
 						onSavePreset={handleSavePreset}
 						presets={presets}
-						searchPlaceholder="Search by name, email, company, or phone..."
+						searchPlaceholder="Search by description, customer name..."
 						values={filterValues}
 					/>
 
-					{/* Table Content */}
 					{isLoading && <LoadingSkeletons />}
-					{!isLoading && customers?.length === 0 && (
+					{!isLoading && invoices?.length === 0 && (
 						<EmptyState hasFilters={hasFilters} />
 					)}
-					{!isLoading && customers && customers.length > 0 && (
+					{!isLoading && invoices && invoices.length > 0 && (
 						<Table>
 							<TableHeader>
 								<TableRow>
-									<TableHead>Name</TableHead>
-									<TableHead>Email</TableHead>
-									<TableHead className="hidden sm:table-cell">
-										Company
-									</TableHead>
-									<TableHead className="hidden md:table-cell">
-										Projects
-									</TableHead>
-									<TableHead className="hidden lg:table-cell">Joined</TableHead>
+									<TableHead>Invoice #</TableHead>
+									<TableHead>Customer</TableHead>
+									<TableHead className="hidden md:table-cell">Date</TableHead>
+									<TableHead className="hidden lg:table-cell">Amount</TableHead>
+									<TableHead>Status</TableHead>
 									<TableHead className="w-12">
 										<span className="sr-only">Actions</span>
 									</TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>
-								{customers?.map((customer) => (
-									<TableRow key={customer.id}>
+								{invoices?.map((invoice) => (
+									<TableRow key={invoice.id}>
+										<TableCell className="font-medium">
+											{invoice.id.slice(-6).toUpperCase()}
+										</TableCell>
 										<TableCell>
-											<div className="flex items-center gap-3">
-												<div className="flex size-8 items-center justify-center rounded-full bg-muted font-medium text-xs uppercase">
-													{customer.user.name
-														?.split(" ")
-														.map((n) => n[0])
-														.join("")
-														.slice(0, 2) ?? "?"}
-												</div>
+											<div className="flex flex-col">
 												<span className="font-medium">
-													{customer.user.name}
+													{invoice.customer?.name ?? "Unknown"}
+												</span>
+												<span className="text-muted-foreground text-xs">
+													{invoice.customer?.email}
 												</span>
 											</div>
 										</TableCell>
-										<TableCell className="text-muted-foreground">
-											{customer.user.email}
+										<TableCell className="hidden text-muted-foreground md:table-cell">
+											{format(new Date(invoice.invoiceDate), "MMM d, yyyy")}
 										</TableCell>
-										<TableCell className="hidden text-muted-foreground sm:table-cell">
-											{customer.companyName ?? "-"}
+										<TableCell className="hidden lg:table-cell">
+											${Number(invoice.amount).toFixed(2)}
 										</TableCell>
-										<TableCell className="hidden md:table-cell">
-											<Badge
-												variant={
-													customer._count?.projects > 0
-														? "secondary"
-														: "outline"
-												}
-											>
-												{customer._count?.projects ?? 0} project
-												{(customer._count?.projects ?? 0) !== 1 ? "s" : ""}
+										<TableCell>
+											<Badge variant={getInvoiceStatusVariant(invoice.status)}>
+												{invoice.status}
 											</Badge>
-										</TableCell>
-										<TableCell className="hidden text-muted-foreground lg:table-cell">
-											{new Date(customer.createdAt).toLocaleDateString()}
 										</TableCell>
 										<TableCell>
 											<DropdownMenu>
@@ -354,39 +347,33 @@ export default function CustomersPage() {
 													<DropdownMenuItem
 														render={
 															<Link
-																href={
-																	`/admin/customers/${customer.id}` as Route
-																}
+																href={`/admin/invoices/${invoice.id}` as Route}
 															/>
 														}
 													>
 														<EyeIcon className="mr-2 size-4" />
 														View Details
 													</DropdownMenuItem>
-													<DropdownMenuItem
-														render={
-															// biome-ignore lint/a11y/useAnchorContent: provided by children
-															<a
-																aria-label={`Send email to ${customer.user.email}`}
-																className="w-full text-left"
-																href={`mailto:${customer.user.email}`}
-															/>
-														}
-													>
-														<MailIcon className="mr-2 size-4" />
-														Send Email
-													</DropdownMenuItem>
-													<DropdownMenuSeparator />
+													{invoice.fileUrl && (
+														<DropdownMenuItem
+															onClick={() =>
+																window.open(invoice.fileUrl as string, "_blank")
+															}
+														>
+															<FileTextIcon className="mr-2 size-4" />
+															Download PDF
+														</DropdownMenuItem>
+													)}
 													<DropdownMenuItem
 														onClick={() =>
 															toast.info(
-																"Deactivate not yet implemented in backend"
+																"Invoice regeneration is not yet implemented in backend"
 															)
 														}
-														variant="destructive"
 													>
-														Deactivate
+														Regenerate
 													</DropdownMenuItem>
+
 												</DropdownMenuContent>
 											</DropdownMenu>
 										</TableCell>

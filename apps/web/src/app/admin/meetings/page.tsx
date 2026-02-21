@@ -175,20 +175,96 @@ function getUserTimezone(): string {
 // Components
 // =============================================================================
 
-function MeetingCard({
-	meeting,
-}: {
-	meeting: {
-		id: string;
-		title: string;
-		scheduledAt: string | Date;
-		duration: number;
-		status: string;
-		meetUrl: string;
-		lead?: { name: string | null; email: string } | null;
-		customer?: { user: { name: string | null; email: string } } | null;
-	};
-}) {
+export interface MeetingData {
+	id: string;
+	title: string;
+	scheduledAt: string | Date;
+	duration: number;
+	status: string;
+	meetUrl: string;
+	lead?: { name: string | null; email: string } | null;
+	customer?: { user: { name: string | null; email: string } } | null;
+}
+
+function MeetingActionsMenu({ meeting }: { meeting: MeetingData }) {
+	const queryClient = useQueryClient();
+	const updateMeetingStatus = useMutation({
+		...trpc.admin.updateMeetingStatus.mutationOptions(),
+		onSuccess: () => {
+			toast.success("Meeting status updated successfully");
+			queryClient.invalidateQueries({ queryKey: trpc.admin.getMeetings.queryKey() });
+		},
+		onError: (error) => toast.error(error.message),
+	});
+
+	const isUpcoming =
+		meeting.status === "SCHEDULED" &&
+		new Date(meeting.scheduledAt) > new Date();
+
+	return (
+		<DropdownMenu>
+			<DropdownMenuTrigger
+				render={
+					<Button className="ml-2 shrink-0" size="icon-xs" variant="ghost" />
+				}
+			>
+				<MoreHorizontalIcon className="size-4" />
+				<span className="sr-only">Open menu</span>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="end">
+				{isUpcoming && (
+					<DropdownMenuItem
+						render={
+							<a
+								href={meeting.meetUrl}
+								rel="noopener noreferrer"
+								target="_blank"
+							>
+								Join Meeting
+							</a>
+						}
+					>
+						Join Meeting
+					</DropdownMenuItem>
+				)}
+				<DropdownMenuItem
+					onClick={() => {
+						navigator.clipboard.writeText(meeting.meetUrl);
+						toast.success("Meeting link copied to clipboard");
+					}}
+				>
+					<LinkIcon className="mr-2 size-4" />
+					Copy Link
+				</DropdownMenuItem>
+				<DropdownMenuItem
+					onClick={() =>
+						toast.info("Reschedule not yet implemented in backend")
+					}
+				>
+					<CalendarIcon className="mr-2 size-4" />
+					Reschedule
+				</DropdownMenuItem>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem
+					disabled={
+						updateMeetingStatus.isPending || meeting.status === "CANCELLED"
+					}
+					onClick={() => {
+						updateMeetingStatus.mutate({
+							meetingId: meeting.id,
+							status: "CANCELLED",
+						});
+					}}
+					variant="destructive"
+				>
+					Cancel Meeting
+				</DropdownMenuItem>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+}
+
+function MeetingCard({ meeting }: { meeting: MeetingData }) {
 	const { date, time } = formatDateTime(new Date(meeting.scheduledAt));
 	const attendee = meeting.lead ?? meeting.customer?.user;
 	const isUpcoming =
@@ -260,48 +336,14 @@ function MeetingCard({
 						</div>
 					</div>
 
-					<DropdownMenu>
-						<DropdownMenuTrigger
-							render={
-								<Button
-									className="ml-2 shrink-0"
-									size="icon-xs"
-									variant="ghost"
-								/>
-							}
-						>
-							<MoreHorizontalIcon className="size-4" />
-							<span className="sr-only">Open menu</span>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end">
-							<DropdownMenuItem>Reschedule</DropdownMenuItem>
-							<DropdownMenuItem>Mark as Completed</DropdownMenuItem>
-							<DropdownMenuSeparator />
-							<DropdownMenuItem variant="destructive">
-								Cancel Meeting
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
+					<MeetingActionsMenu meeting={meeting} />
 				</div>
 			</CardContent>
 		</Card>
 	);
 }
 
-function MeetingListItem({
-	meeting,
-}: {
-	meeting: {
-		id: string;
-		title: string;
-		scheduledAt: string | Date;
-		duration: number;
-		status: string;
-		meetUrl: string;
-		lead?: { name: string | null; email: string } | null;
-		customer?: { user: { name: string | null; email: string } } | null;
-	};
-}) {
+function MeetingListItem({ meeting }: { meeting: MeetingData }) {
 	const { time } = formatDateTime(new Date(meeting.scheduledAt));
 	const attendee = meeting.lead ?? meeting.customer?.user;
 	const isUpcoming =
@@ -360,35 +402,7 @@ function MeetingListItem({
 						Join
 					</Button>
 				)}
-				<DropdownMenu>
-					<DropdownMenuTrigger
-						render={<Button size="icon-xs" variant="ghost" />}
-					>
-						<MoreHorizontalIcon className="size-4" />
-						<span className="sr-only">Open menu</span>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end">
-						{isUpcoming && (
-							<DropdownMenuItem
-								render={
-									<a
-										href={meeting.meetUrl}
-										rel="noopener noreferrer"
-										target="_blank"
-									>
-										Join Meeting
-									</a>
-								}
-							>
-								Join Meeting
-							</DropdownMenuItem>
-						)}
-						<DropdownMenuItem>Reschedule</DropdownMenuItem>
-						<DropdownMenuItem>Mark as Completed</DropdownMenuItem>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem variant="destructive">Cancel</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
+				<MeetingActionsMenu meeting={meeting} />
 			</div>
 		</div>
 	);
@@ -841,9 +855,9 @@ export default function MeetingsPage() {
 		lead: m.lead ? { ...m.lead, email: m.lead.email ?? "" } : null,
 		customer: m.customer
 			? {
-					...m.customer,
-					user: { ...m.customer.user, email: m.customer.user.email ?? "" },
-				}
+				...m.customer,
+				user: { ...m.customer.user, email: m.customer.user.email ?? "" },
+			}
 			: null,
 	}));
 

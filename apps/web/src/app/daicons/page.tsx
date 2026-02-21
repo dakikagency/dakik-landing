@@ -6,7 +6,7 @@ import { Navbar } from "@/components/landing";
 export const metadata: Metadata = {
 	title: "daIcons | Dakik Studio",
 	description:
-		"Open-source icon library with 9000+ icons in multiple styles. Search, preview, and copy SVG icons for your projects.",
+		"Custom icon library with unique SVG icons. Search, preview, and copy SVG icons for your projects.",
 };
 
 export default function DaIconsPage() {
@@ -25,8 +25,8 @@ export default function DaIconsPage() {
 								daIcons
 							</h1>
 							<p className="mx-auto max-w-2xl text-lg text-muted-foreground md:text-xl">
-								A comprehensive icon library featuring 9,000+ icons in multiple
-								weights and styles. Click any icon to copy its SVG code.
+								A curated icon library featuring custom-designed SVG icons.
+								Click any icon to copy its SVG code.
 							</p>
 						</div>
 					</div>
@@ -49,50 +49,38 @@ export default function DaIconsPage() {
 
 							<div className="space-y-6">
 								<div className="rounded-none border border-border bg-background p-6">
-									<h3 className="mb-3 font-medium">React / Next.js</h3>
-									<pre className="overflow-x-auto rounded-none bg-muted p-4 font-mono text-sm">
-										<code>{`npm install @phosphor-icons/react
-
-import { House, Heart, Star } from "@phosphor-icons/react";
-
-<House size={32} weight="regular" />
-<Heart size={32} weight="fill" />
-<Star size={32} weight="duotone" />`}</code>
-									</pre>
-								</div>
-
-								<div className="rounded-none border border-border bg-background p-6">
 									<h3 className="mb-3 font-medium">Vanilla SVG</h3>
 									<p className="mb-3 text-muted-foreground text-sm">
 										Click any icon above to copy its SVG code, then paste
-										directly into your HTML.
+										directly into your HTML or download as an SVG file.
 									</p>
 									<pre className="overflow-x-auto rounded-none bg-muted p-4 font-mono text-sm">
-										<code>{`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+										<code>{`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
   <!-- SVG path data -->
 </svg>`}</code>
 									</pre>
 								</div>
 
 								<div className="rounded-none border border-border bg-background p-6">
-									<h3 className="mb-3 font-medium">Available Weights</h3>
-									<div className="flex flex-wrap gap-2">
-										{[
-											"Thin",
-											"Light",
-											"Regular",
-											"Bold",
-											"Filled",
-											"Duotone",
-										].map((weight) => (
-											<span
-												className="rounded-none bg-muted px-3 py-1 font-mono text-xs"
-												key={weight}
-											>
-												{weight}
-											</span>
-										))}
-									</div>
+									<h3 className="mb-3 font-medium">React / Next.js</h3>
+									<p className="mb-3 text-muted-foreground text-sm">
+										Copy the SVG code and paste it directly into your React
+										components, or save as a reusable component.
+									</p>
+									<pre className="overflow-x-auto rounded-none bg-muted p-4 font-mono text-sm">
+										<code>{`// As inline SVG
+export function IconName({ className }) {
+  return (
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      viewBox="0 0 24 24"
+      className={className}
+    >
+      {/* SVG content */}
+    </svg>
+  );
+}`}</code>
+									</pre>
 								</div>
 							</div>
 						</div>
@@ -103,16 +91,9 @@ import { House, Heart, Star } from "@phosphor-icons/react";
 				<section className="border-border border-t py-8">
 					<div className="container mx-auto px-4 text-center md:px-6">
 						<p className="text-muted-foreground text-sm">
-							Icons powered by{" "}
-							<a
-								className="text-foreground underline-offset-4 transition-colors hover:underline"
-								href="https://phosphoricons.com"
-								rel="noopener noreferrer"
-								target="_blank"
-							>
-								Phosphor Icons
-							</a>{" "}
-							<span className="text-muted-foreground/60">|</span>{" "}
+							Custom icons by{" "}
+							<span className="font-medium text-foreground">Dakik Studio</span>
+							<span className="text-muted-foreground/60"> | </span>
 							<span className="font-mono text-xs">MIT Licensed</span>
 						</p>
 					</div>

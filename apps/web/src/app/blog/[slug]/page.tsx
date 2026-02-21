@@ -16,6 +16,15 @@ async function getPost(slug: string) {
 		.executeTakeFirst();
 }
 
+async function getPostTags(postId: string) {
+	return db
+		.selectFrom("_BlogPostToTag")
+		.innerJoin("tag", "tag.id", "_BlogPostToTag.B")
+		.select(["tag.name"])
+		.where("_BlogPostToTag.A", "=", postId)
+		.execute();
+}
+
 export async function generateMetadata({
 	params,
 }: {
@@ -26,6 +35,9 @@ export async function generateMetadata({
 	if (!post) {
 		return {};
 	}
+
+	const tags = await getPostTags(post.id);
+	const keywordStrings = tags.map((t) => t.name);
 
 	return {
 		title: post.title,
@@ -44,6 +56,7 @@ export async function generateMetadata({
 			description: post.excerpt ?? undefined,
 			images: post.coverImage ? [post.coverImage] : undefined,
 		},
+		keywords: keywordStrings,
 	};
 }
 
@@ -58,6 +71,9 @@ export default async function BlogPostPage({
 		notFound();
 	}
 
+	const tags = await getPostTags(post.id);
+	const keywordStrings = tags.map((t) => t.name).join(", ");
+
 	const jsonLd = {
 		"@context": "https://schema.org",
 		"@type": "BlogPosting",
@@ -69,6 +85,7 @@ export default async function BlogPostPage({
 		author: { "@type": "Person", name: BLOG_AUTHOR.name },
 		publisher: { "@type": "Organization", name: "Dakik Studio" },
 		url: `${BASE_URL}/blog/${slug}`,
+		keywords: keywordStrings,
 	};
 
 	return (

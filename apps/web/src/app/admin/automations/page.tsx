@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	ArrowLeftIcon,
+	DownloadIcon,
 	EditIcon,
 	FileIcon,
 	FilterIcon,
@@ -115,8 +116,12 @@ function AutomationEditor({
 	const createTagMutation = useMutation(
 		trpc.automation.createTag.mutationOptions()
 	);
-	// TODO: Fix upload mutation - the uploads router doesn't have an 'upload' method
-	// const uploadMutation = useMutation(trpc.uploads.upload.mutationOptions());
+	const getSignatureMutation = useMutation(
+		trpc.uploads.getSignature.mutationOptions()
+	);
+	const saveAssetMutation = useMutation(
+		trpc.uploads.saveAsset.mutationOptions()
+	);
 
 	useEffect(() => {
 		if (!(slugManuallyEdited || isEditing)) {
@@ -175,35 +180,57 @@ function AutomationEditor({
 
 		setUploadingFile(true);
 		try {
-			// TODO: Implement file upload using getSignature and saveAsset mutations
-			toast.error("File upload is not yet implemented");
-			setUploadingFile(false);
-			/*
-			const reader = new FileReader();
-			reader.onloadend = async () => {
-				try {
-					const base64 = reader.result as string;
-					const result = await uploadMutation.mutateAsync({
-						file: base64,
-						folder: "automations",
-					});
-					setFileUrl(result.url);
-					setSelectedFile(null);
-					toast.success("File uploaded successfully");
-				} catch (error) {
-					const message =
-						error instanceof Error ? error.message : "Failed to upload file";
-					toast.error(message);
-				} finally {
-					setUploadingFile(false);
+			// Get signature for Cloudinary upload
+			const signatureData = await getSignatureMutation.mutateAsync({
+				folder: "automations",
+			});
+
+			// Upload to Cloudinary
+			const formData = new FormData();
+			formData.append("file", selectedFile);
+			formData.append("api_key", signatureData.apiKey);
+			formData.append("timestamp", signatureData.timestamp.toString());
+			formData.append("signature", signatureData.signature);
+			if (signatureData.folder) {
+				formData.append("folder", signatureData.folder);
+			}
+
+			const uploadResponse = await fetch(
+				`https://api.cloudinary.com/v1_1/${signatureData.cloudName}/auto/upload`,
+				{
+					method: "POST",
+					body: formData,
 				}
-			};
-			reader.readAsDataURL(selectedFile);
-			*/
+			);
+
+			if (!uploadResponse.ok) {
+				throw new Error("Upload failed");
+			}
+
+			const result = await uploadResponse.json();
+
+			// Save asset to database
+			await saveAssetMutation.mutateAsync({
+				publicId: result.public_id,
+				url: result.url,
+				secureUrl: result.secure_url,
+				format: result.format,
+				resourceType: result.resource_type,
+				width: result.width,
+				height: result.height,
+				bytes: result.bytes,
+				folder: result.folder,
+			});
+
+			// Set the file URL for the automation
+			setFileUrl(result.secure_url);
+			setSelectedFile(null);
+			toast.success("File uploaded successfully");
 		} catch (error) {
 			const message =
 				error instanceof Error ? error.message : "Failed to upload file";
 			toast.error(message);
+		} finally {
 			setUploadingFile(false);
 		}
 	};
@@ -512,6 +539,26 @@ function CoverImageCard({
 	);
 }
 
+function formatFileSize(bytes: number): string {
+	if (bytes === 0) {
+		return "0 B";
+	}
+	const k = 1024;
+	const sizes = ["B", "KB", "MB", "GB"];
+	const i = Math.floor(Math.log(bytes) / Math.log(k));
+	return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
+}
+
+function getFileNameFromUrl(url: string): string {
+	try {
+		const urlObj = new URL(url);
+		const pathParts = urlObj.pathname.split("/");
+		return pathParts.at(-1) || "Download file";
+	} catch {
+		return "Download file";
+	}
+}
+
 function AutomationFileCard({
 	fileInputRef,
 	fileUrl,
@@ -533,66 +580,117 @@ function AutomationFileCard({
 }) {
 	return (
 		<Card>
-			<CardHeader>
-				<CardTitle className="text-sm">Automation File</CardTitle>
+			<CardHeader className="pb-3">
+				<CardTitle className="flex items-center gap-2 text-sm">
+					<FileIcon className="size-4" />
+					Automation File
+					{fileUrl && (
+						<Badge className="ml-auto text-[10px]" variant="success">
+							Attached
+						</Badge>
+					)}
+				</CardTitle>
 			</CardHeader>
 			<CardContent className="space-y-4">
 				{fileUrl ? (
-					<div className="flex items-center justify-between border p-3">
-						<div className="flex items-center gap-2">
-							<FileIcon className="size-4 text-gray-500" />
-							<span className="text-sm">File attached</span>
+					<div className="space-y-3">
+						<div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-3">
+							<div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10">
+								<FileIcon className="size-5 text-primary" />
+							</div>
+							<div className="min-w-0 flex-1">
+								<p className="truncate font-medium text-sm">
+									{getFileNameFromUrl(fileUrl)}
+								</p>
+								<p className="mt-0.5 text-muted-foreground text-xs">
+									Ready for download
+								</p>
+							</div>
 						</div>
-						<Button onClick={onRemoveFile} size="icon-sm" variant="ghost">
-							<XIcon className="size-4" />
-						</Button>
+						<div className="flex gap-2">
+							<Button
+								className="flex-1"
+								onClick={() => window.open(fileUrl, "_blank")}
+								size="sm"
+								variant="outline"
+							>
+								<DownloadIcon className="mr-2 size-4" />
+								Download
+							</Button>
+							<Button
+								className="text-destructive hover:text-destructive"
+								onClick={onRemoveFile}
+								size="sm"
+								variant="ghost"
+							>
+								<TrashIcon className="size-4" />
+							</Button>
+						</div>
 					</div>
 				) : (
-					<div className="space-y-2">
+					<div className="space-y-3">
 						<input
-							accept="*/*"
+							accept=".json,.yaml,.yml,.zip,.tar.gz,application/json,application/x-yaml,application/zip,application/gzip"
 							className="hidden"
 							onChange={onFileSelect}
 							ref={fileInputRef}
 							type="file"
 						/>
 						{selectedFile ? (
-							<div className="space-y-2">
-								<div className="flex items-center gap-2 border p-3">
-									<FileIcon className="size-4 text-gray-500" />
-									<span className="flex-1 truncate text-sm">
-										{selectedFile.name}
-									</span>
+							<div className="space-y-3">
+								<div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+									<div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10">
+										<FileIcon className="size-5 text-primary" />
+									</div>
+									<div className="min-w-0 flex-1">
+										<p className="truncate font-medium text-sm">
+											{selectedFile.name}
+										</p>
+										<p className="mt-0.5 text-muted-foreground text-xs">
+											{formatFileSize(selectedFile.size)}
+										</p>
+									</div>
 								</div>
-								<Button
-									className="w-full"
-									disabled={uploadingFile}
-									onClick={onUploadFile}
-									size="sm"
-								>
-									{uploadingFile ? (
-										<Loader2Icon className="mr-2 size-4 animate-spin" />
-									) : (
-										<UploadIcon className="mr-2 size-4" />
-									)}
-									Upload File
-								</Button>
+								<div className="flex gap-2">
+									<Button
+										className="flex-1"
+										disabled={uploadingFile}
+										onClick={onUploadFile}
+										size="sm"
+									>
+										{uploadingFile ? (
+											<Loader2Icon className="mr-2 size-4 animate-spin" />
+										) : (
+											<UploadIcon className="mr-2 size-4" />
+										)}
+										{uploadingFile ? "Uploading..." : "Upload"}
+									</Button>
+									<Button onClick={onRemoveFile} size="sm" variant="ghost">
+										<XIcon className="size-4" />
+									</Button>
+								</div>
 							</div>
 						) : (
-							<Button
-								className="w-full"
+							<button
+								className="group flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-muted-foreground/25 border-dashed p-6 transition-colors hover:border-primary/50 hover:bg-muted/50"
 								onClick={onTriggerFilePicker}
-								size="sm"
-								variant="outline"
+								type="button"
 							>
-								<FileIcon className="mr-2 size-4" />
-								Select File
-							</Button>
+								<div className="flex size-12 items-center justify-center rounded-full bg-muted transition-colors group-hover:bg-primary/10">
+									<UploadIcon className="size-6 text-muted-foreground transition-colors group-hover:text-primary" />
+								</div>
+								<div className="text-center">
+									<p className="font-medium text-sm">Click to upload file</p>
+									<p className="mt-1 text-muted-foreground text-xs">
+										Supports JSON, YAML, ZIP up to 10MB
+									</p>
+								</div>
+							</button>
 						)}
 					</div>
 				)}
 				<p className="text-muted-foreground text-xs">
-					Optional file attachment for download (workflow, template, etc.)
+					Upload n8n workflow files for visitors to download
 				</p>
 			</CardContent>
 		</Card>

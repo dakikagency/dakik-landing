@@ -301,11 +301,13 @@ function ContractsTable({
 	onSend,
 	onDelete,
 	onView,
+	onTerminate,
 }: {
 	contracts: ContractData[];
 	onSend: (id: string) => void;
 	onDelete: (id: string) => void;
 	onView: (url: string) => void;
+	onTerminate: (id: string) => void;
 }) {
 	return (
 		<Table>
@@ -372,6 +374,16 @@ function ContractsTable({
 										<EyeIcon className="mr-2 size-4" />
 										View PDF
 									</DropdownMenuItem>
+									{contract.fileUrl && (
+										<DropdownMenuItem
+											onClick={() =>
+												window.open(contract.fileUrl as string, "_blank")
+											}
+										>
+											<FileTextIcon className="mr-2 size-4" />
+											Download PDF
+										</DropdownMenuItem>
+									)}
 									{contract.status === "DRAFT" && (
 										<DropdownMenuItem onClick={() => onSend(contract.id)}>
 											<SendIcon className="mr-2 size-4" />
@@ -379,6 +391,14 @@ function ContractsTable({
 										</DropdownMenuItem>
 									)}
 									<DropdownMenuSeparator />
+									<DropdownMenuItem
+										disabled={contract.status === "EXPIRED"}
+										onClick={() => onTerminate(contract.id)}
+										variant="destructive"
+									>
+										<XIcon className="mr-2 size-4" />
+										Terminate Contract
+									</DropdownMenuItem>
 									<DropdownMenuItem
 										onClick={() => onDelete(contract.id)}
 										variant="destructive"
@@ -401,11 +421,13 @@ function MobileContractCards({
 	onSend,
 	onDelete,
 	onView,
+	onTerminate,
 }: {
 	contracts: ContractData[];
 	onSend: (id: string) => void;
 	onDelete: (id: string) => void;
 	onView: (url: string) => void;
+	onTerminate: (id: string) => void;
 }) {
 	return (
 		<div className="block sm:hidden">
@@ -468,6 +490,15 @@ function MobileContractCards({
 									<TrashIcon className="mr-1.5 size-3" />
 									Delete
 								</Button>
+								<Button
+									disabled={contract.status === "EXPIRED"}
+									onClick={() => onTerminate(contract.id)}
+									size="xs"
+									variant="outline"
+								>
+									<XIcon className="mr-1.5 size-3" />
+									Terminate
+								</Button>
 							</div>
 						</div>
 					))}
@@ -520,12 +551,30 @@ export default function ContractsPage() {
 		})
 	);
 
+	const updateMutation = useMutation(
+		trpc.contracts.update.mutationOptions({
+			onSuccess: () => {
+				queryClient.invalidateQueries({
+					queryKey: trpc.contracts.list.queryKey(),
+				});
+				toast.success("Contract status updated");
+			},
+			onError: (error) => {
+				toast.error(error.message || "Failed to update contract");
+			},
+		})
+	);
+
 	const handleSend = (id: string) => {
 		sendMutation.mutate({ id });
 	};
 
 	const handleDelete = (id: string) => {
 		deleteMutation.mutate({ id });
+	};
+
+	const handleTerminate = (id: string) => {
+		updateMutation.mutate({ id, status: "EXPIRED" });
 	};
 
 	const handleView = (url: string) => {
@@ -547,6 +596,7 @@ export default function ContractsPage() {
 				contracts={contracts}
 				onDelete={handleDelete}
 				onSend={handleSend}
+				onTerminate={handleTerminate}
 				onView={handleView}
 			/>
 		);
@@ -635,6 +685,7 @@ export default function ContractsPage() {
 					contracts={contracts}
 					onDelete={handleDelete}
 					onSend={handleSend}
+					onTerminate={handleTerminate}
 					onView={handleView}
 				/>
 			)}

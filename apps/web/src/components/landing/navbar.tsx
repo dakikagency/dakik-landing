@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 const navLinks = [
 	{ href: "/daicons", label: "daIcons" },
 	{ href: "/dacomps", label: "daComps" },
+	{ href: "/automations", label: "Automations" },
 	{ href: "/blog", label: "Blog" },
 ] as const;
 

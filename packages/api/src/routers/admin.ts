@@ -1027,6 +1027,109 @@ export const adminRouter = router({
 			return project;
 		}),
 
+	getInvoices: adminProcedure
+		.input(
+			z.object({
+				search: z.string().optional(),
+				status: z.string().optional(),
+				statuses: z.array(z.string()).optional(),
+				dateFrom: z.date().optional(),
+				dateTo: z.date().optional(),
+				sortBy: z.enum(["invoiceDate", "createdAt", "amount"]).optional(),
+				sortOrder: z.enum(["asc", "desc"]).optional(),
+				limit: z.number().min(1).max(100).optional().default(50),
+			})
+		)
+		.query(async ({ input }) => {
+			const {
+				search,
+				status,
+				statuses,
+				dateFrom,
+				dateTo,
+				sortBy,
+				sortOrder,
+				limit,
+			} = input;
+
+			let query = db
+				.selectFrom("invoice as i")
+				.leftJoin("project as p", "p.id", "i.projectId")
+				.leftJoin("customer as c", "c.id", "i.customerId")
+				.leftJoin("user as u", "u.id", "c.userId")
+				.select([
+					"i.id",
+					"i.invoiceDate",
+					"i.dueDate",
+					"i.amount",
+					"i.description",
+					"i.status",
+					"i.fileUrl",
+					"i.paidAt",
+					"i.createdAt",
+					"p.id as project_id",
+					"p.title as project_title",
+					"c.id as customer_id",
+					"u.name as customer_name",
+					"u.email as customer_email",
+				]);
+
+			if (search) {
+				query = query.where(
+					sql<boolean>`("i"."description" ILIKE ${`%${search}%`} OR "u"."name" ILIKE ${`%${search}%`} OR "u"."email" ILIKE ${`%${search}%`} OR "p"."title" ILIKE ${`%${search}%`})`
+				);
+			}
+
+			if (status) {
+				query = query.where("i.status", "=", status as any);
+			}
+
+			if (statuses && statuses.length > 0) {
+				query = query.where("i.status", "in", statuses as any);
+			}
+
+			if (dateFrom) {
+				query = query.where("i.invoiceDate", ">=", dateFrom);
+			}
+			if (dateTo) {
+				query = query.where("i.invoiceDate", "<=", dateTo);
+			}
+
+			const orderDirection = sortOrder ?? "desc";
+			if (sortBy === "createdAt") {
+				query = query.orderBy("i.createdAt", orderDirection);
+			} else if (sortBy === "amount") {
+				query = query.orderBy("i.amount", orderDirection);
+			} else {
+				query = query.orderBy("i.invoiceDate", orderDirection);
+			}
+			query = query.orderBy("i.id", orderDirection);
+
+			const invoices = await query.limit(limit).execute();
+
+			return invoices.map((invoice) => ({
+				id: invoice.id,
+				invoiceDate: invoice.invoiceDate,
+				dueDate: invoice.dueDate,
+				amount: invoice.amount,
+				description: invoice.description,
+				status: invoice.status,
+				fileUrl: invoice.fileUrl,
+				paidAt: invoice.paidAt,
+				createdAt: invoice.createdAt,
+				project: invoice.project_id
+					? { id: invoice.project_id, title: invoice.project_title }
+					: null,
+				customer: invoice.customer_id
+					? {
+							id: invoice.customer_id,
+							name: invoice.customer_name,
+							email: invoice.customer_email,
+						}
+					: null,
+			}));
+		}),
+
 	createMeeting: adminProcedure
 		.input(
 			z.object({

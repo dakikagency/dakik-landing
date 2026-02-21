@@ -1,4 +1,4 @@
-import { GoogleTagManager } from "@next/third-parties/google";
+import { GoogleAnalytics, GoogleTagManager } from "@next/third-parties/google";
 import type { Metadata } from "next";
 
 import "../index.css";
@@ -15,13 +15,18 @@ export const metadata: Metadata = {
 	description:
 		"We transform bold visions into polished digital products through AI automation, brand identity, and custom web/mobile development.",
 	keywords: [
-		"digital agency",
-		"web development",
-		"mobile development",
-		"AI automation",
-		"brand identity",
-		"custom software",
-		"boutique agency",
+		"digital agency london",
+		"boutique software agency",
+		"custom web development",
+		"mobile app development",
+		"AI automation agency",
+		"Next.js development agency",
+		"MVP development startup",
+		"technical audit services",
+		"scale up engineering team",
+		"dedicated software teams",
+		"Typescript development agency",
+		"brand identity design",
 	],
 	authors: [{ name: "Dakik Studio" }],
 	creator: "Dakik Studio",
@@ -76,10 +81,33 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en" suppressHydrationWarning>
-			<head />
+			<head>
+				<script
+					// biome-ignore lint/security/noDangerouslySetInnerHtml: injecting json-ld schema
+					dangerouslySetInnerHTML={{
+						__html: JSON.stringify({
+							"@context": "https://schema.org",
+							"@type": "ProfessionalService",
+							name: "Dakik Studio | London Digital Agency",
+							url: BASE_URL,
+							logo: `${BASE_URL}/apple-touch-icon.png`,
+							description:
+								"Boutique digital agency specializing in custom web development, mobile apps, and AI automation.",
+							address: {
+								"@type": "PostalAddress",
+								addressLocality: "London",
+								addressCountry: "UK",
+							},
+						}),
+					}}
+					type="application/ld+json"
+				/>
+			</head>
 			<body className="antialiased">
-				{/** biome-ignore lint/style/noNonNullAssertion: no explanation */}
+				{/** biome-ignore lint/style/noNonNullAssertion: Required for integration */}
 				<GoogleTagManager gtmId={process.env.NEXT_PUBLIC_GTM_ID!} />
+				{/** biome-ignore lint/style/noNonNullAssertion: Required for integration */}
+				<GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID!} />
 
 				<Providers>{children}</Providers>
 			</body>

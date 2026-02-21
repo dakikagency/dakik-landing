@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	CalendarIcon,
 	EyeIcon,
@@ -11,7 +11,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import type { DateRange } from "react-day-picker";
-
+import { toast } from "sonner";
 import {
 	AdvancedFilters,
 	type FilterConfig,
@@ -197,6 +197,18 @@ function EmptyState({ hasFilters }: { hasFilters: boolean }) {
 // =============================================================================
 
 export default function LeadsPage() {
+	const queryClient = useQueryClient();
+	const updateStatus = useMutation({
+		...trpc.admin.updateLeadStatus.mutationOptions(),
+		onSuccess: () => {
+			toast.success("Lead status updated to CLOSED");
+			queryClient.invalidateQueries({ queryKey: trpc.admin.getLeads.queryKey() });
+		},
+		onError: (error) => {
+			toast.error(error.message || "Failed to update lead status");
+		},
+	});
+
 	const [filterValues, setFilterValues] = useState<FilterValues>({});
 	const [presets, setPresets] = useState<FilterPreset[]>(() => {
 		if (typeof window !== "undefined") {
@@ -414,16 +426,43 @@ export default function LeadsPage() {
 														<EyeIcon className="mr-2 size-4" />
 														View Details
 													</DropdownMenuItem>
-													<DropdownMenuItem>
+													<DropdownMenuItem
+														render={
+															// biome-ignore lint/a11y/useAnchorContent: this anchor receives content from DropdownMenuItem
+															<a
+																aria-label="Send Email"
+																href={`mailto:${lead.email}`}
+															/>
+														}
+													>
 														<MailIcon className="mr-2 size-4" />
 														Send Email
 													</DropdownMenuItem>
-													<DropdownMenuItem>
+													<DropdownMenuItem
+														render={
+															// biome-ignore lint/a11y/useAnchorContent: this anchor receives content from DropdownMenuItem
+															<a
+																aria-label="Schedule Meeting"
+																href={`mailto:${lead.email}?subject=Meeting%20Request`}
+															/>
+														}
+													>
 														<CalendarIcon className="mr-2 size-4" />
 														Schedule Meeting
 													</DropdownMenuItem>
 													<DropdownMenuSeparator />
-													<DropdownMenuItem variant="destructive">
+													<DropdownMenuItem
+														disabled={
+															updateStatus.isPending || lead.status === "CLOSED"
+														}
+														onClick={() =>
+															updateStatus.mutate({
+																leadId: lead.id,
+																status: "CLOSED",
+															})
+														}
+														variant="destructive"
+													>
 														Mark as Closed
 													</DropdownMenuItem>
 												</DropdownMenuContent>

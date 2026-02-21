@@ -16,6 +16,27 @@ export const metadata: Metadata = {
 	title: "Pricing | Transparent Weekly Rates",
 	description:
 		"Simple, predictable pricing. No hidden fees, no equity demands. Just rigorous engineering.",
+	openGraph: {
+		title: "Pricing | Transparent Weekly Rates",
+		description:
+			"Simple, predictable pricing. No hidden fees, no equity demands. Just rigorous engineering.",
+		type: "website",
+	},
+	keywords: [
+		"software agency pricing",
+		"weekly sprint development cost",
+		"flat rate engineering",
+		"technical audit cost",
+		"freelance vs agency pricing",
+		"transparent dev pricing",
+		"retainer software team",
+	],
+	twitter: {
+		card: "summary",
+		title: "Pricing | Transparent Weekly Rates",
+		description:
+			"Simple, predictable pricing. No hidden fees, no equity demands.",
+	},
 };
 
 export default function PricingPage() {
