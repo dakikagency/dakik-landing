@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import Link from "next/link";
 import { GridBackdrop } from "@/components/ui/reactbits/grid-backdrop";
 import { HoverReveal } from "@/components/ui/reactbits/hover-reveal";
@@ -44,7 +45,13 @@ export function ServicesSection() {
 			<GridBackdrop className="opacity-90" />
 			<div className="relative mx-auto max-w-6xl">
 				<div className="grid grid-cols-1 gap-10 lg:grid-cols-12">
-					<div className="lg:col-span-5">
+					<motion.div
+						className="lg:col-span-5"
+						initial={{ opacity: 0, y: 50 }}
+						transition={{ duration: 0.5, ease: "easeOut" }}
+						viewport={{ once: true, margin: "-100px" }}
+						whileInView={{ opacity: 1, y: 0 }}
+					>
 						<span className="inline-block font-mono text-black/50 text-xs uppercase tracking-widest">
 							How we work
 						</span>
@@ -67,21 +74,41 @@ export function ServicesSection() {
 								Start a project
 							</Link>
 						</div>
-					</div>
+					</motion.div>
 
-					<div className="lg:col-span-7">
+					<motion.div
+						className="lg:col-span-7"
+						initial="hidden"
+						variants={{
+							hidden: { opacity: 0 },
+							show: {
+								opacity: 1,
+								transition: { staggerChildren: 0.15 },
+							},
+						}}
+						viewport={{ once: true, margin: "-50px" }}
+						whileInView="show"
+					>
 						<div className="grid grid-cols-1 gap-4">
 							{steps.map((s) => (
-								<HoverReveal
-									description={s.description}
+								<motion.div
 									key={s.label}
-									label={s.label}
-									meta={s.meta}
-									title={s.title}
-								/>
+									transition={{ duration: 0.4, ease: "easeOut" }}
+									variants={{
+										hidden: { opacity: 0, y: 30 },
+										show: { opacity: 1, y: 0 },
+									}}
+								>
+									<HoverReveal
+										description={s.description}
+										label={s.label}
+										meta={s.meta}
+										title={s.title}
+									/>
+								</motion.div>
 							))}
 						</div>
-					</div>
+					</motion.div>
 				</div>
 			</div>
 		</section>

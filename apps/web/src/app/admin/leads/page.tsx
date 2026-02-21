@@ -202,7 +202,9 @@ export default function LeadsPage() {
 		...trpc.admin.updateLeadStatus.mutationOptions(),
 		onSuccess: () => {
 			toast.success("Lead status updated to CLOSED");
-			queryClient.invalidateQueries({ queryKey: trpc.admin.getLeads.queryKey() });
+			queryClient.invalidateQueries({
+				queryKey: trpc.admin.getLeads.queryKey(),
+			});
 		},
 		onError: (error) => {
 			toast.error(error.message || "Failed to update lead status");

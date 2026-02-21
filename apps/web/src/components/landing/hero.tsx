@@ -36,6 +36,8 @@ export function Hero() {
 		["20px", "0px", "0px"]
 	);
 
+	const videoY = useTransform(scrollYProgress, [0, 1], ["0px", "100px"]);
+
 	return (
 		<section
 			className="relative h-[200vh] bg-background text-foreground"
@@ -118,7 +120,8 @@ export function Hero() {
 							width: videoWidth,
 							right: videoRight,
 							bottom: videoBottom,
-							willChange: "width, height, right, bottom",
+							y: videoY,
+							willChange: "width, height, right, bottom, transform",
 						}}
 					>
 						<video

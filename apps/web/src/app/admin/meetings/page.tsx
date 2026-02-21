@@ -192,7 +192,9 @@ function MeetingActionsMenu({ meeting }: { meeting: MeetingData }) {
 		...trpc.admin.updateMeetingStatus.mutationOptions(),
 		onSuccess: () => {
 			toast.success("Meeting status updated successfully");
-			queryClient.invalidateQueries({ queryKey: trpc.admin.getMeetings.queryKey() });
+			queryClient.invalidateQueries({
+				queryKey: trpc.admin.getMeetings.queryKey(),
+			});
 		},
 		onError: (error) => toast.error(error.message),
 	});
@@ -855,9 +857,9 @@ export default function MeetingsPage() {
 		lead: m.lead ? { ...m.lead, email: m.lead.email ?? "" } : null,
 		customer: m.customer
 			? {
-				...m.customer,
-				user: { ...m.customer.user, email: m.customer.user.email ?? "" },
-			}
+					...m.customer,
+					user: { ...m.customer.user, email: m.customer.user.email ?? "" },
+				}
 			: null,
 	}));
 

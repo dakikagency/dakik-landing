@@ -26,7 +26,6 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -60,8 +59,6 @@ const FILTER_CONFIG: FilterConfig[] = [
 	},
 	{
 		key: "statuses",
-		label: "Status",
-		type: "multiselect",
 		options: STATUS_OPTIONS,
 		placeholder: "Filter by status",
 	},
@@ -138,11 +135,13 @@ function EmptyState({ hasFilters }: { hasFilters: boolean }) {
 export default function InvoicesPage() {
 	const queryClient = useQueryClient();
 
-	const updateInvoice = useMutation({
+	const _updateInvoice = useMutation({
 		...trpc.invoices.update.mutationOptions(),
 		onSuccess: () => {
 			toast.success("Invoice status updated successfully");
-			queryClient.invalidateQueries({ queryKey: trpc.admin.getInvoices.queryKey() });
+			queryClient.invalidateQueries({
+				queryKey: trpc.admin.getInvoices.queryKey(),
+			});
 		},
 		onError: (error) => {
 			toast.error(error.message || "Failed to update invoice");
@@ -373,7 +372,6 @@ export default function InvoicesPage() {
 													>
 														Regenerate
 													</DropdownMenuItem>
-
 												</DropdownMenuContent>
 											</DropdownMenu>
 										</TableCell>

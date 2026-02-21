@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 
 import "../index.css";
 import Providers from "@/components/providers";
+import { CustomCursor } from "@/components/ui/custom-cursor";
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://dakik.co.uk";
 
@@ -109,7 +110,10 @@ export default function RootLayout({
 				{/** biome-ignore lint/style/noNonNullAssertion: Required for integration */}
 				<GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID!} />
 
-				<Providers>{children}</Providers>
+				<Providers>
+					<CustomCursor />
+					{children}
+				</Providers>
 			</body>
 		</html>
 	);

@@ -8,18 +8,18 @@ import {
 	ServicesSection,
 	Testimonials,
 } from "@/components/landing";
+import { Marquee } from "@/components/landing/marquee";
 
 export default function Home() {
 	return (
 		<>
 			<Navbar />
 			<main className="relative">
-				<div className="relative z-20">
-					<Hero />
-					<ServicesSection />
-					<Testimonials />
-					<FAQ />
-				</div>
+				<Hero />
+				<Marquee />
+				<ServicesSection />
+				<Testimonials />
+				<FAQ />
 			</main>
 			<Footer />
 		</>
