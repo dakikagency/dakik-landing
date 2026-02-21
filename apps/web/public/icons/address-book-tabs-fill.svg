@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<style>
+  svg { transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1); }
+  @media (hover: hover) { svg:hover { transform: scale(1.1); } }
+  * { fill: currentColor !important; stroke: none !important; }
+</style>
+  <!-- Rings -->
+  <path d="M 32 48 L 64 48 L 64 80 L 32 80 Z" />
+  <path d="M 32 112 L 64 112 L 64 144 L 32 144 Z" />
+  <path d="M 32 176 L 64 176 L 64 208 L 32 208 Z" />
+  <!-- Book Body -->
+  <path d="M 80 32 L 208 32 L 208 224 L 80 224 L 80 192 L 176 192 L 176 64 L 80 64 Z" />
+  <!-- Person Head -->
+  <path d="M 128 80 L 160 80 L 160 112 L 128 112 Z" />
+  <!-- Person Shoulders -->
+  <path d="M 144 144 L 176 176 L 112 176 Z" />
+  <!-- Tabs -->
+  <path d="M 224 48 L 240 48 L 240 80 L 224 80 Z" />
+  <path d="M 224 112 L 240 112 L 240 144 L 224 144 Z" />
+  <path d="M 224 176 L 240 176 L 240 208 L 224 208 Z" />
+</svg>

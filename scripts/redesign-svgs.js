@@ -29,14 +29,21 @@ async function processSvg(filePath) {
             inner = inner.replace(/\b(width|height)=["'][^"']*["']/gi, '');
             inner = inner.replace(/\bfill=["'][^"']*["']/gi, '');
             inner = inner.replace(/\bstroke=["'][^"']*["']/gi, '');
+            // strip out brutalist wrapper classes
+            inner = inner.replace(/class=["'][^"']*["']/gi, '');
             return `<svg${inner}>`;
         });
 
-        // Remove fill and stroke from all other tags
+        // Strip brutalist wrapper tags from previous run
+        content = content.replace(/<rect class="shadow"[^>]*\/>/i, '');
+        content = content.replace(/<g class="brutalist-container">/i, '');
+        content = content.replace(/<rect class="bg"[^>]*\/>/i, '');
+        content = content.replace(/<g class="icon-path"[^>]*>/i, '');
+        content = content.replace(/<\/g>\s*<\/g>\s*<\/svg>/i, '</svg>');
+
         content = content.replace(/\bfill=["'][^"']*["']/gi, '');
         content = content.replace(/\bstroke=["'][^"']*["']/gi, '');
 
-        // Define style to inject
         const styleTag = `<style>
   svg { transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1); }
   @media (hover: hover) { svg:hover { transform: scale(1.1); } }

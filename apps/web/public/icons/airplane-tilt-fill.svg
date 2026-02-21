@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<style>
+  svg { transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1); }
+  @media (hover: hover) { svg:hover { transform: scale(1.1); } }
+  * { fill: currentColor !important; stroke: none !important; }
+</style>
+  <g transform="rotate(-45, 128, 128)">
+    <path d="M 32 112 L 192 112 L 224 128 L 192 144 L 32 144 Z" />
+    <path d="M 112 96 L 144 96 L 64 16 L 32 16 Z" />
+    <path d="M 112 160 L 144 160 L 64 240 L 32 240 Z" />
+    <path d="M 32 96 L 64 96 L 32 64 Z" />
+    <path d="M 32 160 L 64 160 L 32 192 Z" />
+  </g>
+</svg>
