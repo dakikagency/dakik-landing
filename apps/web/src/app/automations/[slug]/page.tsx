@@ -2,10 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Calendar, Download, Tag } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, Clock, Download } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
+import { useMemo } from "react";
 
 import { AutomationCard } from "@/components/automations/automation-card";
 import { AutomationContent } from "@/components/automations/automation-content";
@@ -138,6 +139,33 @@ const sampleRelatedAutomations = [
 	},
 ];
 
+// Regex for calculating read time - defined at top level for performance
+const WHITESPACE_RE = /\s+/;
+
+// Helper function to calculate read time (approximate)
+function calculateReadTime(content: string | null | undefined): number {
+	if (!content) {
+		return 1;
+	}
+	const words = content.trim().split(WHITESPACE_RE).length;
+	return Math.max(1, Math.round(words / 200));
+}
+
+// Helper to check if file URL is valid (not null, empty, or example URL)
+function hasValidFileUrl(fileUrl: string | null | undefined): boolean {
+	if (!fileUrl) {
+		return false;
+	}
+	if (fileUrl.trim() === "") {
+		return false;
+	}
+	// Exclude example/test URLs that might be in sample data
+	if (fileUrl.includes("example.com")) {
+		return false;
+	}
+	return true;
+}
+
 export default function AutomationPage() {
 	const params = useParams();
 	const slug = params.slug as string;
@@ -159,28 +187,33 @@ export default function AutomationPage() {
 			? relatedAutomationsQuery.data
 			: sampleRelatedAutomations;
 
+	const readTime = useMemo(
+		() => calculateReadTime(automation?.content),
+		[automation?.content]
+	);
+
 	// Show loading state
 	if (automationQuery.isLoading) {
 		return (
 			<>
 				<Navbar />
-				<main className="min-h-screen bg-white pt-16">
+				<main className="min-h-screen bg-white pt-24">
 					<div className="animate-pulse">
-						<div className="h-[50vh] bg-gray-200" />
-						<div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
-							<div className="mx-auto max-w-3xl">
-								<div className="mb-4 h-8 w-1/4 rounded bg-gray-200" />
-								<div className="mb-8 h-12 w-3/4 rounded bg-gray-200" />
-								<div className="space-y-4">
-									<div className="h-4 w-[85%] rounded bg-gray-200" />
-									<div className="h-4 w-[92%] rounded bg-gray-200" />
-									<div className="h-4 w-[78%] rounded bg-gray-200" />
-									<div className="h-4 w-[95%] rounded bg-gray-200" />
-									<div className="h-4 w-[68%] rounded bg-gray-200" />
-									<div className="h-4 w-[88%] rounded bg-gray-200" />
-									<div className="h-4 w-[75%] rounded bg-gray-200" />
-									<div className="h-4 w-[82%] rounded bg-gray-200" />
-								</div>
+						<div className="mx-auto max-w-4xl px-4">
+							<div className="mb-6 h-5 w-20 rounded bg-gray-200" />
+							<div className="mb-4 h-10 w-3/4 rounded bg-gray-200" />
+							<div className="mb-10 h-5 w-1/3 rounded bg-gray-200" />
+						</div>
+						<div className="mx-auto max-w-5xl px-4">
+							<div className="aspect-[16/9] rounded-xl bg-gray-200" />
+						</div>
+						<div className="mx-auto max-w-3xl px-4 py-12">
+							<div className="space-y-4">
+								<div className="h-4 w-[85%] rounded bg-gray-200" />
+								<div className="h-4 w-[92%] rounded bg-gray-200" />
+								<div className="h-4 w-[78%] rounded bg-gray-200" />
+								<div className="h-4 w-[95%] rounded bg-gray-200" />
+								<div className="h-4 w-[68%] rounded bg-gray-200" />
 							</div>
 						</div>
 					</div>
@@ -207,118 +240,203 @@ export default function AutomationPage() {
 			}).format(new Date(automation.publishedAt))
 		: null;
 
+	// Check if file is actually available (fixes the bug)
+	const showDownloadButton = hasValidFileUrl(automation.fileUrl);
+
 	return (
 		<>
 			<Navbar />
-			<main className="min-h-screen bg-white pt-16">
-				{/* Cover Image */}
-				<motion.div
-					animate={{ opacity: 1 }}
-					className="relative h-[50vh] min-h-[400px] overflow-hidden bg-gray-100"
-					initial={{ opacity: 0 }}
-					transition={{ duration: 0.6 }}
-				>
-					{automation.coverImage ? (
-						<Image
-							alt={automation.title}
-							className="object-cover"
-							fill
-							priority
-							sizes="100vw"
-							src={automation.coverImage}
-						/>
-					) : (
-						<div className="flex h-full w-full items-center justify-center">
-							<span className="font-medium text-gray-400 text-lg">
-								No cover image
-							</span>
-						</div>
-					)}
-					{/* Gradient overlay */}
-					<div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-				</motion.div>
+			<main className="min-h-screen bg-white pt-24">
+				{/* Header Section - Similar to blog post */}
+				<header className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+					<motion.div
+						animate={{ opacity: 1, y: 0 }}
+						initial={{ opacity: 0, y: 16 }}
+						transition={{ duration: 0.5 }}
+					>
+						{/* Back link */}
+						<Link
+							className="mb-8 inline-flex items-center gap-2 text-gray-500 text-sm transition-colors hover:text-black"
+							href="/automations"
+						>
+							<ArrowLeft className="h-4 w-4" />
+							Back to Automations
+						</Link>
 
-				{/* Article Content */}
-				<article className="relative -mt-20 pb-20">
-					<div className="container mx-auto px-4 sm:px-6 lg:px-8">
-						<div className="mx-auto max-w-3xl">
-							{/* Header */}
-							<motion.div
-								animate={{ opacity: 1, y: 0 }}
-								className="mb-12 rounded-lg bg-white p-8 shadow-sm"
-								initial={{ opacity: 0, y: 20 }}
-								transition={{ duration: 0.5, delay: 0.2 }}
-							>
-								{/* Back link */}
-								<Link
-									className="mb-6 inline-flex items-center gap-2 text-gray-500 text-sm transition-colors hover:text-black"
-									href="/automations"
+						{/* Tags */}
+						{automation.tags.length > 0 && (
+							<div className="mb-4 flex flex-wrap justify-center gap-2">
+								{automation.tags.map((tag) => (
+									<Link
+										className="rounded-full border border-gray-300 px-4 py-1 font-medium text-gray-600 text-sm transition-colors hover:border-gray-400 hover:text-black"
+										href={`/automations?tag=${tag.slug}`}
+										key={tag.id}
+									>
+										{tag.name}
+									</Link>
+								))}
+							</div>
+						)}
+
+						{/* Title */}
+						<h1 className="mb-4 text-center font-bold text-3xl tracking-tight md:text-4xl lg:text-5xl">
+							{automation.title}
+						</h1>
+
+						{/* Meta line */}
+						<div className="mb-10 flex flex-wrap items-center justify-center gap-3 text-gray-500 text-sm">
+							{formattedDate && (
+								<time
+									dateTime={
+										automation.publishedAt
+											? new Date(automation.publishedAt).toISOString()
+											: undefined
+									}
 								>
-									<ArrowLeft className="h-4 w-4" />
-									Back to Automations
-								</Link>
+									{formattedDate}
+								</time>
+							)}
+							{formattedDate && readTime > 0 && (
+								<span aria-hidden="true">&middot;</span>
+							)}
+							{readTime > 0 && (
+								<span className="flex items-center gap-1">
+									<Clock className="h-3.5 w-3.5" />
+									{readTime} min read
+								</span>
+							)}
+							{showDownloadButton && (
+								<>
+									<span aria-hidden="true">&middot;</span>
+									<span className="inline-flex items-center gap-1 text-green-600">
+										<Download className="h-3.5 w-3.5" />
+										Download available
+									</span>
+								</>
+							)}
+						</div>
+					</motion.div>
+				</header>
 
-								{/* Tags */}
-								{automation.tags.length > 0 && (
-									<div className="mb-4 flex flex-wrap gap-2">
-										{automation.tags.map((tag) => (
-											<Link
-												className="flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 font-medium text-gray-600 text-xs transition-colors hover:bg-gray-200"
-												href={`/automations?tag=${tag.slug}`}
-												key={tag.id}
-											>
-												<Tag className="h-3 w-3" />
-												{tag.name}
-											</Link>
-										))}
-									</div>
-								)}
+				{/* Cover Image - Optional, smaller than before */}
+				{automation.coverImage && (
+					<motion.div
+						animate={{ opacity: 1, scale: 1 }}
+						className="mx-auto mb-12 max-w-5xl px-4 sm:px-6 lg:px-8"
+						initial={{ opacity: 0, scale: 0.98 }}
+						transition={{ duration: 0.6, delay: 0.15 }}
+					>
+						<div className="relative aspect-[16/9] overflow-hidden rounded-xl bg-gray-100">
+							<Image
+								alt={automation.title}
+								className="object-cover"
+								fill
+								priority
+								sizes="(max-width: 1024px) 100vw, 1024px"
+								src={automation.coverImage}
+							/>
+						</div>
+					</motion.div>
+				)}
 
-								{/* Title */}
-								<h1 className="mb-4 font-bold text-3xl tracking-tight md:text-4xl lg:text-5xl">
-									{automation.title}
-								</h1>
-
-								{/* Meta */}
-								<div className="flex flex-wrap items-center gap-4">
-									{formattedDate && automation.publishedAt && (
-										<div className="flex items-center gap-2 text-gray-500 text-sm">
-											<Calendar className="h-4 w-4" />
-											<time
-												dateTime={new Date(
-													automation.publishedAt
-												).toISOString()}
-											>
-												{formattedDate}
-											</time>
-										</div>
-									)}
-
-									{/* Download Button */}
-									{automation.fileUrl && (
+				{/* Content Area */}
+				<article className="mx-auto max-w-5xl px-4 pb-20 sm:px-6 lg:px-8">
+					<div className="relative lg:grid lg:grid-cols-[220px_1fr] lg:gap-12">
+						{/* Sidebar */}
+						<aside className="mb-8 lg:mb-0">
+							<div className="sticky top-28 space-y-8">
+								{/* Download Card - Only show if file exists */}
+								{showDownloadButton && (
+									<motion.div
+										animate={{ opacity: 1, y: 0 }}
+										className="rounded-xl border border-gray-200 p-5"
+										initial={{ opacity: 0, y: 10 }}
+										transition={{ duration: 0.4, delay: 0.3 }}
+									>
+										<h3 className="mb-2 font-semibold text-sm">Download</h3>
+										<p className="mb-4 text-gray-500 text-sm">
+											Get the workflow file and import it into your automation
+											platform.
+										</p>
 										<a
-											className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 font-medium text-sm text-white transition-colors hover:bg-gray-800"
+											className="flex w-full items-center justify-center gap-2 rounded-lg bg-black px-4 py-2.5 font-medium text-sm text-white transition-colors hover:bg-gray-800"
 											download
-											href={automation.fileUrl}
+											href={automation.fileUrl ?? undefined}
 											rel="noopener noreferrer"
 											target="_blank"
 										>
 											<Download className="h-4 w-4" />
 											Download File
 										</a>
-									)}
-								</div>
-							</motion.div>
+									</motion.div>
+								)}
 
-							{/* Content */}
-							<motion.div
-								animate={{ opacity: 1, y: 0 }}
-								initial={{ opacity: 0, y: 20 }}
-								transition={{ duration: 0.5, delay: 0.4 }}
-							>
-								<AutomationContent content={automation.content} />
-							</motion.div>
-						</div>
+								{/* Info Card */}
+								<motion.div
+									animate={{ opacity: 1, y: 0 }}
+									className="rounded-xl border border-gray-200 p-5"
+									initial={{ opacity: 0, y: 10 }}
+									transition={{ duration: 0.4, delay: 0.4 }}
+								>
+									<h3 className="mb-3 font-semibold text-sm">Details</h3>
+									<div className="space-y-3 text-sm">
+										{automation.publishedAt && (
+											<div className="flex items-center gap-2 text-gray-500">
+												<Calendar className="h-4 w-4" />
+												<span>
+													Published{" "}
+													{new Intl.DateTimeFormat("en-US", {
+														month: "short",
+														day: "numeric",
+														year: "numeric",
+													}).format(new Date(automation.publishedAt))}
+												</span>
+											</div>
+										)}
+										{automation.tags.length > 0 && (
+											<div className="pt-2">
+												<span className="text-gray-400">Tags:</span>
+												<div className="mt-1 flex flex-wrap gap-1">
+													{automation.tags.map((tag) => (
+														<Link
+															className="text-gray-600 hover:text-black hover:underline"
+															href={`/automations?tag=${tag.slug}`}
+															key={tag.id}
+														>
+															{tag.name}
+														</Link>
+													))}
+												</div>
+											</div>
+										)}
+									</div>
+								</motion.div>
+							</div>
+						</aside>
+
+						{/* Article content */}
+						<motion.div
+							animate={{ opacity: 1, y: 0 }}
+							initial={{ opacity: 0, y: 20 }}
+							transition={{ duration: 0.5, delay: 0.3 }}
+						>
+							<AutomationContent content={automation.content} />
+
+							{/* Updated line */}
+							{automation.updatedAt &&
+								automation.publishedAt &&
+								new Date(automation.updatedAt) >
+									new Date(automation.publishedAt) && (
+									<div className="mt-12 border-gray-100 border-t pt-6 text-gray-400 text-sm">
+										Last updated{" "}
+										{new Intl.DateTimeFormat("en-US", {
+											month: "long",
+											day: "numeric",
+											year: "numeric",
+										}).format(new Date(automation.updatedAt))}
+									</div>
+								)}
+						</motion.div>
 					</div>
 				</article>
 
@@ -331,7 +449,7 @@ export default function AutomationPage() {
 									Ready to automate?
 								</span>
 								<h2 className="mb-6 font-bold text-3xl tracking-tight md:text-4xl">
-									Let's Build Your Automation Solution
+									Let&apos;s Build Your Automation Solution
 								</h2>
 								<p className="mb-8 text-gray-600 text-lg leading-relaxed">
 									Looking for custom automation solutions? We specialize in
