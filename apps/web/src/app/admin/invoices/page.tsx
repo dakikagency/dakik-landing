@@ -59,6 +59,8 @@ const FILTER_CONFIG: FilterConfig[] = [
 	},
 	{
 		key: "statuses",
+		label: "Status",
+		type: "multiselect",
 		options: STATUS_OPTIONS,
 		placeholder: "Filter by status",
 	},
