@@ -55,9 +55,8 @@ export const iconsRouter = router({
 				.where("isCustom", "=", true);
 
 			if (search) {
-				const searchLower = search.toLowerCase();
 				query = query.where(
-					sql<boolean>`("name" ILIKE ${`%${search}%`} OR "slug" ILIKE ${`%${search}%`} OR "keywords" && ARRAY[${searchLower}]::text[])`
+					sql<boolean>`("name" ILIKE ${`%${search}%`} OR "slug" ILIKE ${`%${search}%`} OR EXISTS (SELECT 1 FROM unnest(COALESCE("keywords", ARRAY[]::text[])) AS keyword WHERE keyword ILIKE ${`%${search}%`}))`
 				);
 			}
 
@@ -454,9 +453,8 @@ export const iconsRouter = router({
 				.select(["id", "name", "slug", "category", "svgContent", "keywords"]);
 
 			if (search) {
-				const searchLower = search.toLowerCase();
 				query = query.where(
-					sql<boolean>`("name" ILIKE ${`%${search}%`} OR "slug" ILIKE ${`%${search}%`} OR "keywords" && ARRAY[${searchLower}]::text[])`
+					sql<boolean>`("name" ILIKE ${`%${search}%`} OR "slug" ILIKE ${`%${search}%`} OR EXISTS (SELECT 1 FROM unnest(COALESCE("keywords", ARRAY[]::text[])) AS keyword WHERE keyword ILIKE ${`%${search}%`}))`
 				);
 			}
 
