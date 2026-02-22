@@ -20,7 +20,7 @@ const createIconsInputSchema = z.union([
 ]);
 
 /**
- * POST /api/integrations/icon
+ * POST /api/daicons
  * Create one or more icons
  */
 export async function POST(request: Request) {
