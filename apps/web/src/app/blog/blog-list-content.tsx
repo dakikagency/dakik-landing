@@ -1,6 +1,5 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Search } from "lucide-react";
 import Link from "next/link";
 
@@ -11,40 +10,22 @@ import {
 } from "@/components/blog";
 import { Footer, Navbar } from "@/components/landing";
 import { Reveal } from "@/components/motion";
-import { trpc } from "@/utils/trpc";
 
-function FeaturedSkeleton() {
-	return (
-		<div className="grid gap-8 lg:grid-cols-5 lg:gap-10">
-			{/* Hero skeleton */}
-			<div className="animate-pulse lg:col-span-3">
-				<div className="aspect-[16/10] rounded-2xl bg-gray-200" />
-			</div>
-			{/* Sidebar skeleton */}
-			<div className="animate-pulse lg:col-span-2">
-				<div className="mb-5 h-4 w-28 rounded bg-gray-200" />
-				<div className="flex flex-col gap-5">
-					<SidebarSkeletonItem />
-					<SidebarSkeletonItem />
-					<SidebarSkeletonItem />
-					<SidebarSkeletonItem />
-					<SidebarSkeletonItem />
-				</div>
-			</div>
-		</div>
-	);
+interface BlogTag {
+	id: string;
+	name: string;
+	slug: string;
 }
 
-function SidebarSkeletonItem() {
-	return (
-		<div className="flex gap-4">
-			<div className="h-16 w-16 shrink-0 rounded-lg bg-gray-200" />
-			<div className="flex flex-1 flex-col justify-center gap-2">
-				<div className="h-4 w-full rounded bg-gray-200" />
-				<div className="h-4 w-2/3 rounded bg-gray-200" />
-			</div>
-		</div>
-	);
+export interface BlogListPost {
+	id: string;
+	slug: string;
+	title: string;
+	excerpt: string | null;
+	content: string | null;
+	coverImage: string | null;
+	publishedAt: string | null;
+	tags: BlogTag[];
 }
 
 function EmptyState() {
@@ -57,19 +38,14 @@ function EmptyState() {
 	);
 }
 
-export default function BlogListContent() {
-	const postsQuery = useQuery(
-		trpc.blog.list.queryOptions({
-			page: 1,
-			limit: 15,
-		})
-	);
-
-	const posts = postsQuery.data?.posts ?? [];
-
-	const heroPost = posts[0] ?? null;
-	const sidebarPosts = posts.slice(1, 6);
-	const recentPosts = posts.slice(6);
+export default function BlogListContent({
+	initialPosts,
+}: {
+	initialPosts: BlogListPost[];
+}) {
+	const heroPost = initialPosts[0] ?? null;
+	const sidebarPosts = initialPosts.slice(1, 6);
+	const recentPosts = initialPosts.slice(6);
 
 	return (
 		<>
@@ -84,9 +60,8 @@ export default function BlogListContent() {
 							</span>
 						</Reveal>
 
-						{postsQuery.isLoading && <FeaturedSkeleton />}
-						{!(postsQuery.isLoading || heroPost) && <EmptyState />}
-						{!postsQuery.isLoading && heroPost && (
+						{!heroPost && <EmptyState />}
+						{heroPost && (
 							<div className="grid gap-8 lg:grid-cols-5 lg:gap-10">
 								<BlogFeaturedHero className="lg:col-span-3" post={heroPost} />
 								{sidebarPosts.length > 0 && (

@@ -1,11 +1,9 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, Clock } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { useMemo } from "react";
 
 import {
@@ -18,18 +16,44 @@ import {
 import { Footer, Navbar } from "@/components/landing";
 import { Reveal, StaggerContainer, StaggerItem } from "@/components/motion";
 import { BLOG_AUTHOR, calculateReadTime } from "@/lib/blog";
-import { trpc } from "@/utils/trpc";
 
-export default function BlogPostContent({ slug }: { slug: string }) {
-	const postQuery = useQuery(trpc.blog.getBySlug.queryOptions({ slug }));
+interface BlogTag {
+	id: string;
+	name: string;
+	slug: string;
+}
 
-	const relatedPostsQuery = useQuery(
-		trpc.blog.getRelatedPosts.queryOptions({ slug, limit: 3 })
-	);
+export interface BlogPostViewModel {
+	id: string;
+	slug: string;
+	title: string;
+	excerpt: string | null;
+	content: string;
+	coverImage: string | null;
+	publishedAt: string | null;
+	updatedAt: string | null;
+	tags: BlogTag[];
+}
 
-	const post = postQuery.data ?? null;
-	const relatedPosts = relatedPostsQuery.data ?? [];
+export interface RelatedBlogPostViewModel {
+	id: string;
+	slug: string;
+	title: string;
+	excerpt: string | null;
+	coverImage: string | null;
+	publishedAt: string | null;
+	tags: BlogTag[];
+}
 
+interface BlogPostContentProps {
+	post: BlogPostViewModel;
+	relatedPosts: RelatedBlogPostViewModel[];
+}
+
+export default function BlogPostContent({
+	post,
+	relatedPosts,
+}: BlogPostContentProps) {
 	const headings = useMemo(
 		() => (post ? extractHeadings(post.content) : []),
 		[post]
@@ -39,46 +63,6 @@ export default function BlogPostContent({ slug }: { slug: string }) {
 		() => (post ? calculateReadTime(post.content) : 0),
 		[post]
 	);
-
-	// Show loading state
-	if (postQuery.isLoading) {
-		return (
-			<>
-				<Navbar />
-				<main className="min-h-screen bg-white pt-24">
-					<div className="animate-pulse">
-						<div className="mx-auto max-w-3xl px-4">
-							<div className="mb-6 h-5 w-20 rounded bg-gray-200" />
-							<div className="mb-4 h-10 w-3/4 rounded bg-gray-200" />
-							<div className="mb-10 h-5 w-1/3 rounded bg-gray-200" />
-						</div>
-						<div className="mx-auto max-w-5xl px-4">
-							<div className="aspect-[16/9] rounded-xl bg-gray-200" />
-						</div>
-						<div className="mx-auto max-w-3xl px-4 py-12">
-							<div className="space-y-4">
-								<div className="h-4 w-[85%] rounded bg-gray-200" />
-								<div className="h-4 w-[92%] rounded bg-gray-200" />
-								<div className="h-4 w-[78%] rounded bg-gray-200" />
-								<div className="h-4 w-[95%] rounded bg-gray-200" />
-								<div className="h-4 w-[68%] rounded bg-gray-200" />
-							</div>
-						</div>
-					</div>
-				</main>
-				<Footer />
-			</>
-		);
-	}
-
-	// Show 404 if post not found
-	if (!(post || postQuery.isLoading)) {
-		notFound();
-	}
-
-	if (!post) {
-		return null;
-	}
 
 	const formattedDate = post.publishedAt
 		? new Intl.DateTimeFormat("en-US", {
@@ -91,7 +75,7 @@ export default function BlogPostContent({ slug }: { slug: string }) {
 	const articleUrl =
 		typeof window !== "undefined"
 			? window.location.href
-			: `https://dakik.co.uk/blog/${slug}`;
+			: `https://dakik.co.uk/blog/${post.slug}`;
 
 	return (
 		<>

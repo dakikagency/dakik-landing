@@ -24,6 +24,9 @@ build
 *~
 .DS_Store
 
+packages
+scripts
+
 # Logs
 logs
 *.log
@@ -56,3 +59,5 @@ specs/*
 .playwright-mcp/*
 .claude/*
 .worktrees/
+scripts/import-daicons.ts
+scripts/upload-icons-test.js
