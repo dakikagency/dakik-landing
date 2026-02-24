@@ -48,7 +48,7 @@ export function BlogFeaturedHero({ post, className }: BlogFeaturedHeroProps) {
 						priority
 						sizes="(max-width: 1024px) 100vw, 60vw"
 						src={post.coverImage}
-						unoptimized={post.coverImage.includes("cloudinary.com")}
+						unoptimized
 					/>
 				) : (
 					<div className="flex h-full w-full items-center justify-center bg-gray-100">
@@ -116,7 +116,7 @@ export function BlogFeaturedSidebar({
 										fill
 										sizes="64px"
 										src={post.coverImage}
-										unoptimized={post.coverImage.includes("cloudinary.com")}
+										unoptimized
 									/>
 								) : (
 									<div className="flex h-full w-full items-center justify-center">
