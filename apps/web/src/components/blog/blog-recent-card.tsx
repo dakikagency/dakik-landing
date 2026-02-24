@@ -39,14 +39,22 @@ export function BlogRecentCard({
 				{/* Cover Image */}
 				<div className="relative aspect-[16/10] overflow-hidden rounded-xl bg-gray-100">
 					{coverImage ? (
-						<Image
-							alt={title}
-							className="object-cover transition-transform duration-500 group-hover:scale-105"
-							fill
-							sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-							src={coverImage}
-							unoptimized
-						/>
+						coverImage.includes("cloudinary.com") ? (
+							<img
+								alt={title}
+								className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+								src={coverImage}
+							/>
+						) : (
+							<Image
+								alt={title}
+								className="object-cover transition-transform duration-500 group-hover:scale-105"
+								fill
+								sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+								src={coverImage}
+								unoptimized
+							/>
+						)
 					) : (
 						<div className="flex h-full w-full items-center justify-center">
 							<span className="font-medium text-gray-400 text-sm">
