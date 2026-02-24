@@ -156,6 +156,7 @@ export default function BlogPostContent({
 								priority
 								sizes="(max-width: 1024px) 100vw, 1024px"
 								src={post.coverImage}
+								unoptimized={post.coverImage.includes("cloudinary.com")}
 							/>
 						</div>
 					</motion.div>
