@@ -4,7 +4,6 @@ import type { MetadataRoute } from "next";
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://dakik.co.uk";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-	// Static pages with their priorities and change frequencies
 	const staticPages: MetadataRoute.Sitemap = [
 		{
 			url: BASE_URL,
@@ -61,27 +60,43 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 			priority: 0.7,
 		},
 		{
-			url: `${BASE_URL}/privacy`,
+			url: `${BASE_URL}/privacy-policy`,
+			lastModified: new Date(),
+			changeFrequency: "yearly",
+			priority: 0.3,
+		},
+		{
+			url: `${BASE_URL}/terms-of-service`,
+			lastModified: new Date(),
+			changeFrequency: "yearly",
+			priority: 0.3,
+		},
+		{
+			url: `${BASE_URL}/cookies`,
 			lastModified: new Date(),
 			changeFrequency: "yearly",
 			priority: 0.3,
 		},
 	];
 
-	// Dynamic blog post pages
-	const posts = await db
-		.selectFrom("blog_post")
-		.select(["slug", "updatedAt", "publishedAt"])
-		.where("published", "=", true)
-		.where("publishedAt", "is not", null)
-		.execute();
+	try {
+		const posts = await db
+			.selectFrom("blog_post")
+			.select(["slug", "updatedAt", "publishedAt"])
+			.where("published", "=", true)
+			.where("publishedAt", "is not", null)
+			.execute();
 
-	const blogPages: MetadataRoute.Sitemap = posts.map((post) => ({
-		url: `${BASE_URL}/blog/${post.slug}`,
-		lastModified: post.updatedAt ?? post.publishedAt ?? new Date(),
-		changeFrequency: "monthly",
-		priority: 0.6,
-	}));
+		const blogPages: MetadataRoute.Sitemap = posts.map((post) => ({
+			url: `${BASE_URL}/blog/${post.slug}`,
+			lastModified: post.updatedAt ?? post.publishedAt ?? new Date(),
+			changeFrequency: "monthly",
+			priority: 0.6,
+		}));
 
-	return [...staticPages, ...blogPages];
+		return [...staticPages, ...blogPages];
+	} catch (error) {
+		console.warn("Sitemap blog entries unavailable during build:", error);
+		return staticPages;
+	}
 }

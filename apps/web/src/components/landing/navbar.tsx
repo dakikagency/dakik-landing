@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
+import type { Route } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -12,6 +13,7 @@ const navLinks = [
 	{ href: "/dacomps", label: "daComps" },
 	{ href: "/automations", label: "Automations" },
 	{ href: "/blog", label: "Blog" },
+	{ href: "/privacy-policy", label: "Privacy" },
 ] as const;
 
 export function Navbar() {
@@ -55,7 +57,7 @@ export function Navbar() {
 							src="/dakik_logo.svg"
 							width={83}
 						/>
-						<span className="hidden lg:inline">dakik</span>
+						<span className="hidden lg:inline">Dakik Studio</span>
 					</Link>
 
 					{/* Desktop Navigation */}
@@ -63,7 +65,7 @@ export function Navbar() {
 						{navLinks.map((link) => (
 							<Link
 								className="font-medium text-sm opacity-70 transition-opacity hover:opacity-100 lg:text-base"
-								href={link.href}
+								href={link.href as Route}
 								key={link.href}
 							>
 								{link.label}
@@ -142,7 +144,7 @@ export function Navbar() {
 									>
 										<Link
 											className="block rounded-lg px-3 py-2.5 font-medium text-base transition-colors hover:bg-black/5"
-											href={link.href}
+											href={link.href as Route}
 											onClick={closeMenu}
 										>
 											{link.label}

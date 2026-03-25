@@ -2,7 +2,7 @@
 
 import { useForm } from "@tanstack/react-form";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
-import { cn } from "@/lib/utils";
 
 type AuthMode = "signin" | "signup";
 
@@ -150,129 +149,168 @@ function SignInForm({ onSwitchToSignUp }: { onSwitchToSignUp: () => void }) {
 			transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
 			variants={formVariants}
 		>
-			<motion.h1
-				className="mb-2 text-center font-bold font-display text-2xl tracking-tight"
-				variants={itemVariants}
-			>
-				Welcome Back
-			</motion.h1>
-			<motion.p
-				className="mb-8 text-center text-muted-foreground text-sm"
-				variants={itemVariants}
-			>
-				Sign in to access your dashboard
-			</motion.p>
-
-			<motion.div variants={itemVariants}>
-				<Button
-					className="w-full gap-3 border-border"
-					onClick={handleGoogleSignIn}
-					type="button"
-					variant="outline"
-				>
-					<GoogleIcon className="size-4" />
-					Continue with Google
-				</Button>
-			</motion.div>
-
 			<motion.div
-				className="my-6 flex items-center gap-4"
+				className="border-2 border-black/85 bg-[#fcfcfd] px-5 py-10 shadow-[0_20px_55px_rgba(0,0,0,0.2)] sm:px-10 sm:py-14 lg:px-16 lg:py-16"
 				variants={itemVariants}
 			>
-				<div className="h-px flex-1 bg-border" />
-				<span className="text-muted-foreground text-xs">or</span>
-				<div className="h-px flex-1 bg-border" />
-			</motion.div>
-
-			<form
-				className="space-y-4"
-				onSubmit={(e) => {
-					e.preventDefault();
-					e.stopPropagation();
-					form.handleSubmit();
-				}}
-			>
-				<motion.div variants={itemVariants}>
-					<form.Field name="email">
-						{(field) => (
-							<div className="space-y-2">
-								<Label htmlFor={field.name}>Email</Label>
-								<Input
-									id={field.name}
-									name={field.name}
-									onBlur={field.handleBlur}
-									onChange={(e) => field.handleChange(e.target.value)}
-									placeholder="you@example.com"
-									type="email"
-									value={field.state.value}
-								/>
-								{field.state.meta.errors.map((error) => (
-									<p className="text-destructive text-xs" key={error?.message}>
-										{error?.message}
-									</p>
-								))}
-							</div>
-						)}
-					</form.Field>
-				</motion.div>
-
-				<motion.div variants={itemVariants}>
-					<form.Field name="password">
-						{(field) => (
-							<div className="space-y-2">
-								<Label htmlFor={field.name}>Password</Label>
-								<Input
-									id={field.name}
-									name={field.name}
-									onBlur={field.handleBlur}
-									onChange={(e) => field.handleChange(e.target.value)}
-									placeholder="Enter your password"
-									type="password"
-									value={field.state.value}
-								/>
-								{field.state.meta.errors.map((error) => (
-									<p className="text-destructive text-xs" key={error?.message}>
-										{error?.message}
-									</p>
-								))}
-							</div>
-						)}
-					</form.Field>
-				</motion.div>
-
-				<motion.div variants={itemVariants}>
-					<form.Subscribe>
-						{(state) => (
-							<Button
-								className="w-full"
-								disabled={!state.canSubmit || state.isSubmitting}
-								type="submit"
-							>
-								{state.isSubmitting ? (
-									<>
-										<Loader2 className="mr-2 size-4 animate-spin" />
-										Signing in...
-									</>
-								) : (
-									"Sign In"
-								)}
-							</Button>
-						)}
-					</form.Subscribe>
-				</motion.div>
-			</form>
-
-			<motion.div className="mt-6 text-center" variants={itemVariants}>
-				<span className="text-muted-foreground text-sm">
-					Don't have an account?{" "}
-				</span>
-				<button
-					className="font-medium text-foreground text-sm underline-offset-4 hover:underline"
-					onClick={onSwitchToSignUp}
-					type="button"
+				<motion.h1
+					className="text-center font-bold font-display text-[#101018] text-[36px] tracking-[-0.02em] sm:text-[52px]"
+					variants={itemVariants}
 				>
-					Sign up
-				</button>
+					Login to Your Account
+				</motion.h1>
+				<motion.p
+					className="mx-auto mt-4 max-w-[640px] text-center text-[#5e5e65] text-[15px] leading-relaxed sm:text-[22px]"
+					variants={itemVariants}
+				>
+					Choose from 130,000 online video courses with new additions published
+					every second month
+				</motion.p>
+
+				<div className="mx-auto mt-14 grid max-w-[920px] gap-8 md:grid-cols-[minmax(0,1fr)_56px_minmax(0,1fr)] md:items-center">
+					<form
+						className="space-y-4"
+						onSubmit={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							form.handleSubmit();
+						}}
+					>
+						<motion.div variants={itemVariants}>
+							<form.Field name="email">
+								{(field) => (
+									<div className="space-y-2">
+										<Label className="sr-only" htmlFor={field.name}>
+											Email
+										</Label>
+										<Input
+											className="h-14 rounded-lg border-[#dedee3] bg-[#efeff1] px-5 text-[#1b1b22] text-base placeholder:text-[#8f8f97]"
+											id={field.name}
+											name={field.name}
+											onBlur={field.handleBlur}
+											onChange={(e) => field.handleChange(e.target.value)}
+											placeholder="Email Address"
+											type="email"
+											value={field.state.value}
+										/>
+										{field.state.meta.errors.map((error) => (
+											<p
+												className="text-destructive text-xs"
+												key={error?.message}
+											>
+												{error?.message}
+											</p>
+										))}
+									</div>
+								)}
+							</form.Field>
+						</motion.div>
+
+						<motion.div variants={itemVariants}>
+							<form.Field name="password">
+								{(field) => (
+									<div className="space-y-2">
+										<Label className="sr-only" htmlFor={field.name}>
+											Password
+										</Label>
+										<Input
+											className="h-14 rounded-lg border-[#dedee3] bg-[#efeff1] px-5 text-[#1b1b22] text-base placeholder:text-[#8f8f97]"
+											id={field.name}
+											name={field.name}
+											onBlur={field.handleBlur}
+											onChange={(e) => field.handleChange(e.target.value)}
+											placeholder="Password"
+											type="password"
+											value={field.state.value}
+										/>
+										{field.state.meta.errors.map((error) => (
+											<p
+												className="text-destructive text-xs"
+												key={error?.message}
+											>
+												{error?.message}
+											</p>
+										))}
+									</div>
+								)}
+							</form.Field>
+						</motion.div>
+
+						<motion.div variants={itemVariants}>
+							<form.Subscribe>
+								{(state) => (
+									<Button
+										className="h-14 w-full justify-between rounded-lg bg-gradient-to-r from-emerald-400 via-cyan-300 to-amber-300 px-5 text-base text-black hover:opacity-90"
+										disabled={!state.canSubmit || state.isSubmitting}
+										type="submit"
+									>
+										{state.isSubmitting ? (
+											<>
+												<span>Logging in...</span>
+												<Loader2 className="size-4 animate-spin" />
+											</>
+										) : (
+											<>
+												<span>Login to Your Account</span>
+												<ArrowRight className="size-4" />
+											</>
+										)}
+									</Button>
+								)}
+							</form.Subscribe>
+						</motion.div>
+					</form>
+
+					<span className="hidden text-center text-5xl text-[#25252d]/80 md:block">
+						/
+					</span>
+
+					<div className="flex min-h-[208px] flex-col justify-center">
+						<p className="mb-5 text-center text-[#5e5e65] text-sm">
+							Or continue with
+						</p>
+						<motion.div variants={itemVariants}>
+							<Button
+								className="h-14 w-full justify-start gap-3 rounded-lg border-[#cfcfd5] bg-white px-5 text-[#202028] text-base hover:bg-white/95"
+								onClick={handleGoogleSignIn}
+								type="button"
+								variant="outline"
+							>
+								<GoogleIcon className="size-4" />
+								Sign in with Google
+							</Button>
+						</motion.div>
+					</div>
+				</div>
+
+				<motion.div className="mt-14 text-center" variants={itemVariants}>
+					<Link
+						className="font-medium text-[#22222a] text-sm underline underline-offset-4 transition-opacity hover:opacity-70"
+						href="/contact"
+					>
+						Forgot Password?
+					</Link>
+				</motion.div>
+
+				<motion.div className="mt-4 text-center" variants={itemVariants}>
+					<span className="text-[#5e5e65] text-sm">
+						Don&apos;t have an account?{" "}
+					</span>
+					<button
+						className="font-medium text-[#202028] text-sm underline-offset-4 hover:underline"
+						onClick={onSwitchToSignUp}
+						type="button"
+					>
+						Sign up
+					</button>
+				</motion.div>
+
+				<motion.p
+					className="mt-14 text-right text-[#8f8f97] text-xs"
+					variants={itemVariants}
+				>
+					Copyright@Razor 2022
+				</motion.p>
 			</motion.div>
 		</motion.div>
 	);
@@ -512,7 +550,7 @@ export default function LoginPage() {
 
 	if (isPending) {
 		return (
-			<div className="flex min-h-screen items-center justify-center bg-background">
+			<div className="flex min-h-screen items-center justify-center bg-[#070707]">
 				<Loader2 className="size-8 animate-spin text-muted-foreground" />
 			</div>
 		);
@@ -520,64 +558,39 @@ export default function LoginPage() {
 
 	if (session?.user) {
 		return (
-			<div className="flex min-h-screen items-center justify-center bg-background">
+			<div className="flex min-h-screen items-center justify-center bg-[#070707]">
 				<Loader2 className="size-8 animate-spin text-muted-foreground" />
 			</div>
 		);
 	}
 
 	return (
-		<div className="flex min-h-screen flex-col bg-background">
+		<div className="flex min-h-screen items-center justify-center bg-[#070707] px-3 py-4 sm:px-8 sm:py-8">
 			<motion.main
 				animate="visible"
-				className="flex flex-1 flex-col items-center justify-center px-4 py-12"
+				className="w-full max-w-[1200px]"
 				initial="hidden"
 				variants={containerVariants}
 			>
-				<motion.div className="w-full max-w-sm" variants={itemVariants}>
-					{/* Logo */}
-					<motion.div className="mb-8 text-center" variants={itemVariants}>
-						<Link
-							className="inline-block font-bold font-display text-2xl tracking-tight transition-opacity hover:opacity-70"
-							href="/"
+				<AnimatePresence initial={false} mode="wait">
+					{mode === "signin" ? (
+						<SignInForm
+							key="signin"
+							onSwitchToSignUp={() => setMode("signup")}
+						/>
+					) : (
+						<motion.div
+							className="mx-auto w-full max-w-sm rounded-[24px] border border-white/20 bg-background p-8 shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
+							key="signup-shell"
+							variants={itemVariants}
 						>
-							Dakik Studio
-						</Link>
-					</motion.div>
-
-					{/* Form Container */}
-					<motion.div
-						className={cn(
-							"rounded-lg border border-border bg-card p-8",
-							"shadow-sm"
-						)}
-						variants={itemVariants}
-					>
-						<AnimatePresence initial={false} mode="wait">
-							{mode === "signin" ? (
-								<SignInForm
-									key="signin"
-									onSwitchToSignUp={() => setMode("signup")}
-								/>
-							) : (
-								<SignUpForm
-									key="signup"
-									onSwitchToSignIn={() => setMode("signin")}
-								/>
-							)}
-						</AnimatePresence>
-					</motion.div>
-
-					{/* Footer Link */}
-					<motion.p
-						className="mt-8 text-center text-muted-foreground text-xs"
-						variants={itemVariants}
-					>
-						<Link className="hover:underline" href="/">
-							Back to home
-						</Link>
-					</motion.p>
-				</motion.div>
+							<SignUpForm
+								key="signup"
+								onSwitchToSignIn={() => setMode("signin")}
+							/>
+						</motion.div>
+					)}
+				</AnimatePresence>
 			</motion.main>
 		</div>
 	);

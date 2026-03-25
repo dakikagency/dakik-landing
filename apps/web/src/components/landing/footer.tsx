@@ -12,7 +12,9 @@ const resourceLinks = [
 	{ name: "Blog", href: "/blog" },
 	{ name: "About", href: "/about" },
 	{ name: "Contact", href: "/contact" },
-	{ name: "Privacy", href: "/privacy" },
+	{ name: "Privacy Policy", href: "/privacy-policy" },
+	{ name: "Terms of Service", href: "/terms-of-service" },
+	{ name: "Cookie Settings", href: "/cookies" },
 ] as const;
 
 export function Footer() {
@@ -133,11 +135,17 @@ export function Footer() {
 					<div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] text-white/30">
 						<span>© {currentYear} Dakik Studio Ltd</span>
 						<span className="hidden md:inline">·</span>
-						<a className="transition-colors hover:text-white" href="/privacy">
+						<a
+							className="transition-colors hover:text-white"
+							href="/privacy-policy"
+						>
 							Privacy Policy
 						</a>
 						<span className="hidden md:inline">·</span>
-						<a className="transition-colors hover:text-white" href="/terms">
+						<a
+							className="transition-colors hover:text-white"
+							href="/terms-of-service"
+						>
 							Terms of Service
 						</a>
 						<span className="hidden md:inline">·</span>

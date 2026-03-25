@@ -1,14 +1,12 @@
 "use client";
 
 import { motion, useMotionValue, useSpring } from "framer-motion";
-import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export function CustomCursor() {
 	const [isVisible, setIsVisible] = useState(false);
 	const [isHovering, setIsHovering] = useState(false);
 	const [isClicking, setIsClicking] = useState(false);
-	const pathname = usePathname();
 
 	const cursorX = useMotionValue(-100);
 	const cursorY = useMotionValue(-100);
@@ -74,7 +72,7 @@ export function CustomCursor() {
 			document.removeEventListener("mouseenter", handleMouseEnter);
 			observer.disconnect();
 		};
-	}, [cursorX, cursorY, isVisible, pathname]);
+	}, [cursorX, cursorY, isVisible]);
 
 	if (
 		typeof window !== "undefined" &&

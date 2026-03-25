@@ -41,23 +41,15 @@ export function BlogFeaturedHero({ post, className }: BlogFeaturedHeroProps) {
 				href={`/blog/${post.slug}`}
 			>
 				{post.coverImage ? (
-					post.coverImage.includes("cloudinary.com") ? (
-						<img
-							alt={post.title}
-							className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-							src={post.coverImage}
-						/>
-					) : (
-						<Image
-							alt={post.title}
-							className="object-cover transition-transform duration-700 group-hover:scale-105"
-							fill
-							priority
-							sizes="(max-width: 1024px) 100vw, 60vw"
-							src={post.coverImage}
-							unoptimized
-						/>
-					)
+					<Image
+						alt={post.title}
+						className="object-cover transition-transform duration-700 group-hover:scale-105"
+						fill
+						priority
+						sizes="(max-width: 1024px) 100vw, 60vw"
+						src={post.coverImage}
+						unoptimized
+					/>
 				) : (
 					<div className="flex h-full w-full items-center justify-center bg-gray-100">
 						<span className="font-medium text-gray-400 text-sm">No image</span>
@@ -118,22 +110,14 @@ export function BlogFeaturedSidebar({
 						<Link className="group flex gap-4" href={`/blog/${post.slug}`}>
 							<div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-gray-100">
 								{post.coverImage ? (
-									post.coverImage.includes("cloudinary.com") ? (
-										<img
-											alt={post.title}
-											className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-											src={post.coverImage}
-										/>
-									) : (
-										<Image
-											alt={post.title}
-											className="object-cover transition-transform duration-500 group-hover:scale-110"
-											fill
-											sizes="64px"
-											src={post.coverImage}
-											unoptimized
-										/>
-									)
+									<Image
+										alt={post.title}
+										className="object-cover transition-transform duration-500 group-hover:scale-110"
+										fill
+										sizes="64px"
+										src={post.coverImage}
+										unoptimized
+									/>
 								) : (
 									<div className="flex h-full w-full items-center justify-center">
 										<span className="text-gray-300 text-xs">No img</span>

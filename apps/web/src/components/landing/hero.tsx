@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useScroll, useTransform } from "framer-motion";
+import type { Route } from "next";
 import Link from "next/link";
 import { useRef } from "react";
 import { Reveal } from "@/components/motion";
@@ -50,6 +51,28 @@ export function Hero() {
 					className="relative mx-auto flex h-full flex-col px-[clamp(1rem,5vw,4rem)] pt-[clamp(6rem,15vh,10rem)] pb-[clamp(2rem,5vh,4rem)]"
 					style={{ opacity: prefersReducedMotion ? 1 : textOpacity }}
 				>
+					<div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+						<Reveal delay={0.05} direction="up">
+							<div className="flex items-center gap-3">
+								<span className="font-mono text-[11px] text-foreground/55 uppercase tracking-[0.35em]">
+									Dakik Studio
+								</span>
+								<span className="hidden h-px w-12 bg-foreground/20 sm:block" />
+								<span className="text-foreground/55 text-sm">
+									Client portal and digital product studio
+								</span>
+							</div>
+						</Reveal>
+						<Reveal delay={0.1} direction="left">
+							<Link
+								className="inline-flex items-center gap-2 border border-foreground/20 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.25em] transition-colors duration-300 hover:border-foreground hover:bg-foreground hover:text-background"
+								href={"/privacy-policy" as Route}
+							>
+								Privacy Policy
+							</Link>
+						</Reveal>
+					</div>
+
 					{/* Main Headline */}
 					<div className="flex-1">
 						<Reveal delay={0.1} direction="up">
@@ -92,9 +115,16 @@ export function Hero() {
 					{/* Description */}
 					<div className="mt-auto mb-32 lg:mb-0">
 						<Reveal delay={0.4} direction="down">
-							<p className="w-[25ch] text-3xl text-foreground/90 leading-[1.15]">
-								Boutique digital agency crafting premium experiences through AI
-								automation, brand identity, and custom development.
+							<p className="max-w-[25ch] text-3xl text-foreground/90 leading-[1.15]">
+								Dakik Studio helps teams launch websites, apps, brand systems,
+								and AI automations that are built to ship.
+							</p>
+						</Reveal>
+						<Reveal delay={0.5} direction="down">
+							<p className="mt-4 max-w-[46ch] text-base text-foreground/65 leading-relaxed lg:text-lg">
+								Clients use the app to start projects, book discovery calls,
+								review scope, sign contracts, manage invoices, and keep delivery
+								moving in one place.
 							</p>
 						</Reveal>
 					</div>

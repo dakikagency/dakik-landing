@@ -149,23 +149,15 @@ export default function BlogPostContent({
 						transition={{ duration: 0.6, delay: 0.15 }}
 					>
 						<div className="relative aspect-[16/9] overflow-hidden rounded-xl bg-gray-100">
-							{post.coverImage.includes("cloudinary.com") ? (
-								<img
-									alt={post.title}
-									className="h-full w-full object-cover"
-									src={post.coverImage}
-								/>
-							) : (
-								<Image
-									alt={post.title}
-									className="object-cover"
-									fill
-									priority
-									sizes="(max-width: 1024px) 100vw, 1024px"
-									src={post.coverImage}
-									unoptimized
-								/>
-							)}
+							<Image
+								alt={post.title}
+								className="object-cover"
+								fill
+								priority
+								sizes="(max-width: 1024px) 100vw, 1024px"
+								src={post.coverImage}
+								unoptimized
+							/>
 						</div>
 					</motion.div>
 				)}

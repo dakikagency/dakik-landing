@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react"; // Added React import
+import { Fragment } from "react";
 
 export function Marquee() {
 	const items = [
@@ -16,16 +16,16 @@ export function Marquee() {
 				{/* Using a stable identifier for the two copies of the marquee content */}
 				{["first-copy", "second-copy"].map((copyId) => (
 					<div
-						key={`marquee-group-${copyId}`}
 						className="flex min-w-max items-center space-x-16"
+						key={`marquee-group-${copyId}`}
 					>
 						{items.map((item) => (
-							<React.Fragment key={`${copyId}-${item.id}`}>
+							<Fragment key={`${copyId}-${item.id}`}>
 								<span className="font-black font-display text-4xl text-black uppercase tracking-[-0.02em]">
 									{item.text}
 								</span>
 								<span className="h-4 w-4 rounded-none bg-black" />
-							</React.Fragment>
+							</Fragment>
 						))}
 					</div>
 				))}

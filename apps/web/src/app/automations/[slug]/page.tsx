@@ -139,6 +139,30 @@ const sampleRelatedAutomations = [
 	},
 ];
 
+interface AutomationTag {
+	id: string;
+	name: string;
+	slug: string;
+}
+
+interface RelatedAutomationRecord {
+	id: string;
+	slug: string;
+	title: string;
+	excerpt: string | null;
+	content: string;
+	coverImage: string | null;
+	published: boolean;
+	publishedAt: Date | string | null;
+	createdAt: Date | string;
+	updatedAt: Date | string;
+	tags: AutomationTag[];
+}
+
+interface AutomationRecord extends RelatedAutomationRecord {
+	fileUrl: string | null;
+}
+
 // Regex for calculating read time - defined at top level for performance
 const WHITESPACE_RE = /\s+/;
 
@@ -243,6 +267,30 @@ export default function AutomationPage() {
 	// Check if file is actually available (fixes the bug)
 	const showDownloadButton = hasValidFileUrl(automation.fileUrl);
 
+	return (
+		<AutomationPageContent
+			automation={automation}
+			formattedDate={formattedDate}
+			readTime={readTime}
+			relatedAutomations={relatedAutomations}
+			showDownloadButton={showDownloadButton}
+		/>
+	);
+}
+
+function AutomationPageContent({
+	automation,
+	formattedDate,
+	readTime,
+	relatedAutomations,
+	showDownloadButton,
+}: {
+	automation: AutomationRecord;
+	formattedDate: string | null;
+	readTime: number;
+	relatedAutomations: RelatedAutomationRecord[];
+	showDownloadButton: boolean;
+}) {
 	return (
 		<>
 			<Navbar />
