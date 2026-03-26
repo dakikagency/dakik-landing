@@ -1,9 +1,7 @@
 import { db } from "@collab/db/kysely";
 import { env } from "@collab/env/server";
 import { betterAuth } from "better-auth";
-import { nextCookies } from "better-auth/next-js";
 
-// Admin email addresses that should automatically receive ADMIN role
 const ADMIN_EMAILS = ["erdeniz@dakik.co.uk"];
 
 export const auth = betterAuth({
@@ -15,7 +13,7 @@ export const auth = betterAuth({
 	trustedOrigins: [env.CORS_ORIGIN],
 	advanced: {
 		cookiePrefix: "better-auth",
-		useSecureCookies: false, // Set to true in production with HTTPS
+		useSecureCookies: env.NODE_ENV === "production",
 	},
 	emailAndPassword: {
 		enabled: true,
@@ -39,9 +37,8 @@ export const auth = betterAuth({
 	databaseHooks: {
 		user: {
 			create: {
-				// biome-ignore lint/suspicious/useAwait: better-auth requires async hook even without await
+				// biome-ignore lint/suspicious/useAwait: better-auth requires async hook
 				before: async (user, _context) => {
-					// Auto-assign ADMIN role to specific email addresses
 					if (ADMIN_EMAILS.includes(user.email.toLowerCase())) {
 						return {
 							data: {
@@ -55,7 +52,6 @@ export const auth = betterAuth({
 			},
 		},
 	},
-	plugins: [nextCookies()],
 });
 
 export type Session = typeof auth.$Infer.Session;
