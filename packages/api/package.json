@@ -22,13 +22,12 @@
     "googleapis": "^170.0.0",
     "kysely": "^0.28.3",
     "next": "catalog:",
-    "nodemailer": "^7.0.12",
+    "resend": "^4.5.1",
     "stripe": "^20.2.0",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@collab/config": "workspace:*",
-    "@types/nodemailer": "^7.0.5",
     "typescript": "catalog:"
   }
 }

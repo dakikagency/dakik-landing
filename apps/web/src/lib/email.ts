@@ -1,5 +1,5 @@
 import { env } from "@collab/env/server";
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
 interface SendEmailParams {
 	to: string[];
@@ -14,27 +14,16 @@ interface SendEmailResult {
 	error?: string;
 }
 
-/**
- * Check if Email is configured
- */
+const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
+
 export function isEmailConfigured(): boolean {
-	return Boolean(
-		env.SMTP_HOST &&
-			env.SMTP_PORT &&
-			env.SMTP_USER &&
-			env.SMTP_PASS &&
-			env.MAIL_FROM
-	);
+	return Boolean(env.RESEND_API_KEY && env.MAIL_FROM);
 }
 
-/**
- * Send an email using nodemailer
- */
 export async function sendEmail(
 	params: SendEmailParams
 ): Promise<SendEmailResult> {
-	// If Email is not configured, return mock success in development
-	if (!isEmailConfigured()) {
+	if (!(isEmailConfigured() && resend)) {
 		if (env.NODE_ENV === "development") {
 			console.log("[Email Mock] Would send email:", {
 				to: params.to,
@@ -48,33 +37,31 @@ export async function sendEmail(
 		}
 		return {
 			success: false,
-			error: "Email is not configured",
+			error:
+				"Email is not configured. Set RESEND_API_KEY and MAIL_FROM environment variables.",
 		};
 	}
 
 	try {
-		const transporter = nodemailer.createTransport({
-			host: env.SMTP_HOST,
-			port: env.SMTP_PORT,
-			secure: env.SMTP_SECURE,
-			auth: {
-				user: env.SMTP_USER,
-				pass: env.SMTP_PASS,
-			},
+		const { data, error } = await resend.emails.send({
+			from: env.MAIL_FROM,
+			to: params.to,
+			subject: params.subject,
+			html: params.body,
+			replyTo: params.replyTo,
 		});
 
-		const info = await transporter.sendMail({
-			from: env.MAIL_FROM,
-			to: params.to.join(", "),
-			replyTo: params.replyTo,
-			subject: params.subject,
-			text: params.body.replace(/<[^>]+>/g, ""), // Plain text fallback
-			html: params.body,
-		});
+		if (error) {
+			console.error("[Email] Failed to send email:", error.message);
+			return {
+				success: false,
+				error: error.message,
+			};
+		}
 
 		return {
 			success: true,
-			messageId: info.messageId,
+			messageId: data?.id,
 		};
 	} catch (error) {
 		const errorMessage =
@@ -87,9 +74,6 @@ export async function sendEmail(
 	}
 }
 
-/**
- * Get Email configuration status (public info only)
- */
 export function getEmailConfig() {
 	return {
 		configured: isEmailConfigured(),

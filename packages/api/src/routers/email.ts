@@ -1,12 +1,13 @@
 import { db } from "@collab/db";
 import { env } from "@collab/env/server";
 import { TRPCError } from "@trpc/server";
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { z } from "zod";
 
 import { protectedProcedure, router } from "../index";
 
-// Admin-only procedure that checks for ADMIN role
+const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
+
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 	if (ctx.session.user.role !== "ADMIN") {
 		throw new TRPCError({
@@ -17,30 +18,17 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 	return next({ ctx });
 });
 
-/**
- * Check if Email is configured
- */
 function isEmailConfigured(): boolean {
-	return Boolean(
-		env.SMTP_HOST &&
-			env.SMTP_PORT &&
-			env.SMTP_USER &&
-			env.SMTP_PASS &&
-			env.MAIL_FROM
-	);
+	return Boolean(env.RESEND_API_KEY && env.MAIL_FROM);
 }
 
-/**
- * Send an email using nodemailer
- */
 async function sendEmail(params: {
 	to: string[];
 	subject: string;
 	body: string;
 	replyTo?: string;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
-	// If Email is not configured, return mock success in development
-	if (!isEmailConfigured()) {
+	if (!(isEmailConfigured() && resend)) {
 		if (env.NODE_ENV === "development") {
 			console.log("[Email Mock] Would send email:", {
 				to: params.to,
@@ -54,33 +42,31 @@ async function sendEmail(params: {
 		}
 		return {
 			success: false,
-			error: "Email is not configured",
+			error:
+				"Email is not configured. Set RESEND_API_KEY and MAIL_FROM environment variables.",
 		};
 	}
 
 	try {
-		const transporter = nodemailer.createTransport({
-			host: env.SMTP_HOST,
-			port: env.SMTP_PORT,
-			secure: env.SMTP_SECURE,
-			auth: {
-				user: env.SMTP_USER,
-				pass: env.SMTP_PASS,
-			},
+		const { data, error } = await resend.emails.send({
+			from: env.MAIL_FROM,
+			to: params.to,
+			subject: params.subject,
+			html: params.body,
+			replyTo: params.replyTo,
 		});
 
-		const info = await transporter.sendMail({
-			from: env.MAIL_FROM,
-			to: params.to.join(", "),
-			replyTo: params.replyTo,
-			subject: params.subject,
-			text: params.body.replace(/<[^>]+>/g, ""), // Plain text fallback
-			html: params.body,
-		});
+		if (error) {
+			console.error("[Email] Failed to send email:", error.message);
+			return {
+				success: false,
+				error: error.message,
+			};
+		}
 
 		return {
 			success: true,
-			messageId: info.messageId,
+			messageId: data?.id,
 		};
 	} catch (error) {
 		const errorMessage =
@@ -94,7 +80,6 @@ async function sendEmail(params: {
 }
 
 export const emailRouter = router({
-	// Get Email configuration status
 	getConfig: adminProcedure.query(() => {
 		return {
 			configured: isEmailConfigured(),
@@ -102,7 +87,6 @@ export const emailRouter = router({
 		};
 	}),
 
-	// Send an email
 	send: adminProcedure
 		.input(
 			z.object({
@@ -116,10 +100,8 @@ export const emailRouter = router({
 			const { to, subject, body, replyTo } = input;
 			const userId = ctx.session.user.id;
 
-			// Send the email
 			const result = await sendEmail({ to, subject, body, replyTo });
 
-			// Log the email attempt
 			const emailLog = await db
 				.insertInto("email_log")
 				.values({
@@ -148,7 +130,6 @@ export const emailRouter = router({
 			};
 		}),
 
-	// Get email history
 	getHistory: adminProcedure
 		.input(
 			z.object({
@@ -176,7 +157,11 @@ export const emailRouter = router({
 				]);
 
 			if (status) {
-				query = query.where("e.status", "=", status as any);
+				query = query.where(
+					"e.status",
+					"=",
+					status as "SENT" | "FAILED" | "BOUNCED"
+				);
 			}
 
 			if (cursor) {
@@ -233,7 +218,6 @@ export const emailRouter = router({
 			};
 		}),
 
-	// Get a single email by ID
 	getById: adminProcedure
 		.input(z.object({ id: z.string() }))
 		.query(async ({ input }) => {
