@@ -1,7 +1,29 @@
-// Placeholder for Prisma client factory
-// In Cloudflare Workers, use @prisma/client with Neon HTTP adapter or similar
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@prisma/client";
+import { Pool } from "pg";
 
-// This is a placeholder that will be implemented when database integration is needed
-export function createPrismaClient() {
-	throw new Error("Prisma client not yet configured for Cloudflare Workers");
+declare global {
+	// eslint-disable-next-line no-var
+	var prisma: PrismaClient | undefined;
 }
+
+export function getPrismaClient(databaseUrl: string): PrismaClient {
+	if (process.env.NODE_ENV === "production") {
+		const pool = new Pool({ connectionString: databaseUrl, max: 1 });
+		const adapter = new PrismaPg(pool);
+		return new PrismaClient({ adapter });
+	}
+
+	if (!globalThis.prisma) {
+		const pool = new Pool({ connectionString: databaseUrl, max: 1 });
+		const adapter = new PrismaPg(pool);
+		globalThis.prisma = new PrismaClient({
+			adapter,
+			log: ["error", "warn"],
+		});
+	}
+	return globalThis.prisma;
+}
+
+export type { PrismaClient };
+export type * from "@prisma/client";
