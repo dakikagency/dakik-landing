@@ -15,8 +15,10 @@
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "better-auth": "^1.5.6",
+    "googleapis": "^171.4.0",
     "hono": "^4.7.0",
     "pg": "^8.20.0",
+    "stripe": "^21.0.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {

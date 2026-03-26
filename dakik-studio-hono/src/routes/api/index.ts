@@ -1,9 +1,11 @@
 import { Hono } from "hono";
 import type { EnvVars } from "../../lib/env";
 import { createAuthHandler } from "./auth";
+import { createAvailabilityRouter } from "./availability";
 import { createCustomerRouter } from "./customers";
 import { createInvoiceRouter } from "./invoices";
 import { createLeadRouter } from "./leads";
+import { createMeetingRouter } from "./meetings";
 import { createProjectRouter } from "./projects";
 
 export function createApiRouter(env: EnvVars) {
@@ -19,6 +21,8 @@ export function createApiRouter(env: EnvVars) {
 	api.route("/invoices", createInvoiceRouter());
 	api.route("/leads", createLeadRouter());
 	api.route("/projects", createProjectRouter());
+	api.route("/meetings", createMeetingRouter());
+	api.route("/availability", createAvailabilityRouter());
 
 	api.get("/", (c) => {
 		return c.json({
