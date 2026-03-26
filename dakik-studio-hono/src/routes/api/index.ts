@@ -7,6 +7,7 @@ import { createInvoiceRouter } from "./invoices";
 import { createLeadRouter } from "./leads";
 import { createMeetingRouter } from "./meetings";
 import { createProjectRouter } from "./projects";
+import { createStripeWebhookRouter } from "./webhooks/stripe";
 
 export function createApiRouter(env: EnvVars) {
 	const api = new Hono();
@@ -23,6 +24,7 @@ export function createApiRouter(env: EnvVars) {
 	api.route("/projects", createProjectRouter());
 	api.route("/meetings", createMeetingRouter());
 	api.route("/availability", createAvailabilityRouter());
+	api.route("/webhooks", createStripeWebhookRouter());
 
 	api.get("/", (c) => {
 		return c.json({

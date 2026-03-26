@@ -1,8 +1,9 @@
 import { Hono } from "hono";
 import { cors } from "./middleware/cors";
+import { dbMiddleware } from "./middleware/db";
 import { errorHandler } from "./middleware/error-handler";
 import { logger } from "./middleware/logger";
-import { createAuthHandler } from "./routes/api/auth";
+import { createApiRouter } from "./routes/api";
 import { healthRoute } from "./routes/health";
 import type { CloudflareEnv } from "./types/cloudflare";
 
@@ -14,10 +15,18 @@ app.onError(errorHandler);
 
 app.route("/health", healthRoute);
 
-app.on(["POST", "GET"], "/api/auth/*", (c) => {
-	const env = c.env as CloudflareEnv;
-	const { handler } = createAuthHandler(env);
-	return handler(c);
+app.use("/api/*", dbMiddleware);
+
+let apiRouter: ReturnType<typeof createApiRouter> | undefined;
+
+app.all("/api/*", (c) => {
+	if (!apiRouter) {
+		apiRouter = createApiRouter(c.env as CloudflareEnv);
+	}
+	const url = new URL(c.req.url);
+	url.pathname = url.pathname.slice(4);
+	const req = new Request(url, c.req.raw);
+	return apiRouter.fetch(req);
 });
 
 app.get("/", (c) => {
