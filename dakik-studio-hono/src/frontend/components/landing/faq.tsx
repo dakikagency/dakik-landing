@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 import { Reveal, StaggerContainer, StaggerItem } from "../motion";
 import Noise from "../noise";
-import { GridBackdrop } from "../ui/GridBackdrop";
+import { GridBackdrop } from "../ui/grid-backdrop";
 
 const faqs = [
 	{

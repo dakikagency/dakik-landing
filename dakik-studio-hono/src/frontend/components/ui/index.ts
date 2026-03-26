@@ -1,2 +1,2 @@
-export { GridBackdrop } from "./GridBackdrop";
-export { HoverReveal } from "./HoverReveal";
+export { GridBackdrop } from "./grid-backdrop";
+export { HoverReveal } from "./hover-reveal";

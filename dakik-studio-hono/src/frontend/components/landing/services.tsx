@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
-import { GridBackdrop } from "../ui/GridBackdrop";
-import { HoverReveal } from "../ui/HoverReveal";
+import { GridBackdrop } from "../ui/grid-backdrop";
+import { HoverReveal } from "../ui/hover-reveal";
 
 const steps = [
 	{

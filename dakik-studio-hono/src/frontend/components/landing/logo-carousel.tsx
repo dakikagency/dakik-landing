@@ -1,4 +1,4 @@
-import { useReducedMotion } from "../../hooks/useReducedMotion";
+import { useReducedMotion } from "../../hooks/use-reduced-motion";
 
 const placeholderLogos = [
 	{ name: "Nexus", shape: "hexagon" },

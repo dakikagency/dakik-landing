@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
-import { GridBackdrop } from "../ui/GridBackdrop";
-import { InfiniteMovingCards } from "../ui/InfiniteMovingCards";
+import { GridBackdrop } from "../ui/grid-backdrop";
+import { InfiniteMovingCards } from "../ui/infinite-moving-cards";
 
 const testimonials = [
 	{

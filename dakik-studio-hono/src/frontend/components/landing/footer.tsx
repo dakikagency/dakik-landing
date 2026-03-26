@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { useReducedMotion } from "../../hooks/useReducedMotion";
+import { useReducedMotion } from "../../hooks/use-reduced-motion";
 import { cn } from "../../lib/utils";
 
 const resourceLinks = [

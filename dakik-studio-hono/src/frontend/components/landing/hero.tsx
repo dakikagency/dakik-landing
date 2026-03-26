@@ -1,6 +1,6 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
-import { useReducedMotion } from "../../hooks/useReducedMotion";
+import { useReducedMotion } from "../../hooks/use-reduced-motion";
 import { Reveal } from "../motion";
 import Noise from "../noise";
 
