@@ -2,7 +2,7 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { Reveal } from "../motion";
-import Noise from "../Noise";
+import Noise from "../noise";
 
 export function Hero() {
 	const sectionRef = useRef<HTMLElement>(null);

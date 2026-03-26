@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 import { Reveal, StaggerContainer, StaggerItem } from "../motion";
-import Noise from "../Noise";
+import Noise from "../noise";
 import { GridBackdrop } from "../ui/GridBackdrop";
 
 const faqs = [

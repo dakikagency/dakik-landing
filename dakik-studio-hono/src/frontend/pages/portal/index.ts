@@ -1,4 +1,4 @@
-export { PortalDashboard } from "./Dashboard";
-export { PortalInvoices } from "./Invoices";
-export { PortalMeetings } from "./Meetings";
-export { PortalProjects } from "./Projects";
+export { PortalDashboard } from "./dashboard";
+export { PortalInvoices } from "./invoices";
+export { PortalMeetings } from "./meetings";
+export { PortalProjects } from "./projects";

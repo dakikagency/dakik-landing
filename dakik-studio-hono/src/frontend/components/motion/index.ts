@@ -1,4 +1,4 @@
-export { FadeIn } from "./FadeIn";
-export { Reveal } from "./Reveal";
-export { StaggerContainer } from "./StaggerContainer";
-export { StaggerItem } from "./StaggerItem";
+export { FadeIn } from "./fade-in";
+export { Reveal } from "./reveal";
+export { StaggerContainer } from "./stagger-container";
+export { StaggerItem } from "./stagger-item";

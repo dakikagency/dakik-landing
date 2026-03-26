@@ -10,12 +10,16 @@ export function createInvoiceRouter() {
 		const { status, customerId, limit = "50" } = c.req.query();
 
 		const where: any = {};
-		if (status) where.status = status;
-		if (customerId) where.customerId = customerId;
+		if (status) {
+			where.status = status;
+		}
+		if (customerId) {
+			where.customerId = customerId;
+		}
 
 		const invoicesList = await db.invoice.findMany({
 			where,
-			take: Number.parseInt(limit),
+			take: Number.parseInt(limit, 10),
 			orderBy: { createdAt: "desc" },
 			include: {
 				customer: {

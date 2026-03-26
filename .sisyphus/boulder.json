@@ -1,0 +1,30 @@
+{
+  "active_plan": "/Users/erdenizkorkmaz/Documents/GitHub/Dakik/dakik-landing/.sisyphus/plans/hono-integration.md",
+  "started_at": "2026-03-26T12:55:35.694Z",
+  "session_ids": [
+    "ses_2d5c913fffferKcx1GEM5B1uiu",
+    "ses_2d5c775fcffevK57ILiLQQeG6b",
+    "ses_2d5c1bfe2ffebgfLGLlCIPo62f",
+    "ses_2d5c00bfeffekHf8r1NbjwwYoP",
+    "ses_2d5bb575dffeuTGXPie2S46GAq",
+    "ses_2d5bbca1affe1dIv4EOMlGi5qq",
+    "ses_2d5bb92abffe8qkaS6rxKxpmVZ",
+    "ses_2d5b1604dffe4yrIMVTmEryUsA",
+    "ses_2d5b0fed3ffe0xbNhRoVmmjR1h",
+    "ses_2d5b129b9ffe7B0IceJlz2FcTD",
+    "ses_2d5541990ffeB12IxlFyQkAjaB"
+  ],
+  "plan_name": "hono-integration",
+  "agent": "atlas",
+  "task_sessions": {
+    "final-wave:f1": {
+      "task_key": "final-wave:f1",
+      "task_label": "F1",
+      "task_title": "Landing Page Visual Verification",
+      "session_id": "ses_2d5b1604dffe4yrIMVTmEryUsA",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-03-26T13:22:23.422Z"
+    }
+  }
+}

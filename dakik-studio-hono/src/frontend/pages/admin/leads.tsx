@@ -6,23 +6,32 @@ import {
 	XIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { api, type Project } from "../../lib/api";
+import { api, type Lead } from "../../lib/api";
 
 const STATUS_OPTIONS = [
-	{ value: "PENDING", label: "Pending" },
-	{ value: "IN_PROGRESS", label: "In Progress" },
-	{ value: "ON_HOLD", label: "On Hold" },
-	{ value: "COMPLETED", label: "Completed" },
-	{ value: "CANCELLED", label: "Cancelled" },
+	{ value: "NEW", label: "New" },
+	{ value: "CONTACTED", label: "Contacted" },
+	{ value: "MEETING_SCHEDULED", label: "Meeting Scheduled" },
+	{ value: "MEETING_COMPLETED", label: "Meeting Completed" },
+	{ value: "CONVERTED", label: "Converted" },
+	{ value: "CLOSED", label: "Closed" },
+];
+
+const PROJECT_TYPE_OPTIONS = [
+	{ value: "AI_AUTOMATION", label: "AI Automation" },
+	{ value: "BRAND_IDENTITY", label: "Brand Identity" },
+	{ value: "WEB_MOBILE", label: "Web & Mobile" },
+	{ value: "FULL_PRODUCT", label: "Full Product" },
 ];
 
 function StatusBadge({ status }: { status: string }) {
 	const colors: Record<string, string> = {
-		PENDING: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-		IN_PROGRESS: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-		ON_HOLD: "bg-orange-500/20 text-orange-400 border-orange-500/30",
-		COMPLETED: "bg-green-500/20 text-green-400 border-green-500/30",
-		CANCELLED: "bg-red-500/20 text-red-400 border-red-500/30",
+		NEW: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+		CONTACTED: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+		MEETING_SCHEDULED: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+		MEETING_COMPLETED: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+		CONVERTED: "bg-green-500/20 text-green-400 border-green-500/30",
+		CLOSED: "bg-gray-500/20 text-gray-400 border-gray-500/30",
 	};
 
 	return (
@@ -31,17 +40,6 @@ function StatusBadge({ status }: { status: string }) {
 		>
 			{status.replace(/_/g, " ")}
 		</span>
-	);
-}
-
-function ProgressBar({ progress }: { progress: number }) {
-	return (
-		<div className="w-20 rounded-full bg-white/10">
-			<div
-				className="h-2 rounded-full bg-white/60"
-				style={{ width: `${progress}%` }}
-			/>
-		</div>
 	);
 }
 
@@ -64,20 +62,21 @@ function LoadingSkeletons() {
 function EmptyState() {
 	return (
 		<div className="py-8 text-center">
-			<p className="text-sm text-white/40">No projects yet.</p>
+			<p className="text-sm text-white/40">No leads yet.</p>
 		</div>
 	);
 }
 
-interface ProjectFormData {
-	title: string;
-	description: string;
+interface LeadFormData {
+	email: string;
+	name: string;
+	projectType: string;
+	budget: string;
+	details: string;
 	status: string;
-	progress: number;
-	customerId: string;
 }
 
-function ProjectModal({
+function LeadModal({
 	isOpen,
 	onClose,
 	onSubmit,
@@ -86,46 +85,51 @@ function ProjectModal({
 }: {
 	isOpen: boolean;
 	onClose: () => void;
-	onSubmit: (data: ProjectFormData) => void;
-	initialData?: Project;
+	onSubmit: (data: LeadFormData) => void;
+	initialData?: Lead;
 	isLoading?: boolean;
 }) {
-	const [formData, setFormData] = useState<ProjectFormData>({
-		title: "",
-		description: "",
-		status: "PENDING",
-		progress: 0,
-		customerId: "",
+	const [formData, setFormData] = useState<LeadFormData>({
+		email: "",
+		name: "",
+		projectType: "",
+		budget: "",
+		details: "",
+		status: "NEW",
 	});
 
 	useEffect(() => {
 		if (initialData) {
 			setFormData({
-				title: initialData.title,
-				description: initialData.description ?? "",
+				email: initialData.email,
+				name: initialData.name ?? "",
+				projectType: initialData.projectType ?? "",
+				budget: initialData.budget ?? "",
+				details: initialData.details ?? "",
 				status: initialData.status,
-				progress: initialData.progress,
-				customerId: initialData.customerId,
 			});
 		} else {
 			setFormData({
-				title: "",
-				description: "",
-				status: "PENDING",
-				progress: 0,
-				customerId: "",
+				email: "",
+				name: "",
+				projectType: "",
+				budget: "",
+				details: "",
+				status: "NEW",
 			});
 		}
-	}, [initialData, isOpen]);
+	}, [initialData]);
 
-	if (!isOpen) return null;
+	if (!isOpen) {
+		return null;
+	}
 
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
 			<div className="w-full max-w-md rounded-xl border border-white/10 bg-neutral-900 p-6">
 				<div className="mb-4 flex items-center justify-between">
 					<h2 className="font-semibold text-lg">
-						{initialData ? "Edit Project" : "Create Project"}
+						{initialData ? "Edit Lead" : "Create Lead"}
 					</h2>
 					<button onClick={onClose} type="button">
 						<XIcon className="size-5 text-white/60" />
@@ -139,50 +143,53 @@ function ProjectModal({
 					}}
 				>
 					<div>
-						<label className="mb-1 block text-white/60 text-xs" htmlFor="title">
-							Title *
-						</label>
+						<label className="mb-1 block text-white/60 text-xs">Email *</label>
 						<input
 							className="w-full rounded-lg border border-white/10 bg-neutral-800 px-3 py-2 text-sm text-white placeholder:text-white/40"
-							id="title"
 							onChange={(e) =>
-								setFormData({ ...formData, title: e.target.value })
+								setFormData({ ...formData, email: e.target.value })
 							}
-							placeholder="Project title"
+							placeholder="email@example.com"
 							required
-							type="text"
-							value={formData.title}
+							type="email"
+							value={formData.email}
 						/>
 					</div>
 					<div>
-						<label
-							className="mb-1 block text-white/60 text-xs"
-							htmlFor="customerId"
-						>
-							Customer ID *
-						</label>
+						<label className="mb-1 block text-white/60 text-xs">Name</label>
 						<input
 							className="w-full rounded-lg border border-white/10 bg-neutral-800 px-3 py-2 text-sm text-white placeholder:text-white/40"
-							id="customerId"
 							onChange={(e) =>
-								setFormData({ ...formData, customerId: e.target.value })
+								setFormData({ ...formData, name: e.target.value })
 							}
-							placeholder="Customer ID"
-							required
+							placeholder="John Doe"
 							type="text"
-							value={formData.customerId}
+							value={formData.name}
 						/>
 					</div>
 					<div>
-						<label
-							className="mb-1 block text-white/60 text-xs"
-							htmlFor="status"
-						>
-							Status
+						<label className="mb-1 block text-white/60 text-xs">
+							Project Type
 						</label>
 						<select
 							className="w-full rounded-lg border border-white/10 bg-neutral-800 px-3 py-2 text-sm text-white"
-							id="status"
+							onChange={(e) =>
+								setFormData({ ...formData, projectType: e.target.value })
+							}
+							value={formData.projectType}
+						>
+							<option value="">Select project type</option>
+							{PROJECT_TYPE_OPTIONS.map((opt) => (
+								<option key={opt.value} value={opt.value}>
+									{opt.label}
+								</option>
+							))}
+						</select>
+					</div>
+					<div>
+						<label className="mb-1 block text-white/60 text-xs">Status</label>
+						<select
+							className="w-full rounded-lg border border-white/10 bg-neutral-800 px-3 py-2 text-sm text-white"
 							onChange={(e) =>
 								setFormData({ ...formData, status: e.target.value })
 							}
@@ -196,43 +203,15 @@ function ProjectModal({
 						</select>
 					</div>
 					<div>
-						<label
-							className="mb-1 block text-white/60 text-xs"
-							htmlFor="progress"
-						>
-							Progress ({formData.progress}%)
-						</label>
-						<input
-							className="w-full"
-							id="progress"
-							max={100}
-							min={0}
-							onChange={(e) =>
-								setFormData({
-									...formData,
-									progress: Number.parseInt(e.target.value),
-								})
-							}
-							type="range"
-							value={formData.progress}
-						/>
-					</div>
-					<div>
-						<label
-							className="mb-1 block text-white/60 text-xs"
-							htmlFor="description"
-						>
-							Description
-						</label>
+						<label className="mb-1 block text-white/60 text-xs">Details</label>
 						<textarea
 							className="w-full rounded-lg border border-white/10 bg-neutral-800 px-3 py-2 text-sm text-white placeholder:text-white/40"
-							id="description"
 							onChange={(e) =>
-								setFormData({ ...formData, description: e.target.value })
+								setFormData({ ...formData, details: e.target.value })
 							}
-							placeholder="Project description..."
+							placeholder="Additional details..."
 							rows={3}
-							value={formData.description}
+							value={formData.details}
 						/>
 					</div>
 					<div className="flex gap-3 pt-2">
@@ -257,66 +236,70 @@ function ProjectModal({
 	);
 }
 
-export function AdminProjects() {
-	const [projects, setProjects] = useState<Project[]>([]);
+export function AdminLeads() {
+	const [leads, setLeads] = useState<Lead[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [isModalOpen, setIsModalOpen] = useState(false);
-	const [editingProject, setEditingProject] = useState<Project | undefined>();
+	const [editingLead, setEditingLead] = useState<Lead | undefined>();
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-	async function fetchProjects() {
+	async function fetchLeads() {
 		try {
 			setIsLoading(true);
-			const data = await api.projects.list();
-			setProjects(data.projects);
+			const data = await api.leads.list();
+			setLeads(data.leads);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to load projects");
+			setError(err instanceof Error ? err.message : "Failed to load leads");
 		} finally {
 			setIsLoading(false);
 		}
 	}
 
 	useEffect(() => {
-		fetchProjects();
-	}, []);
+		fetchLeads();
+	}, [fetchLeads]);
 
-	async function handleCreate(data: ProjectFormData) {
+	async function handleCreate(data: LeadFormData) {
 		try {
 			setIsSubmitting(true);
-			await api.projects.create(data);
+			await api.leads.create(data);
 			setIsModalOpen(false);
-			fetchProjects();
+			fetchLeads();
 		} catch (err) {
-			alert(err instanceof Error ? err.message : "Failed to create project");
+			alert(err instanceof Error ? err.message : "Failed to create lead");
 		} finally {
 			setIsSubmitting(false);
 		}
 	}
 
-	async function handleUpdate(data: ProjectFormData) {
-		if (!editingProject) return;
+	async function handleUpdate(data: LeadFormData) {
+		if (!editingLead) {
+			return;
+		}
 		try {
 			setIsSubmitting(true);
-			await api.projects.update(editingProject.id, data);
+			await api.leads.update(editingLead.id, data);
 			setIsModalOpen(false);
-			setEditingProject(undefined);
-			fetchProjects();
+			setEditingLead(undefined);
+			fetchLeads();
 		} catch (err) {
-			alert(err instanceof Error ? err.message : "Failed to update project");
+			alert(err instanceof Error ? err.message : "Failed to update lead");
 		} finally {
 			setIsSubmitting(false);
 		}
 	}
 
 	async function handleDelete(id: string) {
-		if (!confirm("Are you sure you want to delete this project?")) return;
+		if (!confirm("Are you sure you want to delete this lead?")) {
+			return;
+		}
 		try {
-			await api.projects.delete(id);
-			fetchProjects();
+			await api.leads.delete(id);
+			fetchLeads();
 		} catch (err) {
-			alert(err instanceof Error ? err.message : "Failed to delete project");
+			alert(err instanceof Error ? err.message : "Failed to delete lead");
 		}
 	}
 
@@ -324,21 +307,21 @@ export function AdminProjects() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="font-bold text-2xl tracking-tight">Projects</h1>
+					<h1 className="font-bold text-2xl tracking-tight">Leads</h1>
 					<p className="mt-1 text-sm text-white/60">
-						Manage your client projects.
+						Manage leads from survey submissions.
 					</p>
 				</div>
 				<button
 					className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 font-medium text-black text-sm hover:bg-white/90"
 					onClick={() => {
-						setEditingProject(undefined);
+						setEditingLead(undefined);
 						setIsModalOpen(true);
 					}}
 					type="button"
 				>
 					<PlusIcon className="size-4" />
-					Create Project
+					Create Lead
 				</button>
 			</div>
 
@@ -354,16 +337,16 @@ export function AdminProjects() {
 						<thead>
 							<tr className="border-white/10 border-b">
 								<th className="px-4 py-3 text-left font-medium text-white/60 text-xs">
-									Title
+									Email
+								</th>
+								<th className="px-4 py-3 text-left font-medium text-white/60 text-xs">
+									Name
 								</th>
 								<th className="hidden px-4 py-3 text-left font-medium text-white/60 text-xs md:table-cell">
-									Customer
+									Project Type
 								</th>
 								<th className="px-4 py-3 text-left font-medium text-white/60 text-xs">
 									Status
-								</th>
-								<th className="hidden px-4 py-3 text-left font-medium text-white/60 text-xs lg:table-cell">
-									Progress
 								</th>
 								<th className="hidden px-4 py-3 text-left font-medium text-white/60 text-xs lg:table-cell">
 									Created
@@ -375,25 +358,23 @@ export function AdminProjects() {
 						</thead>
 						<tbody>
 							{isLoading && <LoadingSkeletons />}
-							{!isLoading && projects.length === 0 && <EmptyState />}
+							{!isLoading && leads.length === 0 && <EmptyState />}
 							{!isLoading &&
-								projects.map((project) => (
+								leads.map((lead) => (
 									<tr
 										className="border-white/5 border-b last:border-0"
-										key={project.id}
+										key={lead.id}
 									>
-										<td className="px-4 py-3 text-sm">{project.title}</td>
+										<td className="px-4 py-3 text-sm">{lead.email}</td>
+										<td className="px-4 py-3 text-sm">{lead.name ?? "—"}</td>
 										<td className="hidden px-4 py-3 text-sm text-white/60 md:table-cell">
-											{project.customer?.companyName ?? project.customerId}
+											{lead.projectType ?? "—"}
 										</td>
 										<td className="px-4 py-3">
-											<StatusBadge status={project.status} />
-										</td>
-										<td className="hidden px-4 py-3 lg:table-cell">
-											<ProgressBar progress={project.progress} />
+											<StatusBadge status={lead.status} />
 										</td>
 										<td className="hidden px-4 py-3 text-sm text-white/60 lg:table-cell">
-											{new Date(project.createdAt).toLocaleDateString()}
+											{new Date(lead.createdAt).toLocaleDateString()}
 										</td>
 										<td className="px-4 py-3 text-right">
 											<div className="relative">
@@ -401,19 +382,19 @@ export function AdminProjects() {
 													className="rounded p-1 hover:bg-white/10"
 													onClick={() =>
 														setOpenMenuId(
-															openMenuId === project.id ? null : project.id
+															openMenuId === lead.id ? null : lead.id
 														)
 													}
 													type="button"
 												>
 													<MoreHorizontalIcon className="size-4 text-white/60" />
 												</button>
-												{openMenuId === project.id && (
+												{openMenuId === lead.id && (
 													<div className="absolute top-full right-0 z-10 mt-1 w-36 rounded-lg border border-white/10 bg-neutral-800 py-1 shadow-lg">
 														<button
 															className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-white hover:bg-white/10"
 															onClick={() => {
-																setEditingProject(project);
+																setEditingLead(lead);
 																setIsModalOpen(true);
 																setOpenMenuId(null);
 															}}
@@ -425,7 +406,7 @@ export function AdminProjects() {
 														<button
 															className="flex w-full items-center gap-2 px-3 py-2 text-left text-red-400 text-sm hover:bg-white/10"
 															onClick={() => {
-																handleDelete(project.id);
+																handleDelete(lead.id);
 																setOpenMenuId(null);
 															}}
 															type="button"
@@ -444,15 +425,15 @@ export function AdminProjects() {
 				</div>
 			</div>
 
-			<ProjectModal
-				initialData={editingProject}
+			<LeadModal
+				initialData={editingLead}
 				isLoading={isSubmitting}
 				isOpen={isModalOpen}
 				onClose={() => {
 					setIsModalOpen(false);
-					setEditingProject(undefined);
+					setEditingLead(undefined);
 				}}
-				onSubmit={editingProject ? handleUpdate : handleCreate}
+				onSubmit={editingLead ? handleUpdate : handleCreate}
 			/>
 		</div>
 	);

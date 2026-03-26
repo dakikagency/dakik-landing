@@ -1,26 +1,25 @@
 import {
+	CalendarIcon,
+	LinkIcon,
 	MoreHorizontalIcon,
 	PencilIcon,
-	PlusIcon,
 	Trash2Icon,
 	XIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { api, type Invoice } from "../../lib/api";
+import { api, type Meeting } from "../../lib/api";
 
 const STATUS_OPTIONS = [
-	{ value: "UNPAID", label: "Unpaid" },
-	{ value: "PENDING", label: "Pending" },
-	{ value: "PAID", label: "Paid" },
-	{ value: "OVERDUE", label: "Overdue" },
+	{ value: "SCHEDULED", label: "Scheduled" },
+	{ value: "COMPLETED", label: "Completed" },
+	{ value: "CANCELLED", label: "Cancelled" },
 ];
 
 function StatusBadge({ status }: { status: string }) {
 	const colors: Record<string, string> = {
-		UNPAID: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-		PENDING: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-		PAID: "bg-green-500/20 text-green-400 border-green-500/30",
-		OVERDUE: "bg-red-500/20 text-red-400 border-red-500/30",
+		SCHEDULED: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+		COMPLETED: "bg-green-500/20 text-green-400 border-green-500/30",
+		CANCELLED: "bg-red-500/20 text-red-400 border-red-500/30",
 	};
 
 	return (
@@ -51,22 +50,22 @@ function LoadingSkeletons() {
 function EmptyState() {
 	return (
 		<div className="py-8 text-center">
-			<p className="text-sm text-white/40">No invoices yet.</p>
+			<p className="text-sm text-white/40">No meetings yet.</p>
 		</div>
 	);
 }
 
-interface InvoiceFormData {
-	customerId: string;
-	projectId: string;
-	amount: number;
+interface MeetingFormData {
+	title: string;
 	description: string;
+	scheduledAt: string;
+	duration: number;
 	status: string;
-	invoiceDate: string;
-	dueDate: string;
+	leadId: string;
+	customerId: string;
 }
 
-function InvoiceModal({
+function MeetingModal({
 	isOpen,
 	onClose,
 	onSubmit,
@@ -75,52 +74,59 @@ function InvoiceModal({
 }: {
 	isOpen: boolean;
 	onClose: () => void;
-	onSubmit: (data: InvoiceFormData) => void;
-	initialData?: Invoice;
+	onSubmit: (data: MeetingFormData) => void;
+	initialData?: Meeting;
 	isLoading?: boolean;
 }) {
-	const [formData, setFormData] = useState<InvoiceFormData>({
-		customerId: "",
-		projectId: "",
-		amount: 0,
+	const [formData, setFormData] = useState<MeetingFormData>({
+		title: "",
 		description: "",
-		status: "UNPAID",
-		invoiceDate: new Date().toISOString().split("T")[0],
-		dueDate: "",
+		scheduledAt: "",
+		duration: 30,
+		status: "SCHEDULED",
+		leadId: "",
+		customerId: "",
 	});
 
 	useEffect(() => {
 		if (initialData) {
+			const dateStr = initialData.scheduledAt.split("T")[0];
+			const timeStr =
+				initialData.scheduledAt.split("T")[1]?.slice(0, 5) ?? "09:00";
 			setFormData({
-				customerId: initialData.customerId,
-				projectId: initialData.projectId ?? "",
-				amount: initialData.amount,
+				title: initialData.title,
 				description: initialData.description ?? "",
+				scheduledAt: `${dateStr}T${timeStr}`,
+				duration: initialData.duration,
 				status: initialData.status,
-				invoiceDate: initialData.invoiceDate.split("T")[0],
-				dueDate: initialData.dueDate?.split("T")[0] ?? "",
+				leadId: initialData.leadId ?? "",
+				customerId: initialData.customerId ?? "",
 			});
 		} else {
+			const now = new Date();
+			now.setHours(now.getHours() + 1, 0, 0, 0);
 			setFormData({
-				customerId: "",
-				projectId: "",
-				amount: 0,
+				title: "",
 				description: "",
-				status: "UNPAID",
-				invoiceDate: new Date().toISOString().split("T")[0],
-				dueDate: "",
+				scheduledAt: now.toISOString().slice(0, 16),
+				duration: 30,
+				status: "SCHEDULED",
+				leadId: "",
+				customerId: "",
 			});
 		}
-	}, [initialData, isOpen]);
+	}, [initialData]);
 
-	if (!isOpen) return null;
+	if (!isOpen) {
+		return null;
+	}
 
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
 			<div className="w-full max-w-md rounded-xl border border-white/10 bg-neutral-900 p-6">
 				<div className="mb-4 flex items-center justify-between">
 					<h2 className="font-semibold text-lg">
-						{initialData ? "Edit Invoice" : "Create Invoice"}
+						{initialData ? "Edit Meeting" : "Schedule Meeting"}
 					</h2>
 					<button onClick={onClose} type="button">
 						<XIcon className="size-5 text-white/60" />
@@ -134,65 +140,63 @@ function InvoiceModal({
 					}}
 				>
 					<div>
-						<label
-							className="mb-1 block text-white/60 text-xs"
-							htmlFor="customerId"
-						>
-							Customer ID *
+						<label className="mb-1 block text-white/60 text-xs" htmlFor="title">
+							Title *
 						</label>
 						<input
 							className="w-full rounded-lg border border-white/10 bg-neutral-800 px-3 py-2 text-sm text-white placeholder:text-white/40"
-							id="customerId"
+							id="title"
 							onChange={(e) =>
-								setFormData({ ...formData, customerId: e.target.value })
+								setFormData({ ...formData, title: e.target.value })
 							}
-							placeholder="Customer ID"
+							placeholder="Meeting title"
 							required
 							type="text"
-							value={formData.customerId}
+							value={formData.title}
 						/>
 					</div>
 					<div>
 						<label
 							className="mb-1 block text-white/60 text-xs"
-							htmlFor="projectId"
+							htmlFor="scheduledAt"
 						>
-							Project ID
+							Date & Time *
 						</label>
 						<input
-							className="w-full rounded-lg border border-white/10 bg-neutral-800 px-3 py-2 text-sm text-white placeholder:text-white/40"
-							id="projectId"
+							className="w-full rounded-lg border border-white/10 bg-neutral-800 px-3 py-2 text-sm text-white"
+							id="scheduledAt"
 							onChange={(e) =>
-								setFormData({ ...formData, projectId: e.target.value })
+								setFormData({ ...formData, scheduledAt: e.target.value })
 							}
-							placeholder="Project ID (optional)"
-							type="text"
-							value={formData.projectId}
+							required
+							type="datetime-local"
+							value={formData.scheduledAt}
 						/>
 					</div>
 					<div>
 						<label
 							className="mb-1 block text-white/60 text-xs"
-							htmlFor="amount"
+							htmlFor="duration"
 						>
-							Amount *
+							Duration (minutes)
 						</label>
-						<input
-							className="w-full rounded-lg border border-white/10 bg-neutral-800 px-3 py-2 text-sm text-white placeholder:text-white/40"
-							id="amount"
-							min={0}
+						<select
+							className="w-full rounded-lg border border-white/10 bg-neutral-800 px-3 py-2 text-sm text-white"
+							id="duration"
 							onChange={(e) =>
 								setFormData({
 									...formData,
-									amount: Number.parseFloat(e.target.value),
+									duration: Number.parseInt(e.target.value, 10),
 								})
 							}
-							placeholder="0.00"
-							required
-							step="0.01"
-							type="number"
-							value={formData.amount}
-						/>
+							value={formData.duration}
+						>
+							<option value={15}>15 min</option>
+							<option value={30}>30 min</option>
+							<option value={45}>45 min</option>
+							<option value={60}>60 min</option>
+							<option value={90}>90 min</option>
+						</select>
 					</div>
 					<div>
 						<label
@@ -219,36 +223,37 @@ function InvoiceModal({
 					<div>
 						<label
 							className="mb-1 block text-white/60 text-xs"
-							htmlFor="invoiceDate"
+							htmlFor="leadId"
 						>
-							Invoice Date *
+							Lead ID
 						</label>
 						<input
-							className="w-full rounded-lg border border-white/10 bg-neutral-800 px-3 py-2 text-sm text-white"
-							id="invoiceDate"
+							className="w-full rounded-lg border border-white/10 bg-neutral-800 px-3 py-2 text-sm text-white placeholder:text-white/40"
+							id="leadId"
 							onChange={(e) =>
-								setFormData({ ...formData, invoiceDate: e.target.value })
+								setFormData({ ...formData, leadId: e.target.value })
 							}
-							required
-							type="date"
-							value={formData.invoiceDate}
+							placeholder="Lead ID (optional)"
+							type="text"
+							value={formData.leadId}
 						/>
 					</div>
 					<div>
 						<label
 							className="mb-1 block text-white/60 text-xs"
-							htmlFor="dueDate"
+							htmlFor="customerId"
 						>
-							Due Date
+							Customer ID
 						</label>
 						<input
-							className="w-full rounded-lg border border-white/10 bg-neutral-800 px-3 py-2 text-sm text-white"
-							id="dueDate"
+							className="w-full rounded-lg border border-white/10 bg-neutral-800 px-3 py-2 text-sm text-white placeholder:text-white/40"
+							id="customerId"
 							onChange={(e) =>
-								setFormData({ ...formData, dueDate: e.target.value })
+								setFormData({ ...formData, customerId: e.target.value })
 							}
-							type="date"
-							value={formData.dueDate}
+							placeholder="Customer ID (optional)"
+							type="text"
+							value={formData.customerId}
 						/>
 					</div>
 					<div>
@@ -264,7 +269,7 @@ function InvoiceModal({
 							onChange={(e) =>
 								setFormData({ ...formData, description: e.target.value })
 							}
-							placeholder="Invoice description..."
+							placeholder="Meeting agenda..."
 							rows={3}
 							value={formData.description}
 						/>
@@ -291,66 +296,84 @@ function InvoiceModal({
 	);
 }
 
-export function AdminInvoices() {
-	const [invoices, setInvoices] = useState<Invoice[]>([]);
+export function AdminMeetings() {
+	const [meetings, setMeetings] = useState<Meeting[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [isModalOpen, setIsModalOpen] = useState(false);
-	const [editingInvoice, setEditingInvoice] = useState<Invoice | undefined>();
+	const [editingMeeting, setEditingMeeting] = useState<Meeting | undefined>();
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-	async function fetchInvoices() {
+	async function fetchMeetings() {
 		try {
 			setIsLoading(true);
-			const data = await api.invoices.list();
-			setInvoices(data.invoices);
+			const data = await api.meetings.list();
+			setMeetings(data.meetings);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to load invoices");
+			setError(err instanceof Error ? err.message : "Failed to load meetings");
 		} finally {
 			setIsLoading(false);
 		}
 	}
 
 	useEffect(() => {
-		fetchInvoices();
-	}, []);
+		fetchMeetings();
+	}, [fetchMeetings]);
 
-	async function handleCreate(data: InvoiceFormData) {
+	async function handleCreate(data: MeetingFormData) {
 		try {
 			setIsSubmitting(true);
-			await api.invoices.create(data);
+			const [datePart, timePart] = data.scheduledAt.split("T");
+			await api.meetings.create({
+				...data,
+				date: datePart,
+				startTime: timePart,
+			});
 			setIsModalOpen(false);
-			fetchInvoices();
+			fetchMeetings();
 		} catch (err) {
-			alert(err instanceof Error ? err.message : "Failed to create invoice");
+			alert(err instanceof Error ? err.message : "Failed to create meeting");
 		} finally {
 			setIsSubmitting(false);
 		}
 	}
 
-	async function handleUpdate(data: InvoiceFormData) {
-		if (!editingInvoice) return;
+	async function handleUpdate(data: MeetingFormData) {
+		if (!editingMeeting) {
+			return;
+		}
 		try {
 			setIsSubmitting(true);
-			await api.invoices.update(editingInvoice.id, data);
+			await api.meetings.update(editingMeeting.id, { status: data.status });
 			setIsModalOpen(false);
-			setEditingInvoice(undefined);
-			fetchInvoices();
+			setEditingMeeting(undefined);
+			fetchMeetings();
 		} catch (err) {
-			alert(err instanceof Error ? err.message : "Failed to update invoice");
+			alert(err instanceof Error ? err.message : "Failed to update meeting");
 		} finally {
 			setIsSubmitting(false);
 		}
 	}
 
 	async function handleDelete(id: string) {
-		if (!confirm("Are you sure you want to delete this invoice?")) return;
+		if (!confirm("Are you sure you want to delete this meeting?")) {
+			return;
+		}
 		try {
-			await api.invoices.delete(id);
-			fetchInvoices();
+			await api.meetings.delete(id);
+			fetchMeetings();
 		} catch (err) {
-			alert(err instanceof Error ? err.message : "Failed to delete invoice");
+			alert(err instanceof Error ? err.message : "Failed to delete meeting");
+		}
+	}
+
+	async function handleCancel(id: string) {
+		try {
+			await api.meetings.update(id, { status: "CANCELLED" });
+			fetchMeetings();
+		} catch (err) {
+			alert(err instanceof Error ? err.message : "Failed to cancel meeting");
 		}
 	}
 
@@ -358,21 +381,21 @@ export function AdminInvoices() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="font-bold text-2xl tracking-tight">Invoices</h1>
+					<h1 className="font-bold text-2xl tracking-tight">Meetings</h1>
 					<p className="mt-1 text-sm text-white/60">
-						Manage invoices and payments.
+						Manage scheduled meetings.
 					</p>
 				</div>
 				<button
 					className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 font-medium text-black text-sm hover:bg-white/90"
 					onClick={() => {
-						setEditingInvoice(undefined);
+						setEditingMeeting(undefined);
 						setIsModalOpen(true);
 					}}
 					type="button"
 				>
-					<PlusIcon className="size-4" />
-					Create Invoice
+					<CalendarIcon className="size-4" />
+					Schedule Meeting
 				</button>
 			</div>
 
@@ -388,19 +411,16 @@ export function AdminInvoices() {
 						<thead>
 							<tr className="border-white/10 border-b">
 								<th className="px-4 py-3 text-left font-medium text-white/60 text-xs">
-									Invoice #
+									Title
 								</th>
 								<th className="hidden px-4 py-3 text-left font-medium text-white/60 text-xs md:table-cell">
-									Customer
+									Date & Time
 								</th>
 								<th className="px-4 py-3 text-left font-medium text-white/60 text-xs">
-									Amount
+									Duration
 								</th>
 								<th className="px-4 py-3 text-left font-medium text-white/60 text-xs">
 									Status
-								</th>
-								<th className="hidden px-4 py-3 text-left font-medium text-white/60 text-xs lg:table-cell">
-									Due Date
 								</th>
 								<th className="w-12 px-4 py-3 text-right font-medium text-white/60 text-xs">
 									<span className="sr-only">Actions</span>
@@ -409,29 +429,36 @@ export function AdminInvoices() {
 						</thead>
 						<tbody>
 							{isLoading && <LoadingSkeletons />}
-							{!isLoading && invoices.length === 0 && <EmptyState />}
+							{!isLoading && meetings.length === 0 && <EmptyState />}
 							{!isLoading &&
-								invoices.map((invoice) => (
+								meetings.map((meeting) => (
 									<tr
 										className="border-white/5 border-b last:border-0"
-										key={invoice.id}
+										key={meeting.id}
 									>
-										<td className="px-4 py-3 font-mono text-sm">
-											{invoice.id.slice(0, 8)}
+										<td className="px-4 py-3 text-sm">
+											<div className="flex items-center gap-2">
+												{meeting.title}
+												{meeting.meetUrl && (
+													<a
+														className="text-white/40 hover:text-white"
+														href={meeting.meetUrl}
+														rel="noopener noreferrer"
+														target="_blank"
+													>
+														<LinkIcon className="size-3" />
+													</a>
+												)}
+											</div>
 										</td>
 										<td className="hidden px-4 py-3 text-sm text-white/60 md:table-cell">
-											{invoice.customerId}
+											{new Date(meeting.scheduledAt).toLocaleString()}
 										</td>
 										<td className="px-4 py-3 text-sm">
-											${invoice.amount.toFixed(2)}
+											{meeting.duration} min
 										</td>
 										<td className="px-4 py-3">
-											<StatusBadge status={invoice.status} />
-										</td>
-										<td className="hidden px-4 py-3 text-sm text-white/60 lg:table-cell">
-											{invoice.dueDate
-												? new Date(invoice.dueDate).toLocaleDateString()
-												: "—"}
+											<StatusBadge status={meeting.status} />
 										</td>
 										<td className="px-4 py-3 text-right">
 											<div className="relative">
@@ -439,19 +466,30 @@ export function AdminInvoices() {
 													className="rounded p-1 hover:bg-white/10"
 													onClick={() =>
 														setOpenMenuId(
-															openMenuId === invoice.id ? null : invoice.id
+															openMenuId === meeting.id ? null : meeting.id
 														)
 													}
 													type="button"
 												>
 													<MoreHorizontalIcon className="size-4 text-white/60" />
 												</button>
-												{openMenuId === invoice.id && (
+												{openMenuId === meeting.id && (
 													<div className="absolute top-full right-0 z-10 mt-1 w-36 rounded-lg border border-white/10 bg-neutral-800 py-1 shadow-lg">
+														{meeting.meetUrl && (
+															<a
+																className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-white hover:bg-white/10"
+																href={meeting.meetUrl}
+																rel="noopener noreferrer"
+																target="_blank"
+															>
+																<LinkIcon className="size-4" />
+																Join
+															</a>
+														)}
 														<button
 															className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-white hover:bg-white/10"
 															onClick={() => {
-																setEditingInvoice(invoice);
+																setEditingMeeting(meeting);
 																setIsModalOpen(true);
 																setOpenMenuId(null);
 															}}
@@ -460,10 +498,22 @@ export function AdminInvoices() {
 															<PencilIcon className="size-4" />
 															Edit
 														</button>
+														{meeting.status === "SCHEDULED" && (
+															<button
+																className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-yellow-400 hover:bg-white/10"
+																onClick={() => {
+																	handleCancel(meeting.id);
+																	setOpenMenuId(null);
+																}}
+																type="button"
+															>
+																Cancel
+															</button>
+														)}
 														<button
 															className="flex w-full items-center gap-2 px-3 py-2 text-left text-red-400 text-sm hover:bg-white/10"
 															onClick={() => {
-																handleDelete(invoice.id);
+																handleDelete(meeting.id);
 																setOpenMenuId(null);
 															}}
 															type="button"
@@ -482,15 +532,15 @@ export function AdminInvoices() {
 				</div>
 			</div>
 
-			<InvoiceModal
-				initialData={editingInvoice}
+			<MeetingModal
+				initialData={editingMeeting}
 				isLoading={isSubmitting}
 				isOpen={isModalOpen}
 				onClose={() => {
 					setIsModalOpen(false);
-					setEditingInvoice(undefined);
+					setEditingMeeting(undefined);
 				}}
-				onSubmit={editingInvoice ? handleUpdate : handleCreate}
+				onSubmit={editingMeeting ? handleUpdate : handleCreate}
 			/>
 		</div>
 	);

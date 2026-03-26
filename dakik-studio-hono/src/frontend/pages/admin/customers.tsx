@@ -66,9 +66,11 @@ function CustomerModal({
 				phone: "",
 			});
 		}
-	}, [initialData, isOpen]);
+	}, [initialData]);
 
-	if (!isOpen) return null;
+	if (!isOpen) {
+		return null;
+	}
 
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
@@ -168,10 +170,12 @@ export function AdminCustomers() {
 
 	useEffect(() => {
 		fetchCustomers();
-	}, []);
+	}, [fetchCustomers]);
 
 	async function handleUpdate(data: CustomerFormData) {
-		if (!editingCustomer) return;
+		if (!editingCustomer) {
+			return;
+		}
 		try {
 			setIsSubmitting(true);
 			await api.customers.update(editingCustomer.id, data);
@@ -186,7 +190,9 @@ export function AdminCustomers() {
 	}
 
 	async function handleDelete(id: string) {
-		if (!confirm("Are you sure you want to delete this customer?")) return;
+		if (!confirm("Are you sure you want to delete this customer?")) {
+			return;
+		}
 		try {
 			await api.customers.delete(id);
 			fetchCustomers();

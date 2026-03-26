@@ -73,12 +73,14 @@ export function createMeetingRouter() {
 		}
 		if (startDate || endDate) {
 			where.scheduledAt = {};
-			if (startDate)
+			if (startDate) {
 				(where.scheduledAt as Record<string, unknown>).gte = new Date(
 					startDate
 				);
-			if (endDate)
+			}
+			if (endDate) {
 				(where.scheduledAt as Record<string, unknown>).lte = new Date(endDate);
+			}
 		}
 
 		const meetingsList = await db.meeting.findMany({

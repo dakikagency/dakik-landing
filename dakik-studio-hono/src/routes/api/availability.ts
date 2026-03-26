@@ -12,7 +12,7 @@ export function createAvailabilityRouter() {
 			return c.json({ error: "startDate and endDate are required" }, 400);
 		}
 
-		const durationMins = Number.parseInt(duration);
+		const durationMins = Number.parseInt(duration, 10);
 		const start = new Date(startDate);
 		const end = new Date(endDate);
 
@@ -48,7 +48,7 @@ export function createAvailabilityRouter() {
 			const dayOfWeek = current.getDay();
 			const dayHours = workingHours.find((wh) => wh.dayOfWeek === dayOfWeek);
 
-			if (dayHours && dayHours.isEnabled) {
+			if (dayHours?.isEnabled) {
 				const dateStr = current.toISOString().split("T")[0];
 				const daySlots: { start: string; end: string; available: boolean }[] =
 					[];
@@ -66,7 +66,9 @@ export function createAvailabilityRouter() {
 				while (slotStart < dayEnd) {
 					const slotEnd = new Date(slotStart.getTime() + durationMins * 60_000);
 
-					if (slotEnd > dayEnd) break;
+					if (slotEnd > dayEnd) {
+						break;
+					}
 
 					// Check if slot conflicts with existing meetings
 					const conflicting = existingMeetings.find((m) => {

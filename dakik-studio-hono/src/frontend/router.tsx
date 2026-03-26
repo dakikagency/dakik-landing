@@ -1,19 +1,19 @@
 import { createBrowserRouter, Outlet } from "react-router-dom";
-import { AdminLayout } from "./components/admin/AdminLayout";
-import { PortalLayout } from "./components/portal/PortalLayout";
-import { AdminCustomers } from "./pages/admin/Customers";
-import { AdminDashboard } from "./pages/admin/Dashboard";
-import { AdminInvoices } from "./pages/admin/Invoices";
-import { AdminLeads } from "./pages/admin/Leads";
-import { AdminMeetings } from "./pages/admin/Meetings";
-import { AdminProjects } from "./pages/admin/Projects";
-import { LandingPage } from "./pages/LandingPage";
-import { LoginPage } from "./pages/Login";
-import { PortalDashboard } from "./pages/portal/Dashboard";
-import { PortalInvoices } from "./pages/portal/Invoices";
-import { PortalMeetings } from "./pages/portal/Meetings";
-import { PortalProjects } from "./pages/portal/Projects";
-import { SurveyPage } from "./pages/Survey";
+import { AdminLayout } from "./components/admin/admin-layout";
+import { PortalLayout } from "./components/portal/portal-layout";
+import { AdminCustomers } from "./pages/admin/customers";
+import { AdminDashboard } from "./pages/admin/dashboard";
+import { AdminInvoices } from "./pages/admin/invoices";
+import { AdminLeads } from "./pages/admin/leads";
+import { AdminMeetings } from "./pages/admin/meetings";
+import { AdminProjects } from "./pages/admin/projects";
+import { LandingPage } from "./pages/landing-page";
+import { LoginPage } from "./pages/login";
+import { PortalDashboard } from "./pages/portal/dashboard";
+import { PortalInvoices } from "./pages/portal/invoices";
+import { PortalMeetings } from "./pages/portal/meetings";
+import { PortalProjects } from "./pages/portal/projects";
+import { SurveyPage } from "./pages/survey";
 
 export const router = createBrowserRouter([
 	{
