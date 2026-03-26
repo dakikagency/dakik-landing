@@ -13,6 +13,7 @@ Dakik Studio is a digital agency website built as a Turborepo monorepo. It featu
 | Package Manager | Bun 1.3.5 |
 | Monorepo Tool | Turborepo 2.6.3 |
 | Frontend | Next.js 16.1.1 (App Router) |
+| Deployment | Cloudflare Workers via OpenNext |
 | Language | TypeScript 5.x (strict mode) |
 | Styling | Tailwind CSS 4.x |
 | UI Components | shadcn/ui, Base UI, Phosphor Icons |
@@ -24,7 +25,7 @@ Dakik Studio is a digital agency website built as a Turborepo monorepo. It featu
 | Auth | better-auth 1.4.x with Google OAuth |
 | Forms | React Hook Form, Tanstack Form |
 | State Management | Tanstack Query (React Query) |
-| Email | Nodemailer |
+| Email | Resend |
 | Media | Cloudinary |
 | Payments | Stripe |
 | Linting/Formatting | Biome 2.3.x (via Ultracite) |
@@ -120,10 +121,15 @@ bunx biome check .       # Direct Biome check
 
 # Database (Prisma via packages/db)
 bun run db:push          # Sync schema to database
-bun run db:studio        # Open Prisma Studio GUI
+bun run db:studio       # Open Prisma Studio GUI
 bun run db:migrate       # Create and apply migrations
 bun run db:generate      # Regenerate Prisma client
 bun run db:seed-admin    # Seed admin user
+
+# Cloudflare Workers (deployment)
+bun run preview          # Local Cloudflare preview (wrangler dev)
+bun run deploy           # Deploy to Cloudflare Workers
+bun run cf-typegen       # Generate Cloudflare type definitions
 ```
 
 ## Code Style Guidelines
@@ -193,7 +199,7 @@ Routers: `admin`, `portal`, `survey`, `meetings`, `contracts`, `invoices`, `blog
 
 ## Environment Variables
 
-**Important**: All env vars go in the **root `.env`** file, not in app/package directories.
+**Important**: All env vars go in the **root `.env`** file for local development, or **Cloudflare Dashboard** for production.
 
 Required variables:
 ```bash
@@ -214,13 +220,9 @@ GOOGLE_CALENDAR_CLIENT_ID=...
 GOOGLE_CALENDAR_CLIENT_SECRET=...
 GOOGLE_CALENDAR_REFRESH_TOKEN=...
 
-# Email via SMTP
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=465
-SMTP_SECURE=true
-SMTP_USER=...
-SMTP_PASS=...
-MAIL_FROM=...
+# Email via Resend
+RESEND_API_KEY=re_...
+MAIL_FROM=onboarding@resend.dev
 
 # Cloudinary (media storage)
 CLOUDINARY_CLOUD_NAME=...
@@ -234,6 +236,13 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_...
 ```
 
 Validation happens in `packages/env/src/server.ts` using `@t3-oss/env-core`.
+
+### Cloudflare Workers Environment
+
+For Cloudflare Workers deployment:
+1. Local development: Create `apps/web/.dev.vars` with your environment variables
+2. Production: Set secrets in Cloudflare Dashboard → Workers → Your Worker → Settings → Variables
+3. The `.env` file is for Node.js development only (Next.js dev server)
 
 ## Testing Strategy
 
@@ -249,29 +258,66 @@ bunx playwright test
 
 ## Deployment
 
-- **Platform**: Vercel
-- **Config**: `apps/web/vercel.json`
-- **Build**: Uses Turborepo filter: `turbo build --filter=web`
-- **Install**: Custom install command from monorepo root
+- **Platform**: Cloudflare Workers via OpenNext
+- **Config**: `apps/web/wrangler.jsonc`
+- **Build**: Uses OpenNext for Cloudflare adapter
 
-Key settings:
-```json
-{
-  "framework": "nextjs",
-  "installCommand": "cd ../.. && bun install",
-  "buildCommand": "cd ../.. && turbo build --filter=web"
-}
+### Deployment Commands
+
+```bash
+# Local preview (simulates Cloudflare Workers)
+bun run preview
+
+# Deploy to Cloudflare Workers
+bun run deploy
+
+# Generate Cloudflare type definitions
+bun run cf-typegen
 ```
+
+### Key Configuration Files
+
+- `apps/web/wrangler.jsonc` - Cloudflare Worker configuration
+- `apps/web/open-next.config.ts` - OpenNext adapter configuration
+- `apps/web/.dev.vars` - Local environment variables (not committed)
+
+### Environment Variables in Production
+
+Set environment variables in Cloudflare Dashboard:
+1. Go to Workers & Pages → Your Worker → Settings
+2. Add Variables and Secrets
+3. Use Secrets for sensitive values (DATABASE_URL, BETTER_AUTH_SECRET, etc.)
 
 ## Key Integrations
 
 | Service | Purpose | Location |
 |---------|---------|----------|
 | Google Calendar API | Meeting scheduling | `packages/api/src/google-calendar.ts` |
-| Gmail API / SMTP | Transactional emails | `packages/api/src/email.ts`, `apps/web/src/lib/email.ts` |
+| Resend | Transactional emails | `apps/web/src/lib/email.ts`, `packages/api/src/routers/email.ts` |
 | Cloudinary | Media storage | `apps/web/src/lib/cloudinary.ts` |
 | Stripe | Payments | `packages/api/src/stripe.ts`, `packages/api/src/routers/invoices.ts` |
 | better-auth | Authentication | `packages/auth/src/index.ts` |
+| Neon | PostgreSQL database | `packages/db/src/index.ts`, `packages/db/src/kysely.ts` |
+
+## Cloudflare Workers Compatibility
+
+The application is configured for Cloudflare Workers deployment:
+
+### Database
+- Uses Neon PostgreSQL with HTTP/fetch mode (`poolQueryViaFetch: true`)
+- No WebSocket dependencies for edge runtime compatibility
+
+### Authentication
+- better-auth configured for edge runtime (no Next.js-specific plugins)
+- Session cookies work with Cloudflare Workers
+
+### Email
+- Uses Resend API (HTTP-based, edge-compatible)
+- Previously used Nodemailer (SMTP) which is not edge-compatible
+
+### Known Limitations
+- Google Calendar API (`googleapis` package) may have edge runtime issues
+- If problems occur, consider direct REST API calls instead
 
 ## Database Schema Overview
 
