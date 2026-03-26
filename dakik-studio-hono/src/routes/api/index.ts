@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { EnvVars } from "../../lib/env";
 import { createAuthHandler } from "./auth";
+import { createCustomerRouter } from "./customers";
 
 export function createApiRouter(env: EnvVars) {
 	const api = new Hono();
@@ -10,6 +11,8 @@ export function createApiRouter(env: EnvVars) {
 	api.on(["POST", "GET"], "/auth/*", (c) => {
 		return authHandler(c);
 	});
+
+	api.route("/customers", createCustomerRouter());
 
 	api.get("/", (c) => {
 		return c.json({
