@@ -1,2 +1,9 @@
+export { FAQ } from "./FAQ";
+export { Footer } from "./Footer";
 export { Hero } from "./Hero";
+export { LogoCarousel } from "./LogoCarousel";
+export { Marquee } from "./Marquee";
 export { Navbar } from "./Navbar";
+export { ServicesSection } from "./Services";
+export { Testimonials } from "./Testimonials";
+export { Work } from "./Work";

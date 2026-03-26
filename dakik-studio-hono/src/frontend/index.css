@@ -15,3 +15,23 @@ body {
   margin: 0;
   min-height: 100vh;
 }
+
+@keyframes infinite-scroll {
+	to {
+		transform: translateX(calc(-50% - 0.5rem));
+	}
+}
+
+.animate-infinite-scroll {
+	animation: infinite-scroll var(--animation-duration, 40s)
+		var(--animation-direction, forwards) linear infinite;
+}
+
+@keyframes marquee {
+	from { transform: translateX(0); }
+	to { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+	animation: marquee var(--duration, 30s) linear infinite;
+}

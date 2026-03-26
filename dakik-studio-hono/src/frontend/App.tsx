@@ -1,10 +1,6 @@
-import { Hero, Navbar } from "./components/landing";
+import { Outlet } from "react-router-dom";
+import "./index.css";
 
 export default function App() {
-	return (
-		<div className="min-h-screen bg-black text-white">
-			<Navbar />
-			<Hero />
-		</div>
-	);
+	return <Outlet />;
 }
