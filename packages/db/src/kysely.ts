@@ -1,7 +1,6 @@
 import { env } from "@collab/env/server";
 import { neonConfig, Pool } from "@neondatabase/serverless";
 import { Kysely, PostgresDialect } from "kysely";
-import ws from "ws";
 import type { DB } from "./db.types";
 
 const databaseUrl = env.DATABASE_URL;
@@ -23,9 +22,7 @@ if (
 	);
 }
 
-// Configure Neon WebSocket for Node.js environment
-neonConfig.webSocketConstructor = ws;
-neonConfig.poolQueryViaFetch = false;
+neonConfig.poolQueryViaFetch = true;
 
 const globalForKysely = globalThis as unknown as {
 	db: Kysely<DB> | undefined;
