@@ -1,0 +1,32 @@
+# Database
+DATABASE_URL="postgresql://user:pass@host/db?sslmode=require"
+DIRECT_URL="postgresql://user:pass@host/db?sslmode=require"
+
+# Auth
+BETTER_AUTH_SECRET="minimum-32-characters-secret-key-here"
+BETTER_AUTH_URL="http://localhost:8787"
+CORS_ORIGIN="http://localhost:8787"
+
+# Google OAuth
+GOOGLE_CLIENT_ID=""
+GOOGLE_CLIENT_SECRET=""
+
+# Email
+RESEND_API_KEY=""
+MAIL_FROM=""
+
+# Cloudinary
+CLOUDINARY_CLOUD_NAME=""
+CLOUDINARY_API_KEY=""
+CLOUDINARY_API_SECRET=""
+
+# Stripe
+STRIPE_SECRET_KEY=""
+STRIPE_WEBHOOK_SECRET=""
+VITE_STRIPE_PUBLISHABLE_KEY=""
+
+# Google Calendar
+GOOGLE_CALENDAR_CLIENT_ID=""
+GOOGLE_CALENDAR_CLIENT_SECRET=""
+GOOGLE_CALENDAR_REFRESH_TOKEN=""
+GOOGLE_CALENDAR_ID=""
