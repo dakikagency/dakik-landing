@@ -1,19 +1,22 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+	--color-primary: #ef4444;
+	--color-background: #000000;
+}
 
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  color-scheme: dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #000;
+	font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+	line-height: 1.5;
+	font-weight: 400;
+	color-scheme: dark;
+	color: rgba(255, 255, 255, 0.87);
+	background-color: #000;
 }
 
 body {
-  margin: 0;
-  min-height: 100vh;
+	margin: 0;
+	min-height: 100vh;
 }
 
 @keyframes infinite-scroll {
@@ -22,14 +25,18 @@ body {
 	}
 }
 
+@keyframes marquee {
+	from {
+		transform: translateX(0);
+	}
+	to {
+		transform: translateX(-50%);
+	}
+}
+
 .animate-infinite-scroll {
 	animation: infinite-scroll var(--animation-duration, 40s)
 		var(--animation-direction, forwards) linear infinite;
-}
-
-@keyframes marquee {
-	from { transform: translateX(0); }
-	to { transform: translateX(-50%); }
 }
 
 .animate-marquee {
