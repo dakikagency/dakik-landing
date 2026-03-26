@@ -28,13 +28,14 @@
     "STRIPE_SECRET_KEY",
     "STRIPE_WEBHOOK_SECRET",
     "BLOG_INTEGRATION_API_KEY",
-    "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"
+    "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
+    "RESEND_API_KEY"
   ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "dist/**"],
+      "outputs": [".next/**", "dist/**", ".open-next/**"],
       "outputLogs": "new-only"
     },
     "@collab/db#build": {
@@ -61,6 +62,16 @@
       "cache": false
     },
     "db:generate": {
+      "cache": false
+    },
+    "preview": {
+      "cache": false,
+      "persistent": true
+    },
+    "deploy": {
+      "cache": false
+    },
+    "cf-typegen": {
       "cache": false
     }
   }

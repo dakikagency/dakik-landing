@@ -28,12 +28,14 @@
     "db:studio": "turbo -F @collab/db db:studio",
     "db:generate": "turbo -F @collab/db db:generate",
     "db:migrate": "turbo -F @collab/db db:migrate",
-    "db:seed-admin": "turbo -F @collab/db db:seed-admin"
+    "db:seed-admin": "turbo -F @collab/db db:seed-admin",
+    "preview": "turbo -F web preview",
+    "deploy": "turbo -F web deploy",
+    "cf-typegen": "turbo -F web cf-typegen"
   },
   "dependencies": {
     "@collab/env": "workspace:*",
     "dotenv": "catalog:",
-    "nodemailer": "^7.0.12",
     "zod": "catalog:"
   },
   "devDependencies": {

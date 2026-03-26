@@ -4,7 +4,12 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
 	typedRoutes: true,
 	reactCompiler: true,
-	serverExternalPackages: ["@prisma/client", "ws"],
+	serverExternalPackages: [
+		"@prisma/client",
+		".prisma/client",
+		"@neondatabase/serverless",
+		"kysely",
+	],
 	images: {
 		remotePatterns: [
 			{

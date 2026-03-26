@@ -11,6 +11,7 @@ build
 # Environment variables
 .env
 .env*.local
+.dev.vars
 
 # IDEs and editors
 .vscode/*
@@ -61,3 +62,10 @@ specs/*
 .worktrees/
 scripts/import-daicons.ts
 scripts/upload-icons-test.js
+
+# Cloudflare Workers
+.wrangler/
+.open-next/
+.dev.vars
+*.worker.js
+*.worker.js.map
