@@ -6,3 +6,5 @@ declare global {
 		ASSETS: Fetcher;
 	}
 }
+
+export type { CloudflareEnv };
