@@ -100,6 +100,22 @@ enum SurveyInputType {
   MULTIPLE_CHOICE
 }
 
+enum QuestionType {
+  TEXT
+  SINGLE_CHOICE
+  MULTI_CHOICE
+}
+
+enum SlotStatus {
+  AVAILABLE
+  BOOKED
+}
+
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+}
+
 enum FileType {
   TYPESCRIPT
   TYPESCRIPT_RX
@@ -672,4 +688,60 @@ model Webhook {
   updatedAt DateTime @updatedAt
 
   @@map("webhook")
+}
+
+// =============================================================================
+// Survey Questions (Wave 1 - Survey Flow)
+// =============================================================================
+
+model SurveyQuestionItem {
+  id            String      @id @default(cuid())
+  questionText  String
+  questionType  QuestionType @default(SINGLE_CHOICE)
+  options       Json?
+  orderIndex    Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([orderIndex])
+  @@map("survey_questions")
+}
+
+// =============================================================================
+// Meeting Slots (Wave 1 - Scheduling)
+// =============================================================================
+
+model MeetingSlots {
+  id              String     @id @default(cuid())
+  userId          String?
+  calendarEventId String?
+  startTime       DateTime
+  endTime         DateTime
+  status          SlotStatus @default(AVAILABLE)
+  createdAt       DateTime   @default(now())
+
+  @@index([userId])
+  @@index([calendarEventId])
+  @@index([status])
+  @@map("meeting_slots")
+}
+
+// =============================================================================
+// Survey Submissions (Wave 1 - Survey Flow)
+// =============================================================================
+
+model SurveySubmissions {
+  id            String           @id @default(cuid())
+  userId        String?
+  email         String
+  answers       Json
+  meetingSlotId String?
+  status        SubmissionStatus @default(DRAFT)
+  createdAt     DateTime         @default(now())
+
+  @@index([userId])
+  @@index([email])
+  @@index([meetingSlotId])
+  @@index([status])
+  @@map("survey_submissions")
 }
