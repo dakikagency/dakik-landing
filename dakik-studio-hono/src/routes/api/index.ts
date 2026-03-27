@@ -7,6 +7,7 @@ import { createInvoiceRouter } from "./invoices";
 import { createLeadRouter } from "./leads";
 import { createMeetingRouter } from "./meetings";
 import { createProjectRouter } from "./projects";
+import { createSurveyQuestionsRouter } from "./survey-questions";
 import { createStripeWebhookRouter } from "./webhooks/stripe";
 
 export function createApiRouter(env: EnvVars) {
@@ -24,6 +25,7 @@ export function createApiRouter(env: EnvVars) {
 	api.route("/projects", createProjectRouter());
 	api.route("/meetings", createMeetingRouter());
 	api.route("/availability", createAvailabilityRouter());
+	api.route("/survey-questions", createSurveyQuestionsRouter());
 	api.route("/webhooks", createStripeWebhookRouter());
 
 	api.get("/", (c) => {
