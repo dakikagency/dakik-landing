@@ -20,14 +20,15 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 export function PortalMeetings() {
 	const [meetings, setMeetings] = useState<Meeting[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
 		async function fetchMeetings() {
 			try {
 				const res = await api.meetings.list();
 				setMeetings(res.meetings);
-			} catch {
-				setMeetings([]);
+			} catch (err) {
+				setError(err instanceof Error ? err.message : "Failed to load meetings");
 			} finally {
 				setIsLoading(false);
 			}
@@ -99,6 +100,12 @@ export function PortalMeetings() {
 				</p>
 			</div>
 
+			{error && (
+				<div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-red-200 text-sm">
+					{error}
+				</div>
+			)}
+
 			{isLoading && (
 				<div className="space-y-4">
 					{[1, 2, 3].map((i) => (
@@ -107,7 +114,7 @@ export function PortalMeetings() {
 				</div>
 			)}
 
-			{!isLoading && meetings.length === 0 && (
+			{!isLoading && !error && meetings.length === 0 && (
 				<div className="flex flex-col items-center justify-center rounded-xl border border-white/10 bg-white/5 py-16">
 					<svg
 						aria-hidden="true"

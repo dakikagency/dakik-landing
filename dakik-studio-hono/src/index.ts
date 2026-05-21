@@ -5,6 +5,7 @@ import { errorHandler } from "./middleware/error-handler";
 import { logger } from "./middleware/logger";
 import { createApiRouter } from "./routes/api";
 import { healthRoute } from "./routes/health";
+import { seoRoute } from "./routes/seo";
 import type { CloudflareEnv } from "./types/cloudflare";
 
 const app = new Hono();
@@ -29,11 +30,6 @@ app.all("/api/*", (c) => {
 	return apiRouter.fetch(req);
 });
 
-app.get("/", (c) => {
-	return c.json({
-		message: "Dakik Studio API",
-		version: "0.0.1",
-	});
-});
+app.route("/", seoRoute);
 
 export default app;

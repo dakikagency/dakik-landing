@@ -1,0 +1,69 @@
+{
+  "active_plan": "/Users/erdenizkorkmaz/Documents/GitHub/Dakik/dakik-landing/.sisyphus/plans/page-implementation.md",
+  "started_at": "2026-03-26T23:31:36.442Z",
+  "session_ids": [
+    "ses_2d382ca96ffe3WCWIxHDG8Kehz",
+    "ses_2d381fbb4ffeLqFpcBRodZHy2N",
+    "ses_2d381e4e0ffeV9Dzq5pMkQxJym",
+    "ses_2d3822c8effeTw5m0TObH3D1OO",
+    "ses_2d381cfd0ffeRWLWzRF8vJtxtI",
+    "ses_2d381bc0fffeR5fZD1oW6NQiP7",
+    "ses_2d3815b9affexjtx7F8vy7FSqD",
+    "ses_2d375d558ffeYLQ20WJcR4L6wr",
+    "ses_2d375fa55ffefWScDHc3p9tiUN",
+    "ses_2d355e971ffekUeek57LmcA5lh",
+    "ses_2d3542d31ffetD72VuZZkLwlsO",
+    "ses_2d3512338ffehBrzPqhqP4FMKZ",
+    "ses_2d34db21dffevKPx7c50RzCY47",
+    "ses_2d3471de4ffewl4eeUtSZUdtUA"
+  ],
+  "plan_name": "page-implementation",
+  "agent": "atlas",
+  "task_sessions": {
+    "todo:1": {
+      "task_key": "todo:1",
+      "task_label": "1",
+      "task_title": "Fix Next.js imports throughout codebase",
+      "session_id": "ses_2d381fbb4ffeLqFpcBRodZHy2N",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-03-26T23:33:13.639Z"
+    },
+    "todo:6": {
+      "task_key": "todo:6",
+      "task_label": "6",
+      "task_title": "Implement auth session storage and middleware",
+      "session_id": "ses_2d355e971ffekUeek57LmcA5lh",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-03-27T00:21:35.986Z"
+    },
+    "todo:7": {
+      "task_key": "todo:7",
+      "task_label": "7",
+      "task_title": "Build login page UI",
+      "session_id": "ses_2d3542d31ffetD72VuZZkLwlsO",
+      "agent": "Sisyphus-Junior",
+      "category": "visual-engineering",
+      "updated_at": "2026-03-27T00:25:07.953Z"
+    },
+    "todo:8": {
+      "task_key": "todo:8",
+      "task_label": "8",
+      "task_title": "Wire login frontend to auth backend",
+      "session_id": "ses_2d3512338ffehBrzPqhqP4FMKZ",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-03-27T00:27:39.985Z"
+    },
+    "todo:10": {
+      "task_key": "todo:10",
+      "task_label": "10",
+      "task_title": "Create survey questions admin API endpoints",
+      "session_id": "ses_2d3471de4ffewl4eeUtSZUdtUA",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-03-27T00:44:11.748Z"
+    }
+  }
+}

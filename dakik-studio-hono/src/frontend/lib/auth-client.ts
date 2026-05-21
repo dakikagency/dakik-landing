@@ -38,15 +38,16 @@ export interface Session {
 
 /**
  * Get the current session.
- * Returns null if not authenticated.
+ * Returns null if the user is not authenticated.
+ * Throws if the session endpoint is unreachable or returns an error — callers
+ * should surface that to the UI rather than silently treating it as "logged out".
  */
 export async function getSession(): Promise<Session | null> {
-	try {
-		const session = await authClient.getSession();
-		return session;
-	} catch {
-		return null;
+	const result = await authClient.getSession();
+	if (result && "error" in result && result.error) {
+		throw new Error(result.error.message ?? "Failed to fetch session");
 	}
+	return (result?.data as Session | null) ?? null;
 }
 
 /**
@@ -58,46 +59,53 @@ export async function isAuthenticated(): Promise<boolean> {
 }
 
 /**
- * Sign in with email and password
+ * Sign in with email and password.
+ * Errors from the auth server are returned as `{ error }`; transport-level
+ * failures throw so callers can decide how to surface them.
  */
 export async function signInWithEmail(
 	email: string,
 	password: string,
 ): Promise<{ user: Session["user"] } | { error: string }> {
-	try {
-		const result = await authClient.signIn.emailPassword(email, password);
-		return result;
-	} catch (err) {
-		return { error: err instanceof Error ? err.message : "Sign in failed" };
+	const result = await authClient.signIn.email({ email, password });
+	if (result.error) {
+		return { error: result.error.message ?? "Sign in failed" };
 	}
+	const data = result.data as unknown as { user: Session["user"] };
+	return { user: data.user };
 }
 
 /**
- * Sign up with email and password
+ * Sign up with email and password.
  */
 export async function signUpWithEmail(
 	email: string,
 	password: string,
 	name?: string,
 ): Promise<{ user: Session["user"] } | { error: string }> {
-	try {
-		const result = await authClient.signUp.emailPassword(email, password, {
-			name,
-		});
-		return result;
-	} catch (err) {
-		return { error: err instanceof Error ? err.message : "Sign up failed" };
+	const result = await authClient.signUp.email({
+		email,
+		password,
+		name: name ?? email.split("@")[0],
+	});
+	if (result.error) {
+		return { error: result.error.message ?? "Sign up failed" };
 	}
+	const data = result.data as unknown as { user: Session["user"] };
+	return { user: data.user };
 }
 
 /**
- * Sign in with Google OAuth
+ * Sign in with Google OAuth.
  */
 export async function signInWithGoogle(): Promise<void> {
-	await authClient.signIn.socialOAuth({
+	const result = await authClient.signIn.social({
 		provider: "google",
-		callbackURL: "/portal",
+		callbackURL: "/auth/callback",
 	});
+	if (result.error) {
+		throw new Error(result.error.message ?? "Google sign in failed");
+	}
 }
 
 /**
@@ -115,5 +123,3 @@ export async function getUser(): Promise<Session["user"] | null> {
 	return session?.user ?? null;
 }
 
-// Re-export authClient for direct access to better-auth methods
-export { authClient };

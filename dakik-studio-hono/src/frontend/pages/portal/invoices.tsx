@@ -24,6 +24,7 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 export function PortalInvoices() {
 	const [invoices, setInvoices] = useState<Invoice[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
 		async function fetchInvoices() {
@@ -31,8 +32,8 @@ export function PortalInvoices() {
 				const mockCustomerId = "customer-1";
 				const res = await api.invoices.list({ customerId: mockCustomerId });
 				setInvoices(res.invoices);
-			} catch {
-				setInvoices([]);
+			} catch (err) {
+				setError(err instanceof Error ? err.message : "Failed to load invoices");
 			} finally {
 				setIsLoading(false);
 			}
@@ -78,6 +79,12 @@ export function PortalInvoices() {
 				<p className="mt-2 text-white/60">View and pay your invoices</p>
 			</div>
 
+			{error && (
+				<div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-red-200 text-sm">
+					{error}
+				</div>
+			)}
+
 			{isLoading && (
 				<div className="space-y-4">
 					{[1, 2, 3].map((i) => (
@@ -86,7 +93,7 @@ export function PortalInvoices() {
 				</div>
 			)}
 
-			{!isLoading && invoices.length === 0 && (
+			{!isLoading && !error && invoices.length === 0 && (
 				<div className="flex flex-col items-center justify-center rounded-xl border border-white/10 bg-white/5 py-16">
 					<svg
 						aria-hidden="true"

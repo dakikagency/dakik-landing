@@ -1,8 +1,12 @@
 import { Hono } from "hono";
 import type { EnvVars } from "../../lib/env";
 import { createAuthHandler } from "./auth";
+import { createAutomationsRouter } from "./automations";
 import { createAvailabilityRouter } from "./availability";
+import { createBlogRouter } from "./blog";
+import { createComponentsRouter } from "./components";
 import { createCustomerRouter } from "./customers";
+import { createIconsRouter } from "./icons";
 import { createInvoiceRouter } from "./invoices";
 import { createLeadRouter } from "./leads";
 import { createMeetingRouter } from "./meetings";
@@ -26,6 +30,10 @@ export function createApiRouter(env: EnvVars) {
 	api.route("/meetings", createMeetingRouter());
 	api.route("/availability", createAvailabilityRouter());
 	api.route("/survey-questions", createSurveyQuestionsRouter());
+	api.route("/blog", createBlogRouter());
+	api.route("/automations", createAutomationsRouter());
+	api.route("/components", createComponentsRouter());
+	api.route("/icons", createIconsRouter());
 	api.route("/webhooks", createStripeWebhookRouter());
 
 	api.get("/", (c) => {

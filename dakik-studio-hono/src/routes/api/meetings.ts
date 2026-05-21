@@ -241,8 +241,14 @@ export function createMeetingRouter() {
 					calendarId: env.GOOGLE_CALENDAR_ID || "primary",
 					eventId: meeting.eventId,
 				});
-			} catch {
-				// Ignore calendar deletion errors
+			} catch (err) {
+				// We still proceed with the DB cancel even if Google Calendar rejects
+				// the delete (often "Resource has been deleted" when the event was
+				// already removed externally), but the failure must be visible.
+				console.error(
+					`Failed to delete Google Calendar event ${meeting.eventId} for meeting ${meeting.id}:`,
+					err,
+				);
 			}
 		}
 

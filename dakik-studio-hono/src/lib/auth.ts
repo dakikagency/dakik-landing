@@ -18,6 +18,7 @@ export function createAuth(env: EnvVars) {
 			type: "postgres",
 		},
 		baseURL: env.BETTER_AUTH_URL,
+		basePath: "/auth",
 		trustedOrigins: [env.CORS_ORIGIN],
 		advanced: {
 			cookiePrefix: "dakik-auth",

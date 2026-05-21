@@ -15,6 +15,7 @@ interface SessionContextValue {
 	isLoading: boolean;
 	isAuthenticated: boolean;
 	isExpired: boolean;
+	error: string | null;
 	signOut: () => Promise<void>;
 	refreshSession: () => Promise<void>;
 }
@@ -31,22 +32,27 @@ interface SessionProviderProps {
 export function SessionProvider({ children }: SessionProviderProps) {
 	const [session, setSession] = useState<Session | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 	const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
 		null,
 	);
 	const expiryCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
 	/**
-	 * Refresh the session from the server
+	 * Refresh the session from the server.
+	 * Surfaces failures via `error` rather than silently treating an outage
+	 * as "logged out".
 	 */
 	const refreshSession = useCallback(async () => {
 		try {
 			const newSession = await getSession();
 			setSession(newSession);
-			return newSession;
-		} catch {
-			setSession(null);
-			return null;
+			setError(null);
+		} catch (err) {
+			setError(
+				err instanceof Error ? err.message : "Unable to verify your session",
+			);
+			throw err;
 		}
 	}, []);
 
@@ -79,8 +85,13 @@ export function SessionProvider({ children }: SessionProviderProps) {
 			try {
 				const initialSession = await getSession();
 				setSession(initialSession);
-			} catch {
-				setSession(null);
+				setError(null);
+			} catch (err) {
+				setError(
+					err instanceof Error
+						? err.message
+						: "Unable to verify your session",
+				);
 			} finally {
 				setIsLoading(false);
 			}
@@ -88,9 +99,10 @@ export function SessionProvider({ children }: SessionProviderProps) {
 
 		initSession();
 
-		// Set up periodic session refresh
-		refreshIntervalRef.current = setInterval(async () => {
-			await refreshSession();
+		refreshIntervalRef.current = setInterval(() => {
+			refreshSession().catch(() => {
+				// error already surfaced via state by refreshSession
+			});
 		}, SESSION_REFRESH_INTERVAL);
 
 		// Set up expiry check interval
@@ -117,7 +129,9 @@ export function SessionProvider({ children }: SessionProviderProps) {
 	// Listen for auth state changes
 	useEffect(() => {
 		const handleAuthChange = () => {
-			refreshSession();
+			refreshSession().catch(() => {
+				// error already surfaced via state by refreshSession
+			});
 		};
 
 		// better-auth emits events on sign in/out
@@ -134,6 +148,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
 		isLoading,
 		isAuthenticated: session !== null && !isSessionExpired(session),
 		isExpired: session !== null && isSessionExpired(session),
+		error,
 		signOut,
 		refreshSession,
 	};
