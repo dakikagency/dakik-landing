@@ -60,6 +60,7 @@ specs/*
 .playwright-mcp/*
 .claude/*
 .worktrees/
+.sisyphus/
 scripts/import-daicons.ts
 scripts/upload-icons-test.js
 
