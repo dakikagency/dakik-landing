@@ -1,10 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useHead } from "@unhead/react";
-import { Navbar } from "../../components/landing/navbar";
-import { Footer } from "../../components/landing/footer";
 import { BlogCard } from "../../components/blog/blog-card";
-import { BlogFeaturedHero, BlogFeaturedSidebar } from "../../components/blog/blog-featured";
-import { BlogRecentCard } from "../../components/blog/blog-recent-card";
+import { Footer } from "../../components/landing/footer";
+import { Navbar } from "../../components/landing/navbar";
 import type { BlogPostSummary } from "../../lib/blog";
 
 async function fetchPosts(): Promise<{ posts: BlogPostSummary[] }> {
@@ -33,55 +31,74 @@ export function BlogIndexPage() {
 	});
 
 	const posts = data?.posts ?? [];
-	const hero = posts[0];
-	const sidebar = posts.slice(1, 6);
-	const recent = posts.slice(6);
+	const lead = posts[0];
+	const rest = posts.slice(1);
 
 	return (
-		<div className="min-h-screen bg-white">
+		<div className="min-h-screen bg-white text-black">
 			<Navbar />
-			<main className="mx-auto max-w-7xl px-6 pt-32 pb-24 lg:px-10">
-				<header className="mb-16 max-w-3xl">
-					<span className="font-semibold text-gray-400 text-xs uppercase tracking-widest">
-						Journal
-					</span>
-					<h1 className="mt-3 font-bold text-4xl tracking-tight sm:text-5xl lg:text-6xl">
-						Notes from the studio
-					</h1>
-					<p className="mt-5 text-gray-500 text-lg leading-relaxed">
-						Design systems, performance, and product engineering — written from the ground floor.
+			<main className="mx-auto max-w-7xl px-[clamp(1.5rem,6vw,6rem)] pt-32 pb-32">
+				<header className="mb-20 grid grid-cols-12 gap-6 lg:mb-28">
+					<div className="col-span-12 lg:col-span-8">
+						<span className="font-mono text-[11px] text-black/55 uppercase tracking-[0.35em]">
+							Journal
+						</span>
+						<h1 className="mt-4 font-black text-[clamp(2.75rem,7vw,6rem)] uppercase leading-[0.9] tracking-[-0.04em]">
+							Notes from
+							<br />
+							the studio.
+						</h1>
+					</div>
+					<p className="col-span-12 max-w-[44ch] self-end text-base text-black/65 leading-relaxed lg:col-span-4 lg:text-lg">
+						Design systems, web performance, and product engineering —
+						written from the ground floor.
 					</p>
 				</header>
 
-				{isLoading && <p className="text-gray-500">Loading...</p>}
+				{isLoading && (
+					<p className="font-mono text-[11px] text-black/45 uppercase tracking-[0.35em]">
+						Loading…
+					</p>
+				)}
 				{isError && (
-					<p className="text-gray-500">Posts are temporarily unavailable. Check back soon.</p>
+					<p className="font-mono text-[11px] text-black/45 uppercase tracking-[0.35em]">
+						Posts are temporarily unavailable. Check back soon.
+					</p>
 				)}
 
-				{hero && (
-					<section className="mb-20 grid gap-10 lg:grid-cols-[1.6fr_1fr]">
-						<BlogFeaturedHero post={hero} />
-						<BlogFeaturedSidebar posts={sidebar} />
-					</section>
+				{!isLoading && !isError && posts.length === 0 && (
+					<p className="font-mono text-[11px] text-black/45 uppercase tracking-[0.35em]">
+						No posts yet.
+					</p>
 				)}
 
-				{posts.length > 1 && (
-					<section className="mb-20">
-						<h2 className="mb-8 font-bold text-2xl tracking-tight">Latest</h2>
-						<div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3">
-							{posts.slice(1, 7).map((post) => (
-								<BlogCard key={post.slug} {...post} />
-							))}
+				{lead && (
+					<section className="mb-24 border-black/10 border-b pb-16 lg:mb-32 lg:pb-24">
+						<div className="mb-6 flex items-baseline justify-between">
+							<span className="font-mono text-[10px] text-black/55 uppercase tracking-[0.35em]">
+								Latest
+							</span>
+							<span className="font-mono text-[10px] text-black/45 uppercase tracking-[0.35em] tabular-nums">
+								01
+							</span>
 						</div>
+						<BlogCard {...lead} variant="lead" />
 					</section>
 				)}
 
-				{recent.length > 0 && (
+				{rest.length > 0 && (
 					<section>
-						<h2 className="mb-8 font-bold text-2xl tracking-tight">More</h2>
-						<div className="flex flex-col gap-8">
-							{recent.map((post) => (
-								<BlogRecentCard key={post.slug} {...post} />
+						<div className="mb-10 flex items-baseline justify-between">
+							<span className="font-mono text-[10px] text-black/55 uppercase tracking-[0.35em]">
+								Archive
+							</span>
+							<span className="font-mono text-[10px] text-black/45 uppercase tracking-[0.35em] tabular-nums">
+								{String(rest.length).padStart(2, "0")} posts
+							</span>
+						</div>
+						<div className="grid gap-x-8 gap-y-16 md:grid-cols-2 lg:gap-x-12">
+							{rest.map((post) => (
+								<BlogCard key={post.slug} {...post} />
 							))}
 						</div>
 					</section>

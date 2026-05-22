@@ -24,35 +24,42 @@ export function ShareArticle({ url, title, className }: ShareArticleProps) {
 	const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`;
 	const linkedInUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
 
+	const buttonClass =
+		"flex h-9 items-center justify-center border border-black/15 px-3 font-mono text-[10px] text-black uppercase tracking-[0.25em] transition-colors hover:bg-black hover:text-white";
+
 	return (
-		<div className={cn("flex items-center gap-2", className)}>
-			<span className="text-gray-400 text-xs uppercase tracking-widest">Share</span>
-			<a
-				className="flex h-9 items-center justify-center rounded-full border border-gray-200 px-3 font-medium text-gray-600 text-xs transition hover:bg-gray-50"
-				href={twitterUrl}
-				rel="noreferrer"
-				target="_blank"
-				aria-label="Share on X"
-			>
-				X
-			</a>
-			<a
-				className="flex h-9 items-center justify-center rounded-full border border-gray-200 px-3 font-medium text-gray-600 text-xs transition hover:bg-gray-50"
-				href={linkedInUrl}
-				rel="noreferrer"
-				target="_blank"
-				aria-label="Share on LinkedIn"
-			>
-				in
-			</a>
-			<button
-				className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition hover:bg-gray-50"
-				onClick={handleCopy}
-				type="button"
-				aria-label="Copy link"
-			>
-				{copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-			</button>
+		<div className={cn("flex flex-col gap-3", className)}>
+			<span className="font-mono text-[10px] text-black/55 uppercase tracking-[0.35em]">
+				Share
+			</span>
+			<div className="flex flex-wrap items-center gap-2">
+				<a
+					aria-label="Share on X"
+					className={buttonClass}
+					href={twitterUrl}
+					rel="noreferrer"
+					target="_blank"
+				>
+					X
+				</a>
+				<a
+					aria-label="Share on LinkedIn"
+					className={buttonClass}
+					href={linkedInUrl}
+					rel="noreferrer"
+					target="_blank"
+				>
+					IN
+				</a>
+				<button
+					aria-label="Copy link"
+					className={cn(buttonClass, "h-9 w-9 px-0")}
+					onClick={handleCopy}
+					type="button"
+				>
+					{copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+				</button>
+			</div>
 		</div>
 	);
 }

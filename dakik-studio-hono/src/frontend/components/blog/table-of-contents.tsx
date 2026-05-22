@@ -37,27 +37,38 @@ export function TableOfContents({ headings, className }: TableOfContentsProps) {
 	if (headings.length === 0) return null;
 
 	return (
-		<nav className={cn("sticky top-24", className)}>
-			<h4 className="mb-3 font-semibold text-gray-400 text-xs uppercase tracking-widest">
+		<nav className={cn("sticky top-32", className)}>
+			<h4 className="mb-5 font-mono text-[10px] text-black/55 uppercase tracking-[0.35em]">
 				On this page
 			</h4>
-			<ul className="space-y-2 text-sm">
-				{headings.map((h) => (
-					<li
-						key={h.id}
-						style={{ paddingLeft: `${(h.level - 1) * 12}px` }}
-					>
-						<a
-							className={cn(
-								"block transition-colors hover:text-black",
-								activeId === h.id ? "text-black font-medium" : "text-gray-500",
-							)}
-							href={`#${h.id}`}
+			<ul className="space-y-3 border-black/10 border-l text-sm">
+				{headings.map((h) => {
+					const isActive = activeId === h.id;
+					return (
+						<li
+							key={h.id}
+							style={{ paddingLeft: `${(h.level - 1) * 14 + 16}px` }}
 						>
-							{h.text}
-						</a>
-					</li>
-				))}
+							<a
+								className={cn(
+									"relative block py-0.5 transition-colors hover:text-black",
+									isActive
+										? "font-medium text-black"
+										: "text-black/55",
+								)}
+								href={`#${h.id}`}
+							>
+								{isActive && (
+									<span
+										aria-hidden="true"
+										className="-left-px absolute top-1 h-4 w-px bg-black"
+									/>
+								)}
+								{h.text}
+							</a>
+						</li>
+					);
+				})}
 			</ul>
 		</nav>
 	);

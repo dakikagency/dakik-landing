@@ -1,12 +1,37 @@
-import { motion } from "framer-motion";
-import { ArrowUpRight, Calendar } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { type BlogPostSummary, formatDate } from "../../lib/blog";
 import { cn } from "../../lib/utils";
-import type { BlogPostSummary } from "../../lib/blog";
-import { formatDate } from "../../lib/blog";
 
-interface BlogCardProps extends Pick<BlogPostSummary, "slug" | "title" | "excerpt" | "coverImage" | "publishedAt" | "tags"> {
+interface BlogCardProps
+	extends Pick<
+		BlogPostSummary,
+		"slug" | "title" | "excerpt" | "coverImage" | "publishedAt" | "tags"
+	> {
 	className?: string;
+	/**
+	 * `lead` is the full-width card used at the top of the blog index for the
+	 * latest post; `default` is the smaller card used in the grid.
+	 */
+	variant?: "default" | "lead";
+}
+
+/**
+ * Visually-distinct placeholder for posts without a cover image. The
+ * previous version used a low-contrast gray block that ended up the same
+ * tone as white-text overlays on cards — making titles unreadable.
+ * This is high-contrast black-on-white with a mono index marker so we
+ * never need to render light text over a light surface.
+ */
+function NoImagePlaceholder({ slug }: { slug: string }) {
+	const initial = (slug.match(/[a-z]/i)?.[0] ?? "•").toUpperCase();
+	return (
+		<div className="absolute inset-0 flex items-center justify-center bg-black text-white">
+			<span className="font-black text-[20vw] leading-none tracking-tighter sm:text-[12rem]">
+				{initial}
+			</span>
+		</div>
+	);
 }
 
 export function BlogCard({
@@ -17,63 +42,81 @@ export function BlogCard({
 	publishedAt,
 	tags,
 	className,
+	variant = "default",
 }: BlogCardProps) {
+	const isLead = variant === "lead";
+
 	return (
-		<motion.article
-			className={cn("group relative flex flex-col", className)}
-			initial={{ opacity: 0, y: 20 }}
-			transition={{ duration: 0.5 }}
-			viewport={{ once: true, margin: "-50px" }}
-			whileInView={{ opacity: 1, y: 0 }}
-		>
+		<article className={cn("group", className)}>
 			<Link className="block" to={`/blog/${slug}`}>
-				<div className="relative aspect-[16/10] overflow-hidden bg-gray-100">
+				<div
+					className={cn(
+						"relative overflow-hidden bg-black/5",
+						isLead ? "aspect-[16/9] lg:aspect-[21/9]" : "aspect-[16/10]",
+					)}
+				>
 					{coverImage ? (
 						<img
 							alt={title}
-							className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+							className="absolute inset-0 h-full w-full object-cover transition-transform duration-[600ms] ease-[cubic-bezier(0.4,0,0.2,1)] group-hover:scale-[1.03]"
 							src={coverImage}
 						/>
 					) : (
-						<div className="flex h-full w-full items-center justify-center bg-gray-100">
-							<span className="font-medium text-gray-400 text-sm">No image</span>
-						</div>
+						<NoImagePlaceholder slug={slug} />
 					)}
-					<div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/5" />
-					<div className="absolute top-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-white opacity-0 shadow-sm transition-opacity duration-300 group-hover:opacity-100">
+					<div
+						aria-hidden="true"
+						className="absolute top-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-white text-black opacity-0 shadow-sm transition-opacity duration-300 group-hover:opacity-100"
+					>
 						<ArrowUpRight className="h-5 w-5" />
 					</div>
 				</div>
 
-				<div className="flex flex-1 flex-col pt-5">
-					{tags.length > 0 && (
-						<div className="mb-3 flex flex-wrap gap-2">
-							{tags.slice(0, 3).map((tag) => (
-								<span
-									className="rounded-full bg-gray-100 px-3 py-1 font-medium text-gray-600 text-xs transition-colors group-hover:bg-gray-200"
-									key={tag.id}
-								>
-									{tag.name}
-								</span>
-							))}
-						</div>
+				<div
+					className={cn(
+						"flex flex-col",
+						isLead ? "mt-8 max-w-3xl gap-3" : "mt-5 gap-2",
 					)}
-					<h3 className="mb-2 font-semibold text-lg leading-tight tracking-tight transition-colors group-hover:text-gray-600">
+				>
+					<div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10px] text-black/55 uppercase tracking-[0.3em]">
+						{tags[0] && <span>{tags[0].name}</span>}
+						{tags[0] && publishedAt && (
+							<span aria-hidden="true" className="text-black/30">
+								/
+							</span>
+						)}
+						{publishedAt && (
+							<time dateTime={new Date(publishedAt).toISOString()}>
+								{formatDate(publishedAt)}
+							</time>
+						)}
+					</div>
+
+					<h3
+						className={cn(
+							"font-black uppercase leading-[0.95] tracking-[-0.03em] transition-colors group-hover:text-black/60",
+							isLead
+								? "text-3xl sm:text-4xl lg:text-5xl"
+								: "text-xl lg:text-2xl",
+						)}
+					>
 						{title}
 					</h3>
+
 					{excerpt && (
-						<p className="mb-4 line-clamp-2 flex-1 text-gray-500 text-sm leading-relaxed">
+						<p
+							className={cn(
+								"text-black/65 leading-relaxed",
+								isLead
+									? "max-w-2xl text-base lg:text-lg"
+									: "line-clamp-3 text-sm lg:text-base",
+							)}
+						>
 							{excerpt}
 						</p>
 					)}
-					{publishedAt && (
-						<div className="mt-auto flex items-center gap-1.5 text-gray-400 text-xs">
-							<Calendar className="h-3.5 w-3.5" />
-							<time dateTime={new Date(publishedAt).toISOString()}>{formatDate(publishedAt)}</time>
-						</div>
-					)}
 				</div>
 			</Link>
-		</motion.article>
+		</article>
 	);
 }
