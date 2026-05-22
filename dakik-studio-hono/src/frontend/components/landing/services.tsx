@@ -1,112 +1,189 @@
-import { motion } from "framer-motion";
-import { GridBackdrop } from "../ui/grid-backdrop";
-import { HoverReveal } from "../ui/hover-reveal";
+import {
+	motion,
+	type MotionValue,
+	useScroll,
+	useTransform,
+} from "framer-motion";
+import { useRef } from "react";
+import { useReducedMotion } from "../../hooks/use-reduced-motion";
 
-const steps = [
+interface Step {
+	num: string;
+	label: string;
+	angle: string;
+	body: string;
+	meta: string;
+}
+
+const steps: readonly Step[] = [
 	{
-		label: "01 / Discover",
-		title: "We map the real problem",
-		description:
-			"Short call, fast audit, then we define what 'done' means. Scope stays tight so you ship, not spiral.",
+		num: "01",
+		label: "Discover",
+		angle: "We map the real problem",
+		body: "Short call, fast audit, then we define what 'done' means. Scope stays tight so you ship, not spiral.",
 		meta: "1–2 days",
 	},
 	{
-		label: "02 / Design",
-		title: "Systems, not vibes",
-		description:
-			"Typography, layout rules, and reusable blocks. Looks premium, stays consistent, scales clean.",
+		num: "02",
+		label: "Design",
+		angle: "Systems, not vibes",
+		body: "Typography, layout rules, and reusable blocks. Premium look, consistent system, ready to scale.",
 		meta: "3–7 days",
 	},
 	{
-		label: "03 / Build",
-		title: "Ship the thing",
-		description:
-			"Next.js + Tailwind + motion where it matters. Clean code, fast pages, proper SEO hygiene.",
+		num: "03",
+		label: "Build",
+		angle: "Ship the thing",
+		body: "Hono, React, Tailwind, motion where it matters. Clean code, fast pages, SEO baked in.",
 		meta: "1–3 weeks",
 	},
 	{
-		label: "04 / Improve",
-		title: "Measure → iterate",
-		description:
-			"Analytics, experiments, and conversion tweaks. Small changes, big wins — no guesswork.",
+		num: "04",
+		label: "Improve",
+		angle: "Measure, then iterate",
+		body: "Analytics, experiments, conversion tweaks. Small changes, big wins — no guesswork.",
 		meta: "ongoing",
 	},
 ];
 
+const TOTAL_LABEL = String(steps.length).padStart(2, "0");
+
+function Panel({ step }: { step: Step }) {
+	return (
+		<article className="relative flex h-full w-screen shrink-0 flex-col justify-center px-[clamp(1.5rem,6vw,6rem)] py-[clamp(6rem,12vh,8rem)]">
+			{/* Faded oversized number behind the content */}
+			<span
+				aria-hidden="true"
+				className="pointer-events-none absolute right-[-0.04em] bottom-[-0.16em] select-none font-black text-[40vw] text-black/[0.04] leading-none tracking-tighter"
+			>
+				{step.num}
+			</span>
+
+			<div className="relative flex h-full flex-col">
+				<div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
+					<span className="font-mono text-[11px] text-black/55 uppercase tracking-[0.35em]">
+						{step.num} / {TOTAL_LABEL} · {step.label}
+					</span>
+					<span className="font-mono text-[11px] text-black/45 uppercase tracking-[0.3em]">
+						{step.meta}
+					</span>
+				</div>
+
+				<div className="mt-auto max-w-[18ch] lg:max-w-none">
+					<h3 className="font-black text-[clamp(3rem,9vw,9rem)] uppercase leading-[0.88] tracking-[-0.04em]">
+						{step.angle}
+					</h3>
+					<p className="mt-8 max-w-[44ch] text-base text-black/70 leading-relaxed lg:text-lg">
+						{step.body}
+					</p>
+				</div>
+			</div>
+		</article>
+	);
+}
+
+/**
+ * A single progress marker. Its width and opacity grow while the matching
+ * panel is on screen, then shrink back. Extracted into its own component
+ * because hooks can't run inside a .map() — one Dot instance = one hook call.
+ */
+function Dot({
+	progress,
+	start,
+	end,
+}: {
+	progress: MotionValue<number>;
+	start: number;
+	end: number;
+}) {
+	const opacity = useTransform(
+		progress,
+		[Math.max(0, start - 0.05), start, end, Math.min(1, end + 0.05)],
+		[0.25, 1, 1, 0.25],
+	);
+	const width = useTransform(
+		progress,
+		[Math.max(0, start - 0.05), start, end, Math.min(1, end + 0.05)],
+		[16, 40, 40, 16],
+	);
+	return (
+		<motion.span
+			aria-hidden="true"
+			className="h-0.5 bg-black"
+			style={{ opacity, width }}
+		/>
+	);
+}
+
 export function ServicesSection() {
+	const ref = useRef<HTMLElement>(null);
+	const prefersReducedMotion = useReducedMotion();
+	const { scrollYProgress } = useScroll({
+		target: ref,
+		offset: ["start start", "end end"],
+	});
+
+	// Map vertical scroll to horizontal translate.
+	// scrollYProgress = 0 → panel 0 visible (x = 0)
+	// scrollYProgress = 1 → panel N-1 visible (x = -(N-1)*100vw)
+	const x = useTransform(
+		scrollYProgress,
+		[0, 1],
+		["0vw", `-${(steps.length - 1) * 100}vw`],
+	);
+
+	if (prefersReducedMotion) {
+		return (
+			<section className="bg-white text-black" id="services">
+				<header className="mx-auto max-w-6xl px-[clamp(1.5rem,6vw,6rem)] pt-24 pb-8">
+					<span className="font-mono text-[11px] text-black/55 uppercase tracking-[0.35em]">
+						How we work
+					</span>
+				</header>
+				<div className="divide-y divide-black/10">
+					{steps.map((step) => (
+						<div className="min-h-[80vh]" key={step.num}>
+							<Panel step={step} />
+						</div>
+					))}
+				</div>
+			</section>
+		);
+	}
+
 	return (
 		<section
-			className="relative z-30 mx-auto bg-white px-[clamp(1rem,5vw,4rem)] py-16 text-black md:py-24"
+			className="relative bg-white text-black"
 			id="services"
+			ref={ref}
+			style={{ height: `${steps.length * 100}vh` }}
 		>
-			<GridBackdrop className="opacity-90" />
-			<div className="relative mx-auto max-w-6xl">
-				<div className="grid grid-cols-1 gap-10 lg:grid-cols-12">
-					<motion.div
-						className="lg:col-span-5"
-						initial={{ opacity: 0, y: 50 }}
-						transition={{ duration: 0.5, ease: "easeOut" }}
-						viewport={{ once: true, margin: "-100px" }}
-						whileInView={{ opacity: 1, y: 0 }}
-					>
-						<span className="inline-block font-mono text-black/50 text-xs uppercase tracking-widest">
-							How we work
-						</span>
-						<h2 className="mt-3 font-black font-display text-[clamp(2.4rem,5vw,4.2rem)] uppercase leading-[0.85] tracking-[-0.04em]">
-							No waffle.
-							<br />
-							Just shipping.
-						</h2>
-						<p className="mt-4 max-w-[52ch] text-black/70">
-							We build digital products with a strict system: define, design,
-							build, then improve. Detailed enough to feel premium — short
-							enough that you won't drown in text.
-						</p>
-
-						<div className="mt-6 flex flex-wrap gap-3">
-							<a
-								className="inline-flex border-2 border-black bg-white px-4 py-3 font-mono text-black text-xs uppercase tracking-widest hover:bg-black hover:text-white"
-								href="/survey"
-							>
-								Start a project
-							</a>
-						</div>
-					</motion.div>
-
-					<motion.div
-						className="lg:col-span-7"
-						initial="hidden"
-						variants={{
-							hidden: { opacity: 0 },
-							show: {
-								opacity: 1,
-								transition: { staggerChildren: 0.15 },
-							},
-						}}
-						viewport={{ once: true, margin: "-50px" }}
-						whileInView="show"
-					>
-						<div className="grid grid-cols-1 gap-4">
-							{steps.map((s) => (
-								<motion.div
-									key={s.label}
-									transition={{ duration: 0.4, ease: "easeOut" }}
-									variants={{
-										hidden: { opacity: 0, y: 30 },
-										show: { opacity: 1, y: 0 },
-									}}
-								>
-									<HoverReveal
-										description={s.description}
-										label={s.label}
-										meta={s.meta}
-										title={s.title}
-									/>
-								</motion.div>
-							))}
-						</div>
-					</motion.div>
+			<div className="sticky top-0 h-screen w-full overflow-hidden">
+				<div className="absolute top-[clamp(2rem,8vh,5rem)] left-[clamp(1.5rem,6vw,6rem)] z-10">
+					<span className="font-mono text-[11px] text-black/55 uppercase tracking-[0.35em]">
+						How we work
+					</span>
 				</div>
+
+				<div className="absolute bottom-[clamp(2rem,6vh,4rem)] left-1/2 z-10 flex -translate-x-1/2 items-center gap-2">
+					{steps.map((s, i) => (
+						<Dot
+							end={(i + 1) / steps.length}
+							key={s.num}
+							progress={scrollYProgress}
+							start={i / steps.length}
+						/>
+					))}
+				</div>
+
+				<motion.div
+					className="flex h-full will-change-transform"
+					style={{ x }}
+				>
+					{steps.map((step) => (
+						<Panel key={step.num} step={step} />
+					))}
+				</motion.div>
 			</div>
 		</section>
 	);
