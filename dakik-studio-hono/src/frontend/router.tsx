@@ -3,8 +3,10 @@ import { AdminLayout } from "./components/admin/admin-layout";
 import { RequireAdmin } from "./components/auth/require-admin";
 import { PortalLayout } from "./components/portal/portal-layout";
 import { AboutPage } from "./pages/about";
+import { AdminAutomations } from "./pages/admin/automations";
 import { AdminBlog } from "./pages/admin/blog";
 import { AdminCustomers } from "./pages/admin/customers";
+import { AdminDaicons } from "./pages/admin/daicons";
 import { AdminDashboard } from "./pages/admin/dashboard";
 import { AdminInvoices } from "./pages/admin/invoices";
 import { AdminLeads } from "./pages/admin/leads";
@@ -66,6 +68,8 @@ export const router = createBrowserRouter([
 					{ path: "invoices", element: <AdminInvoices /> },
 					{ path: "meetings", element: <AdminMeetings /> },
 					{ path: "blog", element: <AdminBlog /> },
+					{ path: "automations", element: <AdminAutomations /> },
+					{ path: "daicons", element: <AdminDaicons /> },
 				],
 			},
 			{

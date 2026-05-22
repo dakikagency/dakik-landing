@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { sanitizeSvg } from "../../../lib/sanitize-svg";
 
 /**
  * Admin CRUD for Icon. Mounted at /api/admin/icons.
@@ -51,7 +52,7 @@ export function createAdminIconsRouter() {
 				name: body.name,
 				slug: body.slug,
 				category: body.category,
-				svgContent: body.svgContent,
+				svgContent: sanitizeSvg(body.svgContent),
 				keywords: Array.isArray(body.keywords) ? body.keywords : [],
 				isCustom: body.isCustom ?? true,
 			},
@@ -76,7 +77,9 @@ export function createAdminIconsRouter() {
 				name: body.name ?? existing.name,
 				slug: body.slug ?? existing.slug,
 				category: body.category ?? existing.category,
-				svgContent: body.svgContent ?? existing.svgContent,
+				svgContent: body.svgContent
+					? sanitizeSvg(body.svgContent)
+					: existing.svgContent,
 				keywords: Array.isArray(body.keywords)
 					? body.keywords
 					: existing.keywords,
