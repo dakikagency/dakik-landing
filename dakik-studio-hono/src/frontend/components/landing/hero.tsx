@@ -95,7 +95,7 @@ export function Hero() {
 						<span className="text-sm tracking-wide">(Scroll)</span>
 					</Reveal>
 
-					<div className="mt-auto mb-32 lg:mb-0">
+					<div className="mt-auto mb-32 lg:mb-0 lg:max-w-[50%] lg:pr-8">
 						<Reveal delay={0.4} direction="down">
 							<p className="max-w-[25ch] text-3xl text-white/90 leading-[1.15]">
 								Dakik Studio helps teams launch websites, apps, brand systems,
