@@ -14,6 +14,7 @@ import { AutomationDetailPage } from "./pages/automations/post";
 import { BlogIndexPage } from "./pages/blog";
 import { BlogPostPage } from "./pages/blog/post";
 import { ContactPage } from "./pages/contact";
+import { CookiesPage } from "./pages/cookies";
 import { DacompsPage } from "./pages/dacomps";
 import { DaiconsPage } from "./pages/daicons";
 import { LandingPage } from "./pages/landing-page";
@@ -23,7 +24,9 @@ import { PortalDashboard } from "./pages/portal/dashboard";
 import { PortalInvoices } from "./pages/portal/invoices";
 import { PortalMeetings } from "./pages/portal/meetings";
 import { PortalProjects } from "./pages/portal/projects";
+import { PrivacyPolicyPage } from "./pages/privacy-policy";
 import { SurveyPage } from "./pages/survey";
+import { TermsOfServicePage } from "./pages/terms-of-service";
 
 export const router = createBrowserRouter([
 	{
@@ -41,6 +44,9 @@ export const router = createBrowserRouter([
 			{ path: "daicons", element: <DaiconsPage /> },
 			{ path: "login", element: <LoginPage /> },
 			{ path: "survey", element: <SurveyPage /> },
+			{ path: "cookies", element: <CookiesPage /> },
+			{ path: "privacy-policy", element: <PrivacyPolicyPage /> },
+			{ path: "terms-of-service", element: <TermsOfServicePage /> },
 			{ path: "auth/callback", element: <AuthCallbackPage /> },
 			{ path: "portal-access-denied", element: <PortalAccessDeniedPage /> },
 			{

@@ -26,7 +26,22 @@ const STATIC_SITEMAP_PATHS: Array<{
 	{ path: "/daicons", priority: 0.8, changefreq: "monthly" },
 	{ path: "/survey", priority: 0.9, changefreq: "monthly" },
 	{ path: "/login", priority: 0.4, changefreq: "yearly" },
+	{ path: "/cookies", priority: 0.3, changefreq: "yearly" },
+	{ path: "/privacy-policy", priority: 0.3, changefreq: "yearly" },
+	{ path: "/terms-of-service", priority: 0.3, changefreq: "yearly" },
 ];
+
+// Legacy paths from the previous Next.js site. Permanent redirects so search
+// engines consolidate signal to the canonical URLs.
+const LEGACY_REDIRECTS: Record<string, string> = {
+	"/privacy": "/privacy-policy",
+	"/terms": "/terms-of-service",
+};
+
+// Permanent redirects from legacy Next.js URLs to their canonical SPA routes.
+for (const [from, to] of Object.entries(LEGACY_REDIRECTS)) {
+	seoRoute.get(from, (c) => c.redirect(to, 301));
+}
 
 seoRoute.get("/robots.txt", (c) => {
 	const base = getBaseUrl(c.env);

@@ -15,7 +15,9 @@
       "/blog",
       "/blog/*",
       "/automations",
-      "/automations/*"
+      "/automations/*",
+      "/privacy",
+      "/terms"
     ]
   },
 
