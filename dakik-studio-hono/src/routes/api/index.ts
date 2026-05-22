@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { EnvVars } from "../../lib/env";
+import { createAdminRouter } from "./admin";
 import { createAuthHandler } from "./auth";
 import { createAutomationsRouter } from "./automations";
 import { createAvailabilityRouter } from "./availability";
@@ -22,6 +23,8 @@ export function createApiRouter(env: EnvVars) {
 	api.on(["POST", "GET"], "/auth/*", (c) => {
 		return authHandler(c);
 	});
+
+	api.route("/admin", createAdminRouter());
 
 	api.route("/customers", createCustomerRouter());
 	api.route("/invoices", createInvoiceRouter());

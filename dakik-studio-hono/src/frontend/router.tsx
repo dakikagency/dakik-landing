@@ -1,5 +1,6 @@
 import { createBrowserRouter, Outlet } from "react-router-dom";
 import { AdminLayout } from "./components/admin/admin-layout";
+import { RequireAdmin } from "./components/auth/require-admin";
 import { PortalLayout } from "./components/portal/portal-layout";
 import { AboutPage } from "./pages/about";
 import { AdminCustomers } from "./pages/admin/customers";
@@ -51,7 +52,11 @@ export const router = createBrowserRouter([
 			{ path: "portal-access-denied", element: <PortalAccessDeniedPage /> },
 			{
 				path: "admin",
-				element: <AdminLayout />,
+				element: (
+					<RequireAdmin>
+						<AdminLayout />
+					</RequireAdmin>
+				),
 				children: [
 					{ index: true, element: <AdminDashboard /> },
 					{ path: "leads", element: <AdminLeads /> },
