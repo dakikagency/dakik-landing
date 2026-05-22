@@ -41,17 +41,14 @@ export function Navbar() {
 			<nav className="mx-auto px-[clamp(1rem,5vw,4rem)]">
 				<div className="flex h-20 items-center justify-between">
 					<a
-						className="flex flex-row items-center font-bold text-base tracking-tight transition-opacity hover:opacity-70 lg:text-xl"
+						className="flex flex-row items-center gap-2 font-bold text-base tracking-tight transition-opacity hover:opacity-70 lg:text-xl"
 						href="/"
 					>
-						<svg
-							className="h-12 w-auto shrink-0 fill-current"
-							viewBox="0 0 83 61"
-							xmlns="http://www.w3.org/2000/svg"
-						>
-							<path d="M0 0h83v61H0z" fill="none" />
-							<path d="M41.5 10.2L54.9 30H28.1L41.5 10.2zM21 30V48H8.5V30H21zM41.5 30V48H54V30H41.5zM74.5 30V48H62V30H74.5z" />
-						</svg>
+						<img
+							alt="Dakik Studio"
+							className="h-12 w-auto shrink-0"
+							src="/dakik_logo.svg"
+						/>
 						<span className="hidden lg:inline">Dakik Studio</span>
 					</a>
 
@@ -82,7 +79,7 @@ export function Navbar() {
 					<motion.button
 						aria-expanded={isOpen}
 						aria-label={isOpen ? "Close menu" : "Open menu"}
-						className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-white/10"
+						className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-white/10 md:hidden"
 						onClick={toggleMenu}
 						type="button"
 						whileTap={{ scale: 0.95 }}
