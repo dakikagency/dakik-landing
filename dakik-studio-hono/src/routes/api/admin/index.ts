@@ -4,6 +4,7 @@ import { createAdminAutomationsRouter } from "./automations";
 import { createAdminBlogRouter } from "./blog";
 import { createAdminComponentsRouter } from "./components";
 import { createAdminIconsRouter } from "./icons";
+import { createAdminUploadRouter } from "./upload";
 
 /**
  * Admin-only API namespace.
@@ -29,6 +30,7 @@ export function createAdminRouter() {
 	admin.route("/automations", createAdminAutomationsRouter());
 	admin.route("/components", createAdminComponentsRouter());
 	admin.route("/icons", createAdminIconsRouter());
+	admin.route("/upload", createAdminUploadRouter());
 
 	return admin;
 }

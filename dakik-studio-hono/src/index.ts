@@ -5,6 +5,7 @@ import { errorHandler } from "./middleware/error-handler";
 import { logger } from "./middleware/logger";
 import { createApiRouter } from "./routes/api";
 import { healthRoute } from "./routes/health";
+import { mediaRoute } from "./routes/media";
 import { seoRoute } from "./routes/seo";
 import type { CloudflareEnv } from "./types/cloudflare";
 
@@ -30,6 +31,7 @@ app.all("/api/*", (c) => {
 	return apiRouter.fetch(req);
 });
 
+app.route("/", mediaRoute);
 app.route("/", seoRoute);
 
 export default app;

@@ -17,13 +17,21 @@
       "/automations",
       "/automations/*",
       "/privacy",
-      "/terms"
+      "/terms",
+      "/media/*"
     ]
   },
 
   "vars": {
     "ENVIRONMENT": "development"
   },
+
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "dakik-media"
+    }
+  ],
 
   "observability": {
     "enabled": true
