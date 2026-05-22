@@ -1,10 +1,12 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
-import { Reveal, StaggerContainer, StaggerItem } from "../motion";
-import Noise from "../noise";
-import { GridBackdrop } from "../ui/grid-backdrop";
 
-const faqs = [
+interface FaqItem {
+	question: string;
+	answer: string;
+}
+
+const faqs: readonly FaqItem[] = [
 	{
 		question: "What is your design and development process?",
 		answer:
@@ -37,6 +39,7 @@ interface AccordionItemProps {
 	answer: string;
 	isOpen: boolean;
 	onToggle: () => void;
+	index: number;
 }
 
 function AccordionItem({
@@ -44,36 +47,48 @@ function AccordionItem({
 	answer,
 	isOpen,
 	onToggle,
+	index,
 }: AccordionItemProps) {
+	const contentId = `faq-panel-${index}`;
 	return (
-		<div className="border-white/10 border-b">
+		<div className="border-black/10 border-t">
 			<button
-				className="flex w-full items-center justify-between py-6 text-left"
+				aria-controls={contentId}
+				aria-expanded={isOpen}
+				className="group flex w-full items-start gap-6 py-7 text-left transition-colors hover:bg-black/[0.02] focus-visible:bg-black/[0.03] focus-visible:outline-none"
 				onClick={onToggle}
 				type="button"
 			>
-				<span className="pr-4 font-medium text-lg">{question}</span>
-				<motion.span
-					animate={{ rotate: isOpen ? 180 : 0 }}
-					transition={{ duration: 0.2 }}
+				<span className="mt-[0.55em] shrink-0 font-mono text-[11px] text-black/45 uppercase tracking-[0.35em] tabular-nums">
+					{String(index + 1).padStart(2, "0")}
+				</span>
+				<span className="flex-1 font-medium text-lg leading-snug text-balance tracking-tight lg:text-2xl">
+					{question}
+				</span>
+				<span
+					aria-hidden="true"
+					className="mt-[0.4em] shrink-0 font-mono text-base text-black/45 transition-colors group-hover:text-black"
 				>
-					{isOpen ? (
-						<MinusIcon className="h-5 w-5 flex-shrink-0" />
-					) : (
-						<PlusIcon className="h-5 w-5 flex-shrink-0" />
-					)}
-				</motion.span>
+					{isOpen ? "—" : "+"}
+				</span>
 			</button>
+
 			<AnimatePresence initial={false}>
 				{isOpen && (
 					<motion.div
 						animate={{ height: "auto", opacity: 1 }}
 						className="overflow-hidden"
 						exit={{ height: 0, opacity: 0 }}
+						id={contentId}
 						initial={{ height: 0, opacity: 0 }}
-						transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+						role="region"
+						transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
 					>
-						<p className="pb-6 text-gray-400">{answer}</p>
+						<div className="pb-8 pl-12 pr-6 lg:pl-[calc(11px+1.5rem)]">
+							<p className="max-w-[60ch] text-base text-black/65 leading-relaxed lg:text-lg">
+								{answer}
+							</p>
+						</div>
 					</motion.div>
 				)}
 			</AnimatePresence>
@@ -81,115 +96,49 @@ function AccordionItem({
 	);
 }
 
-function MinusIcon({ className }: { className?: string }) {
-	return (
-		<svg
-			className={className}
-			fill="none"
-			height="20"
-			stroke="currentColor"
-			strokeWidth="2"
-			viewBox="0 0 24 24"
-			width="20"
-			xmlns="http://www.w3.org/2000/svg"
-		>
-			<path d="M20 12H4" strokeLinecap="round" strokeLinejoin="round" />
-		</svg>
-	);
-}
-
-function PlusIcon({ className }: { className?: string }) {
-	return (
-		<svg
-			className={className}
-			fill="none"
-			height="20"
-			stroke="currentColor"
-			strokeWidth="2"
-			viewBox="0 0 24 24"
-			width="20"
-			xmlns="http://www.w3.org/2000/svg"
-		>
-			<path d="M12 4v16m8-8H4" strokeLinecap="round" strokeLinejoin="round" />
-		</svg>
-	);
-}
-
 export function FAQ() {
 	const [openIndex, setOpenIndex] = useState<number | null>(0);
 
 	return (
-		<section
-			className="relative z-10 mx-auto w-full bg-white px-[clamp(1rem,5vw,4rem)] pt-16 md:pt-24"
-			id="faq"
-		>
-			<GridBackdrop className="opacity-90" />
-			<div className="relative">
-				<div className="relative top-0 mx-auto flex w-full">
-					<video
-						autoPlay
-						className="pointer-events-auto absolute z-10 aspect-video h-auto w-full lg:h-96 lg:w-auto"
-						loop
-						muted
-						src="/faq.mp4"
-					/>
-					<div className="pointer-events-auto relative z-50 aspect-video h-auto w-full lg:h-96 lg:w-auto">
-						<Noise
-							patternAlpha={25}
-							patternRefreshInterval={2}
-							patternScaleX={1}
-							patternScaleY={1}
-							patternSize={500}
-						/>
-					</div>
-				</div>
+		<section className="relative bg-white text-black" id="faq">
+			<div className="mx-auto max-w-7xl px-[clamp(1.5rem,6vw,6rem)] py-[clamp(6rem,12vh,10rem)]">
+				<div className="grid grid-cols-12 gap-x-8 gap-y-12 lg:gap-x-12">
+					<header className="col-span-12 lg:col-span-4 lg:sticky lg:top-24 lg:self-start">
+						<span className="font-mono text-[11px] text-black/55 uppercase tracking-[0.35em]">
+							FAQ
+						</span>
+						<h2 className="mt-4 font-black text-[clamp(2.5rem,6vw,5rem)] uppercase leading-[0.9] tracking-[-0.03em]">
+							Frequently
+							<br />
+							asked.
+						</h2>
+						<p className="mt-6 max-w-[34ch] text-base text-black/65 leading-relaxed">
+							The questions we hear most often. Email{" "}
+							<a
+								className="font-medium text-black underline decoration-black/30 underline-offset-4 transition-colors hover:decoration-black"
+								href="mailto:hello@dakik.co.uk"
+							>
+								hello@dakik.co.uk
+							</a>{" "}
+							if you don't see yours.
+						</p>
+					</header>
 
-				<div className="mx-auto mt-20 w-full">
-					<Reveal direction="up">
-						<div className="mb-4 text-left lg:mb-16">
-							<span className="mb-4 inline-block font-medium text-gray-500 text-sm uppercase tracking-widest">
-								FAQ
-							</span>
-							<h2 className="font-bold text-display-md tracking-tight">
-								Common questions
-							</h2>
-						</div>
-					</Reveal>
-
-					<div className="mx-auto">
-						<StaggerContainer>
+					<div className="col-span-12 lg:col-span-8">
+						<div className="border-black/10 border-b">
 							{faqs.map((faq, index) => (
-								<StaggerItem key={faq.question}>
-									<AccordionItem
-										answer={faq.answer}
-										isOpen={openIndex === index}
-										onToggle={() =>
-											setOpenIndex(openIndex === index ? null : index)
-										}
-										question={faq.question}
-									/>
-								</StaggerItem>
+								<AccordionItem
+									answer={faq.answer}
+									index={index}
+									isOpen={openIndex === index}
+									key={faq.question}
+									onToggle={() =>
+										setOpenIndex(openIndex === index ? null : index)
+									}
+									question={faq.question}
+								/>
 							))}
-						</StaggerContainer>
-					</div>
-				</div>
-
-				<div className="relative top-0 right-0 mt-12 mb-32 ml-auto flex w-fit">
-					<video
-						autoPlay
-						className="pointer-events-auto absolute z-10 aspect-video h-auto w-full lg:h-96 lg:w-auto"
-						loop
-						muted
-						src="/faq3.mp4"
-					/>
-					<div className="pointer-events-auto relative z-50 aspect-video h-auto w-full lg:h-96 lg:w-auto">
-						<Noise
-							patternAlpha={25}
-							patternRefreshInterval={2}
-							patternScaleX={1}
-							patternScaleY={1}
-							patternSize={500}
-						/>
+						</div>
 					</div>
 				</div>
 			</div>
