@@ -2,12 +2,9 @@ import {
 	FAQ,
 	Footer,
 	Hero,
-	LogoCarousel,
 	Marquee,
 	Navbar,
 	ServicesSection,
-	Testimonials,
-	Work,
 } from "../components/landing";
 
 export function LandingPage() {
@@ -17,10 +14,7 @@ export function LandingPage() {
 			<main>
 				<Hero />
 				<Marquee />
-				<LogoCarousel />
 				<ServicesSection />
-				<Work />
-				<Testimonials />
 				<FAQ />
 			</main>
 			<Footer />

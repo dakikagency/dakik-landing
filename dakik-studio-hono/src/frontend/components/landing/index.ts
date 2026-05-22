@@ -1,9 +1,6 @@
 export { FAQ } from "./faq";
 export { Footer } from "./footer";
 export { Hero } from "./hero";
-export { LogoCarousel } from "./logo-carousel";
 export { Marquee } from "./marquee";
 export { Navbar } from "./navbar";
 export { ServicesSection } from "./services";
-export { Testimonials } from "./testimonials";
-export { Work } from "./work";
