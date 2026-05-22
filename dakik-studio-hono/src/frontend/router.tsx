@@ -6,6 +6,7 @@ import { AboutPage } from "./pages/about";
 import { AdminAutomations } from "./pages/admin/automations";
 import { AdminBlog } from "./pages/admin/blog";
 import { AdminCustomers } from "./pages/admin/customers";
+import { AdminDacomps } from "./pages/admin/dacomps";
 import { AdminDaicons } from "./pages/admin/daicons";
 import { AdminDashboard } from "./pages/admin/dashboard";
 import { AdminInvoices } from "./pages/admin/invoices";
@@ -70,6 +71,7 @@ export const router = createBrowserRouter([
 					{ path: "blog", element: <AdminBlog /> },
 					{ path: "automations", element: <AdminAutomations /> },
 					{ path: "daicons", element: <AdminDaicons /> },
+					{ path: "dacomps", element: <AdminDacomps /> },
 				],
 			},
 			{
