@@ -44,7 +44,7 @@ export function Hero() {
 					className="relative mx-auto flex h-full flex-col px-[clamp(1rem,5vw,4rem)] pt-[clamp(6rem,15vh,10rem)] pb-[clamp(2rem,5vh,4rem)]"
 					style={{ opacity: prefersReducedMotion ? 1 : textOpacity }}
 				>
-					<div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+					<div className="mb-8 flex flex-wrap items-center gap-4">
 						<Reveal delay={0.05} direction="up">
 							<div className="flex items-center gap-3">
 								<span className="font-mono text-[11px] text-white/55 uppercase tracking-[0.35em]">
@@ -55,14 +55,6 @@ export function Hero() {
 									Client portal and digital product studio
 								</span>
 							</div>
-						</Reveal>
-						<Reveal delay={0.1} direction="left">
-							<a
-								className="inline-flex items-center gap-2 border border-white/20 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.25em] transition-colors duration-300 hover:border-white hover:bg-white hover:text-black"
-								href="/privacy-policy"
-							>
-								Privacy Policy
-							</a>
 						</Reveal>
 					</div>
 
