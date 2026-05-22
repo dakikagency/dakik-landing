@@ -2,7 +2,6 @@ import {
 	FAQ,
 	Footer,
 	Hero,
-	Marquee,
 	Navbar,
 	ServicesSection,
 } from "../components/landing";
@@ -13,7 +12,6 @@ export function LandingPage() {
 			<Navbar />
 			<main>
 				<Hero />
-				<Marquee />
 				<ServicesSection />
 				<FAQ />
 			</main>
