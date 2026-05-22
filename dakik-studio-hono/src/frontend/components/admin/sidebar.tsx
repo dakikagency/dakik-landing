@@ -1,9 +1,13 @@
 import {
+	BoxIcon,
 	CalendarIcon,
 	ClipboardListIcon,
 	DollarSignIcon,
+	FileTextIcon,
 	LayoutDashboardIcon,
 	LogOutIcon,
+	ShapesIcon,
+	SparklesIcon,
 	UsersIcon,
 	XIcon,
 } from "lucide-react";
@@ -23,6 +27,10 @@ const navItems = [
 	{ href: "/admin/projects", label: "Projects", icon: ClipboardListIcon },
 	{ href: "/admin/invoices", label: "Invoices", icon: DollarSignIcon },
 	{ href: "/admin/meetings", label: "Meetings", icon: CalendarIcon },
+	{ href: "/admin/blog", label: "Blog", icon: FileTextIcon },
+	{ href: "/admin/automations", label: "Automations", icon: SparklesIcon },
+	{ href: "/admin/dacomps", label: "Components", icon: BoxIcon },
+	{ href: "/admin/daicons", label: "Icons", icon: ShapesIcon },
 ];
 
 export function Sidebar({ isMobileOpen, onClose, onLogout }: SidebarProps) {

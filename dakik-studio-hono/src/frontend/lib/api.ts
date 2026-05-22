@@ -104,6 +104,112 @@ export interface Meeting {
 	status: string;
 }
 
+export interface Tag {
+	id: string;
+	name: string;
+	slug: string;
+}
+
+export interface BlogPost {
+	id: string;
+	slug: string;
+	title: string;
+	excerpt?: string | null;
+	content: string;
+	coverImage?: string | null;
+	published: boolean;
+	publishedAt?: string | null;
+	createdAt: string;
+	updatedAt: string;
+	tags: Tag[];
+}
+
+export interface Automation {
+	id: string;
+	slug: string;
+	title: string;
+	excerpt?: string | null;
+	content: string;
+	coverImage?: string | null;
+	fileUrl?: string | null;
+	published: boolean;
+	publishedAt?: string | null;
+	createdAt: string;
+	updatedAt: string;
+	tags: Tag[];
+}
+
+export interface ComponentFileEntry {
+	id?: string;
+	filename: string;
+	fileType?: string;
+	content: string;
+	isMainFile?: boolean;
+	order?: number;
+}
+
+export interface ComponentDoc {
+	id: string;
+	slug: string;
+	name: string;
+	category: string;
+	description?: string | null;
+	props: unknown;
+	code: string;
+	preview?: string | null;
+	published: boolean;
+	createdAt: string;
+	updatedAt: string;
+	files: ComponentFileEntry[];
+}
+
+export interface Icon {
+	id: string;
+	slug: string;
+	name: string;
+	category: string;
+	svgContent: string;
+	keywords: string[];
+	isCustom: boolean;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface BlogPostInput {
+	title: string;
+	slug: string;
+	excerpt?: string;
+	content: string;
+	coverImage?: string | null;
+	published?: boolean;
+	tags?: string[];
+}
+
+export interface AutomationInput extends BlogPostInput {
+	fileUrl?: string | null;
+}
+
+export interface ComponentDocInput {
+	name: string;
+	slug: string;
+	category: string;
+	description?: string;
+	props?: unknown;
+	code: string;
+	preview?: string | null;
+	published?: boolean;
+	files?: ComponentFileEntry[];
+}
+
+export interface IconInput {
+	name: string;
+	slug: string;
+	category: string;
+	svgContent: string;
+	keywords?: string[];
+	isCustom?: boolean;
+}
+
 // API Client
 export const api = {
 	leads: {
@@ -226,5 +332,104 @@ export const api = {
 					times: Array<{ start: string; end: string; available: boolean }>;
 				}>;
 			}>("/availability/slots", { params }),
+	},
+
+	admin: {
+		blog: {
+			list: (params?: {
+				search?: string;
+				published?: "true" | "false";
+				limit?: number;
+			}) => fetchApi<{ posts: BlogPost[] }>("/admin/blog", { params }),
+			get: (id: string) =>
+				fetchApi<{ post: BlogPost }>(`/admin/blog/${id}`),
+			create: (data: BlogPostInput) =>
+				fetchApi<{ post: BlogPost }>("/admin/blog", {
+					method: "POST",
+					body: JSON.stringify(data),
+				}),
+			update: (id: string, data: Partial<BlogPostInput>) =>
+				fetchApi<{ post: BlogPost }>(`/admin/blog/${id}`, {
+					method: "PUT",
+					body: JSON.stringify(data),
+				}),
+			delete: (id: string) =>
+				fetchApi<{ success: boolean }>(`/admin/blog/${id}`, {
+					method: "DELETE",
+				}),
+		},
+		automations: {
+			list: (params?: {
+				search?: string;
+				published?: "true" | "false";
+				limit?: number;
+			}) =>
+				fetchApi<{ automations: Automation[] }>("/admin/automations", {
+					params,
+				}),
+			get: (id: string) =>
+				fetchApi<{ automation: Automation }>(`/admin/automations/${id}`),
+			create: (data: AutomationInput) =>
+				fetchApi<{ automation: Automation }>("/admin/automations", {
+					method: "POST",
+					body: JSON.stringify(data),
+				}),
+			update: (id: string, data: Partial<AutomationInput>) =>
+				fetchApi<{ automation: Automation }>(`/admin/automations/${id}`, {
+					method: "PUT",
+					body: JSON.stringify(data),
+				}),
+			delete: (id: string) =>
+				fetchApi<{ success: boolean }>(`/admin/automations/${id}`, {
+					method: "DELETE",
+				}),
+		},
+		components: {
+			list: (params?: {
+				search?: string;
+				category?: string;
+				limit?: number;
+			}) =>
+				fetchApi<{ components: ComponentDoc[] }>("/admin/components", {
+					params,
+				}),
+			get: (id: string) =>
+				fetchApi<{ component: ComponentDoc }>(`/admin/components/${id}`),
+			create: (data: ComponentDocInput) =>
+				fetchApi<{ component: ComponentDoc }>("/admin/components", {
+					method: "POST",
+					body: JSON.stringify(data),
+				}),
+			update: (id: string, data: Partial<ComponentDocInput>) =>
+				fetchApi<{ component: ComponentDoc }>(`/admin/components/${id}`, {
+					method: "PUT",
+					body: JSON.stringify(data),
+				}),
+			delete: (id: string) =>
+				fetchApi<{ success: boolean }>(`/admin/components/${id}`, {
+					method: "DELETE",
+				}),
+		},
+		icons: {
+			list: (params?: {
+				search?: string;
+				category?: string;
+				limit?: number;
+			}) => fetchApi<{ icons: Icon[] }>("/admin/icons", { params }),
+			create: (data: IconInput) =>
+				fetchApi<{ icon: Icon }>("/admin/icons", {
+					method: "POST",
+					body: JSON.stringify(data),
+				}),
+			update: (id: string, data: Partial<IconInput>) =>
+				fetchApi<{ icon: Icon }>(`/admin/icons/${id}`, {
+					method: "PUT",
+					body: JSON.stringify(data),
+				}),
+			delete: (id: string) =>
+				fetchApi<{ success: boolean }>(`/admin/icons/${id}`, {
+					method: "DELETE",
+				}),
+		},
 	},
 };

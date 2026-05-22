@@ -3,6 +3,7 @@ import { AdminLayout } from "./components/admin/admin-layout";
 import { RequireAdmin } from "./components/auth/require-admin";
 import { PortalLayout } from "./components/portal/portal-layout";
 import { AboutPage } from "./pages/about";
+import { AdminBlog } from "./pages/admin/blog";
 import { AdminCustomers } from "./pages/admin/customers";
 import { AdminDashboard } from "./pages/admin/dashboard";
 import { AdminInvoices } from "./pages/admin/invoices";
@@ -64,6 +65,7 @@ export const router = createBrowserRouter([
 					{ path: "projects", element: <AdminProjects /> },
 					{ path: "invoices", element: <AdminInvoices /> },
 					{ path: "meetings", element: <AdminMeetings /> },
+					{ path: "blog", element: <AdminBlog /> },
 				],
 			},
 			{
