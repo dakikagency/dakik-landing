@@ -46,7 +46,7 @@ export function Hero() {
 				>
 					<div className="mb-8 flex flex-wrap items-center gap-4">
 						<Reveal delay={0.05} direction="up">
-							<div className="flex items-center gap-3">
+							<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
 								<span className="font-mono text-[11px] text-white/55 uppercase tracking-[0.35em]">
 									Dakik Studio
 								</span>
@@ -60,30 +60,35 @@ export function Hero() {
 
 					<div className="flex-1">
 						<Reveal delay={0.1} direction="up">
-							<h1 className="relative block text-left font-black text-5xl uppercase leading-[0.7em] tracking-[-0.03em] lg:inline lg:text-8xl">
-								<span className="leading-[0.6em]">WE DELIVER</span>
-								<br className="leading-[0.6em]" />
-								<span className="relative block leading-none lg:inline">
-									<span className="text-nowrap leading-[0.7em]">
-										DIGITAL PRODUCTS
-									</span>
-									<span className="absolute top-0 left-0 mt-[0.84em] w-full lg:mt-[1em]">
-										<span className="items-center-safe block text-5xl leading-none lg:inline lg:flex lg:flex-1 lg:text-8xl">
-											<span className="text-nowrap leading-[0.7em]">
-												BLOODY WORK
-											</span>
-											<a
-												className="group mt-[0.20em] ml-[0.1em] inline-flex h-[1em] w-full translate-y-[-0.08em] items-center justify-center border-4 border-white bg-black px-[0.25em] align-middle transition-all duration-300 hover:bg-white hover:text-black lg:h-[0.72em] lg:w-[calc(100%-0.1em-16px)] lg:border-8"
-												href="/survey"
-											>
-												<span className="text-nowrap font-medium text-lg uppercase tracking-wider">
-													Start a Project
-												</span>
-											</a>
+							<h1 className="font-black text-4xl uppercase leading-[0.85] tracking-[-0.03em] sm:text-6xl md:text-7xl lg:text-8xl lg:leading-[0.7em]">
+								<span className="block lg:leading-[0.6em]">WE DELIVER</span>
+								<span className="block lg:leading-[0.7em]">
+									DIGITAL PRODUCTS
+								</span>
+								<span className="block lg:flex lg:items-end lg:gap-[0.15em] lg:leading-[0.7em]">
+									<span>BLOODY WORK</span>
+									{/* Desktop-only inline button — fills remaining row width.
+									    Mobile / tablet get the separate button below. */}
+									<a
+										className="hidden lg:inline-flex group h-[0.72em] flex-1 items-center justify-center border-8 border-white bg-black px-[0.25em] transition-colors duration-300 hover:bg-white hover:text-black"
+										href="/survey"
+									>
+										<span className="text-nowrap font-medium text-lg uppercase tracking-wider">
+											Start a Project
 										</span>
-									</span>
+									</a>
 								</span>
 							</h1>
+						</Reveal>
+
+						{/* Mobile / tablet button: full-width on phones, fit on small tablets. */}
+						<Reveal className="mt-6 lg:hidden" delay={0.2} direction="up">
+							<a
+								className="group inline-flex w-full items-center justify-center border-4 border-white bg-black px-8 py-4 font-medium text-base uppercase tracking-wider transition-colors duration-300 hover:bg-white hover:text-black sm:w-auto"
+								href="/survey"
+							>
+								Start a Project
+							</a>
 						</Reveal>
 					</div>
 

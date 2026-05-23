@@ -27,7 +27,7 @@
   },
 
   "vars": {
-    "ENVIRONMENT": "development"
+    "ENVIRONMENT": "production"
   },
 
   "r2_buckets": [
