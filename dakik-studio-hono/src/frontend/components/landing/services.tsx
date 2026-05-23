@@ -59,21 +59,21 @@ function Panel({ step }: { step: Step }) {
 				{step.num}
 			</span>
 
-			<div className="relative flex h-full flex-col">
+			<div className="relative flex flex-col gap-8 lg:h-full lg:gap-0">
 				<div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
-					<span className="font-mono text-[11px] text-black/55 uppercase tracking-[0.35em]">
+					<span className="font-mono text-[10px] text-black/55 uppercase tracking-[0.35em] sm:text-[11px]">
 						{step.num} / {TOTAL_LABEL} · {step.label}
 					</span>
-					<span className="font-mono text-[11px] text-black/45 uppercase tracking-[0.3em]">
+					<span className="font-mono text-[10px] text-black/45 uppercase tracking-[0.3em] sm:text-[11px]">
 						{step.meta}
 					</span>
 				</div>
 
-				<div className="mt-auto max-w-[18ch] lg:max-w-none">
-					<h3 className="font-black text-[clamp(3rem,9vw,9rem)] uppercase leading-[0.88] tracking-[-0.04em]">
+				<div className="max-w-[18ch] lg:mt-auto lg:max-w-none">
+					<h3 className="font-black text-[clamp(2.5rem,9vw,9rem)] uppercase leading-[0.88] tracking-[-0.04em]">
 						{step.angle}
 					</h3>
-					<p className="mt-8 max-w-[44ch] text-base text-black/70 leading-relaxed lg:text-lg">
+					<p className="mt-6 max-w-[44ch] text-base text-black/70 leading-relaxed lg:mt-8 lg:text-lg">
 						{step.body}
 					</p>
 				</div>
