@@ -100,18 +100,11 @@ export function Hero() {
 						<span className="text-sm tracking-wide">(Scroll)</span>
 					</Reveal>
 
-					<div className="mt-auto mb-32 lg:mb-0 lg:max-w-[50%] lg:pr-8">
+					<div className="mt-auto mb-24 lg:mb-0 lg:max-w-[50%] lg:pr-8">
 						<Reveal delay={0.4} direction="down">
-							<p className="max-w-[25ch] text-3xl text-white/90 leading-[1.15]">
-								Dakik Studio helps teams launch websites, apps, brand systems,
-								and AI automations that are built to ship.
-							</p>
-						</Reveal>
-						<Reveal delay={0.5} direction="down">
-							<p className="mt-4 max-w-[46ch] text-base text-white/65 leading-relaxed lg:text-lg">
-								Clients use the app to start projects, book discovery calls,
-								review scope, sign contracts, manage invoices, and keep delivery
-								moving in one place.
+							<p className="max-w-[44ch] text-base text-white/80 leading-snug sm:text-lg lg:text-xl">
+								We build the stuff that ships — websites, apps, brand systems,
+								AI that earns its keep. No agency theatre.
 							</p>
 						</Reveal>
 					</div>
