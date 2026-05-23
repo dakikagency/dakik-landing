@@ -69,11 +69,11 @@ function Panel({ step }: { step: Step }) {
 					</span>
 				</div>
 
-				<div className="max-w-[18ch] lg:mt-auto lg:max-w-none">
-					<h3 className="font-black text-[clamp(2.5rem,9vw,9rem)] uppercase leading-[0.88] tracking-[-0.04em]">
+				<div className="lg:mt-auto">
+					<h3 className="font-black text-[clamp(2rem,8vw,9rem)] uppercase leading-[0.9] tracking-[-0.04em] lg:leading-[0.88]">
 						{step.angle}
 					</h3>
-					<p className="mt-6 max-w-[44ch] text-base text-black/70 leading-relaxed lg:mt-8 lg:text-lg">
+					<p className="mt-5 max-w-[44ch] text-base text-black/70 leading-relaxed lg:mt-8 lg:text-lg">
 						{step.body}
 					</p>
 				</div>
