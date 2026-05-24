@@ -5,7 +5,6 @@ import {
 	useTransform,
 } from "framer-motion";
 import { useRef } from "react";
-import { useReducedMotion } from "../../hooks/use-reduced-motion";
 
 interface Step {
 	num: string;
@@ -48,44 +47,61 @@ const steps: readonly Step[] = [
 
 const TOTAL_LABEL = String(steps.length).padStart(2, "0");
 
+/**
+ * Render-time read of prefers-reduced-motion. No useEffect subscription —
+ * the OS preference doesn't change mid-session in practice, so the cost of
+ * waiting for an effect to fire (and re-rendering the whole section after)
+ * isn't worth it. Saves one useEffect per mount.
+ */
+function getPrefersReducedMotion(): boolean {
+	if (typeof window === "undefined") return false;
+	return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/**
+ * Panel uses absolute positioning so the top-label row and the bottom
+ * headline+body cluster sit at the same pixel position on every panel.
+ * That guarantees horizontal alignment as the user scrolls between
+ * panels — text doesn't jump up or down between transitions.
+ *
+ * No flex column, no mt-auto: those distribute space based on content
+ * height, which varies between panels (different headline lengths)
+ * and breaks cross-panel alignment.
+ */
 function Panel({ step }: { step: Step }) {
 	return (
-		<article className="relative flex h-full w-screen shrink-0 flex-col justify-center px-[clamp(1.5rem,6vw,6rem)] py-[clamp(6rem,12vh,8rem)]">
-			{/* Faded oversized number behind the content */}
-			<span
-				aria-hidden="true"
-				className="pointer-events-none absolute right-[-0.04em] bottom-[-0.16em] select-none font-black text-[40vw] text-black/[0.04] leading-none tracking-tighter"
-			>
-				{step.num}
-			</span>
+		<article className="relative h-full w-screen shrink-0">
+			{/* Top labels — anchored to top */}
+			<div className="absolute inset-x-[clamp(1.5rem,6vw,6rem)] top-[clamp(2rem,10vh,6rem)] flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
+				<span className="font-mono text-[10px] text-black/55 uppercase tracking-[0.35em] sm:text-[11px]">
+					{step.num} / {TOTAL_LABEL} · {step.label}
+				</span>
+				<span className="font-mono text-[10px] text-black/45 uppercase tracking-[0.3em] sm:text-[11px]">
+					{step.meta}
+				</span>
+			</div>
 
-			<div className="relative flex flex-col gap-8 lg:h-full lg:gap-0">
-				<div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
-					<span className="font-mono text-[10px] text-black/55 uppercase tracking-[0.35em] sm:text-[11px]">
-						{step.num} / {TOTAL_LABEL} · {step.label}
-					</span>
-					<span className="font-mono text-[10px] text-black/45 uppercase tracking-[0.3em] sm:text-[11px]">
-						{step.meta}
-					</span>
-				</div>
-
-				<div className="lg:mt-auto">
-					<h3 className="font-black text-[clamp(2rem,8vw,9rem)] uppercase leading-[0.9] tracking-[-0.04em] lg:leading-[0.88]">
-						{step.angle}
-					</h3>
-					<p className="mt-5 max-w-[44ch] text-base text-black/70 leading-relaxed lg:mt-8 lg:text-lg">
-						{step.body}
-					</p>
-				</div>
+			{/* Headline + body — bottom-anchored cluster. The body's bottom
+			    edge sits at the same y on every panel; headlines grow upward
+			    from above the body, so longer or shorter headlines don't
+			    shift body position. */}
+			<div className="absolute inset-x-[clamp(1.5rem,6vw,6rem)] bottom-[clamp(6rem,18vh,12rem)]">
+				<h3 className="font-black text-[clamp(2rem,8vw,9rem)] uppercase leading-[0.9] tracking-[-0.04em] lg:leading-[0.88]">
+					{step.angle}
+				</h3>
+				<p className="mt-5 max-w-[44ch] text-base text-black/70 leading-relaxed lg:mt-8 lg:text-lg">
+					{step.body}
+				</p>
 			</div>
 		</article>
 	);
 }
 
 /**
- * A single progress marker. Its width and opacity grow while the matching
- * panel is on screen, then shrink back. Extracted into its own component
- * because hooks can't run inside a .map() — one Dot instance = one hook call.
+ * One progress marker. Width and opacity grow while its panel is on
+ * screen via useTransform — framer-motion writes directly to the DOM
+ * style, no React re-render fires on scroll. Extracted so each
+ * instance owns its own hook call (rules of hooks).
  */
 function Dot({
 	progress,
@@ -117,7 +133,7 @@ function Dot({
 
 export function ServicesSection() {
 	const ref = useRef<HTMLElement>(null);
-	const prefersReducedMotion = useReducedMotion();
+	const prefersReducedMotion = getPrefersReducedMotion();
 	const { scrollYProgress } = useScroll({
 		target: ref,
 		offset: ["start start", "end end"],

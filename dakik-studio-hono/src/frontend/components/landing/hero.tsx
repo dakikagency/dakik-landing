@@ -15,10 +15,21 @@ export function Hero() {
 
 	const textOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0]);
 
+	// Container size in viewport units so it inherits the viewport's aspect
+	// ratio at every breakpoint. On a portrait phone the initial tile is
+	// 38vw × 38vh ≈ a portrait thumbnail; on a landscape desktop it's a
+	// landscape thumbnail of the same proportion. The video itself stays
+	// 16:9 — object-cover crops as needed so the source always fills the
+	// container without letterboxing.
 	const videoWidth = useTransform(
 		scrollYProgress,
 		[0, 0.3, 1],
-		["50%", "100vw", "100vw"]
+		["38vw", "100vw", "100vw"]
+	);
+	const videoHeight = useTransform(
+		scrollYProgress,
+		[0, 0.3, 1],
+		["38vh", "100vh", "100vh"]
 	);
 	const videoRight = useTransform(
 		scrollYProgress,
@@ -30,8 +41,6 @@ export function Hero() {
 		[0, 0.3, 1],
 		["20px", "0px", "0px"]
 	);
-
-	const videoY = useTransform(scrollYProgress, [0, 1], ["0px", "100px"]);
 
 	return (
 		<section
@@ -111,7 +120,10 @@ export function Hero() {
 				</motion.div>
 
 				{prefersReducedMotion ? (
-					<div className="absolute right-[clamp(1rem,5vw,4rem)] bottom-[clamp(2rem,5vh,4rem)] w-1/2">
+					<div
+						className="absolute right-[clamp(1rem,5vw,4rem)] bottom-[clamp(2rem,5vh,4rem)]"
+						style={{ width: "38vw", height: "38vh" }}
+					>
 						<video
 							autoPlay
 							className="h-full w-full object-cover shadow-2xl"
@@ -124,13 +136,13 @@ export function Hero() {
 					</div>
 				) : (
 					<motion.div
-						className="absolute aspect-video"
+						className="absolute"
 						style={{
 							width: videoWidth,
+							height: videoHeight,
 							right: videoRight,
 							bottom: videoBottom,
-							y: videoY,
-							willChange: "width, height, right, bottom, transform",
+							willChange: "width, height, right, bottom",
 						}}
 					>
 						<video
