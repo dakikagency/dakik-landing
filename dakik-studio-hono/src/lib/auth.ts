@@ -24,7 +24,12 @@ export function createAuth(env: EnvVars) {
 			provider: "postgresql",
 		}),
 		baseURL: env.BETTER_AUTH_URL,
-		basePath: "/auth",
+		// Match the actual route mount: api router is mounted at /api in
+		// src/index.ts, and the auth handler lives at /auth/* inside it,
+		// so the full path is /api/auth/*. better-auth's default is
+		// /api/auth — we set it explicitly here so URL construction
+		// (especially OAuth redirect_uri) matches what Google sees.
+		basePath: "/api/auth",
 		trustedOrigins: [env.CORS_ORIGIN],
 		advanced: {
 			cookiePrefix: "dakik-auth",
