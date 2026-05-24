@@ -1,28 +1,20 @@
+import { ChevronDown, FolderKanban } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, type Project } from "../../lib/api";
 import { cn } from "../../lib/utils";
 
-const statusConfig: Record<string, { label: string; color: string }> = {
-	PENDING: {
-		label: "Pending",
-		color: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-	},
+const statusConfig: Record<string, { label: string; tone: string }> = {
+	PENDING: { label: "Pending", tone: "text-amber-400 border-amber-500/40" },
 	IN_PROGRESS: {
 		label: "In Progress",
-		color: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+		tone: "text-primary border-primary/40",
 	},
-	ON_HOLD: {
-		label: "On Hold",
-		color: "bg-orange-500/10 text-orange-400 border-orange-500/20",
-	},
+	ON_HOLD: { label: "On Hold", tone: "text-orange-400 border-orange-500/40" },
 	COMPLETED: {
 		label: "Completed",
-		color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+		tone: "text-emerald-400 border-emerald-500/40",
 	},
-	CANCELLED: {
-		label: "Cancelled",
-		color: "bg-red-500/10 text-red-400 border-red-500/20",
-	},
+	CANCELLED: { label: "Cancelled", tone: "text-red-400 border-red-500/40" },
 };
 
 export function PortalProjects() {
@@ -47,156 +39,147 @@ export function PortalProjects() {
 		fetchProjects();
 	}, []);
 
-	const getStatusConfig = (status: string) => {
-		return (
-			statusConfig[status] || {
-				label: status,
-				color: "bg-white/10 text-white/70 border-white/20",
-			}
-		);
-	};
+	const getStatusConfig = (status: string) =>
+		statusConfig[status] || {
+			label: status,
+			tone: "text-white/70 border-white/20",
+		};
 
 	return (
-		<div className="space-y-6">
-			<div>
-				<h1 className="font-bold text-3xl">My Projects</h1>
-				<p className="mt-2 text-white/60">
-					Track the progress of your projects
+		<div className="space-y-10">
+			<header>
+				<p className="font-mono text-[10px] text-white/55 uppercase tracking-[0.35em]">
+					// Projects
 				</p>
-			</div>
+				<h1 className="mt-3 font-black text-4xl uppercase leading-[0.9] tracking-[-0.03em] sm:text-5xl">
+					Your Work.
+				</h1>
+				<div className="mt-6 h-px bg-white/10" />
+			</header>
 
 			{error && (
-				<div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-red-200 text-sm">
-					{error}
+				<div className="border border-red-500/30 bg-red-500/5 p-4 font-mono text-[11px] text-red-300 uppercase tracking-[0.2em]">
+					// {error}
 				</div>
 			)}
 
 			{isLoading && (
-				<div className="space-y-4">
+				<div className="space-y-3">
 					{[1, 2, 3].map((i) => (
-						<div className="h-32 animate-pulse rounded-xl bg-white/5" key={i} />
+						<div
+							className="h-24 animate-pulse border border-white/10 bg-white/5"
+							key={i}
+						/>
 					))}
 				</div>
 			)}
 
 			{!isLoading && !error && projects.length === 0 && (
-				<div className="flex flex-col items-center justify-center rounded-xl border border-white/10 bg-white/5 py-16">
-					<svg
-						aria-hidden="true"
-						className="h-12 w-12 text-white/30"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
-					>
-						<path
-							d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={1.5}
-						/>
-					</svg>
-					<p className="mt-4 font-medium text-lg">No projects yet</p>
-					<p className="mt-1 text-sm text-white/50">
-						Your active projects will appear here
+				<div className="flex flex-col items-center justify-center border border-white/10 bg-white/[0.02] py-20">
+					<FolderKanban className="h-10 w-10 text-white/20" />
+					<p className="mt-6 font-mono text-[11px] text-white/55 uppercase tracking-[0.35em]">
+						// No projects yet
+					</p>
+					<p className="mt-2 text-sm text-white/40">
+						Your active projects will land here.
 					</p>
 				</div>
 			)}
 
 			{!isLoading && projects.length > 0 && (
-				<div className="space-y-4">
-					{projects.map((project) => {
+				<div className="space-y-3">
+					{projects.map((project, index) => {
 						const isExpanded = expandedId === project.id;
 						const statusCfg = getStatusConfig(project.status);
+						const idx = String(index + 1).padStart(2, "0");
 
 						return (
 							<div
-								className="overflow-hidden rounded-xl border border-white/10 bg-white/5 transition-all"
+								className="border border-white/10 bg-neutral-950 transition-colors hover:border-white/20"
 								key={project.id}
 							>
 								<button
-									className="flex w-full items-center justify-between p-6 text-left"
-									onClick={() => setExpandedId(isExpanded ? null : project.id)}
+									className="flex w-full items-center gap-4 p-5 text-left"
+									onClick={() =>
+										setExpandedId(isExpanded ? null : project.id)
+									}
 									type="button"
 								>
+									<span className="font-mono text-[10px] text-white/40 uppercase tracking-[0.35em]">
+										{idx}
+									</span>
 									<div className="flex-1">
-										<div className="flex items-center gap-3">
-											<h3 className="font-semibold text-lg">{project.title}</h3>
+										<div className="flex flex-wrap items-center gap-3">
+											<h3 className="font-bold text-base uppercase tracking-tight sm:text-lg">
+												{project.title}
+											</h3>
 											<span
 												className={cn(
-													"rounded-full border px-2.5 py-0.5 font-medium text-xs",
-													statusCfg.color
+													"inline-flex border px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.25em]",
+													statusCfg.tone
 												)}
 											>
 												{statusCfg.label}
 											</span>
 										</div>
 										{project.description && (
-											<p className="mt-1 line-clamp-2 text-sm text-white/60">
+											<p className="mt-1.5 line-clamp-2 text-sm text-white/55">
 												{project.description}
 											</p>
 										)}
 									</div>
-									<svg
-										aria-hidden="true"
+									<ChevronDown
 										className={cn(
-											"ml-4 h-5 w-5 text-white/40 transition-transform",
+											"h-4 w-4 text-white/40 transition-transform",
 											isExpanded && "rotate-180"
 										)}
-										fill="none"
-										stroke="currentColor"
-										viewBox="0 0 24 24"
-									>
-										<path
-											d="M19 9l-7 7-7-7"
-											strokeLinecap="round"
-											strokeLinejoin="round"
-											strokeWidth={2}
-										/>
-									</svg>
+									/>
 								</button>
 
 								{isExpanded && (
-									<div className="border-white/10 border-t px-6 pt-4 pb-6">
-										<div className="space-y-4">
+									<div className="border-white/10 border-t px-5 pt-5 pb-6">
+										<div className="space-y-5">
 											<div>
-												<div className="flex justify-between text-sm">
-													<span className="text-white/60">Progress</span>
-													<span className="font-medium">
+												<div className="flex items-baseline justify-between">
+													<span className="font-mono text-[10px] text-white/55 uppercase tracking-[0.35em]">
+														// Progress
+													</span>
+													<span className="font-black text-2xl tracking-tight">
 														{project.progress}%
 													</span>
 												</div>
-												<div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+												<div className="mt-3 h-1 overflow-hidden bg-white/10">
 													<div
-														className="h-full rounded-full bg-white transition-all duration-500"
+														className="h-full bg-white transition-all duration-500"
 														style={{ width: `${project.progress}%` }}
 													/>
 												</div>
 											</div>
 
-											{project.startDate && (
-												<div className="flex justify-between text-sm">
-													<span className="text-white/60">Start Date</span>
-													<span>
-														{new Date(project.startDate).toLocaleDateString()}
-													</span>
-												</div>
-											)}
-
-											{project.endDate && (
-												<div className="flex justify-between text-sm">
-													<span className="text-white/60">End Date</span>
-													<span>
-														{new Date(project.endDate).toLocaleDateString()}
-													</span>
-												</div>
-											)}
-
-											{project.customer?.companyName && (
-												<div className="flex justify-between text-sm">
-													<span className="text-white/60">Company</span>
-													<span>{project.customer.companyName}</span>
-												</div>
-											)}
+											<dl className="grid gap-3 sm:grid-cols-3">
+												{project.startDate && (
+													<MetaRow
+														label="Started"
+														value={new Date(
+															project.startDate
+														).toLocaleDateString()}
+													/>
+												)}
+												{project.endDate && (
+													<MetaRow
+														label="Target"
+														value={new Date(
+															project.endDate
+														).toLocaleDateString()}
+													/>
+												)}
+												{project.customer?.companyName && (
+													<MetaRow
+														label="Company"
+														value={project.customer.companyName}
+													/>
+												)}
+											</dl>
 										</div>
 									</div>
 								)}
@@ -205,6 +188,17 @@ export function PortalProjects() {
 					})}
 				</div>
 			)}
+		</div>
+	);
+}
+
+function MetaRow({ label, value }: { label: string; value: string }) {
+	return (
+		<div>
+			<dt className="font-mono text-[10px] text-white/45 uppercase tracking-[0.35em]">
+				// {label}
+			</dt>
+			<dd className="mt-1 text-sm text-white/80">{value}</dd>
 		</div>
 	);
 }

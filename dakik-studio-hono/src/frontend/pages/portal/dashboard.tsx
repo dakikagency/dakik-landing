@@ -1,7 +1,7 @@
+import { Calendar, FolderKanban, Receipt } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type Invoice, type Meeting, type Project } from "../../lib/api";
-import { cn } from "../../lib/utils";
 
 interface Stats {
 	activeProjects: number;
@@ -65,22 +65,17 @@ export function PortalDashboard() {
 			label: "Active Projects",
 			value: stats.activeProjects,
 			href: "/portal/projects",
-			color: "bg-blue-500/10 border-blue-500/20",
-			textColor: "text-blue-400",
 		},
 		{
 			label: "Pending Invoices",
 			value: stats.pendingInvoices,
 			href: "/portal/invoices",
-			color: "bg-amber-500/10 border-amber-500/20",
-			textColor: "text-amber-400",
+			accent: stats.pendingInvoices > 0,
 		},
 		{
 			label: "Upcoming Meetings",
 			value: stats.upcomingMeetings,
 			href: "/portal/meetings",
-			color: "bg-emerald-500/10 border-emerald-500/20",
-			textColor: "text-emerald-400",
 		},
 	];
 
@@ -88,123 +83,103 @@ export function PortalDashboard() {
 		{
 			label: "View Projects",
 			href: "/portal/projects",
-			icon: (
-				<svg
-					aria-hidden="true"
-					className="h-5 w-5"
-					fill="none"
-					stroke="currentColor"
-					viewBox="0 0 24 24"
-				>
-					<path
-						d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-						strokeLinecap="round"
-						strokeLinejoin="round"
-						strokeWidth={2}
-					/>
-				</svg>
-			),
+			Icon: FolderKanban,
 		},
 		{
 			label: "View Invoices",
 			href: "/portal/invoices",
-			icon: (
-				<svg
-					aria-hidden="true"
-					className="h-5 w-5"
-					fill="none"
-					stroke="currentColor"
-					viewBox="0 0 24 24"
-				>
-					<path
-						d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-						strokeLinecap="round"
-						strokeLinejoin="round"
-						strokeWidth={2}
-					/>
-				</svg>
-			),
+			Icon: Receipt,
 		},
 		{
 			label: "Schedule Meeting",
 			href: "/portal/meetings",
-			icon: (
-				<svg
-					aria-hidden="true"
-					className="h-5 w-5"
-					fill="none"
-					stroke="currentColor"
-					viewBox="0 0 24 24"
-				>
-					<path
-						d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-						strokeLinecap="round"
-						strokeLinejoin="round"
-						strokeWidth={2}
-					/>
-				</svg>
-			),
+			Icon: Calendar,
 		},
 	];
 
 	return (
-		<div className="space-y-8">
-			<div>
-				<h1 className="font-bold text-3xl">Welcome back, {customerName}</h1>
-				<p className="mt-2 text-white/60">
-					Here&apos;s an overview of your account
+		<div className="space-y-10">
+			<header>
+				<p className="font-mono text-[10px] text-white/55 uppercase tracking-[0.35em]">
+					// Welcome back
 				</p>
-			</div>
+				<h1 className="mt-3 font-black text-4xl uppercase leading-[0.9] tracking-[-0.03em] sm:text-5xl">
+					Hello, {customerName}.
+				</h1>
+				<div className="mt-6 h-px bg-white/10" />
+			</header>
 
 			{error && (
-				<div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-red-200 text-sm">
-					{error}
+				<div className="border border-red-500/30 bg-red-500/5 p-4 font-mono text-[11px] text-red-300 uppercase tracking-[0.2em]">
+					// {error}
 				</div>
 			)}
 
-			{isLoading ? (
-				<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-					{[1, 2, 3].map((i) => (
-						<div className="h-32 animate-pulse rounded-xl bg-white/5" key={i} />
-					))}
+			<section>
+				<div className="mb-5 flex items-center gap-3">
+					<span className="font-mono text-[10px] text-white/55 uppercase tracking-[0.35em]">
+						// Overview
+					</span>
+					<span className="h-px flex-1 bg-white/10" />
 				</div>
-			) : (
-				<div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-					{statCards.map((card) => (
-						<Link
-							className={cn(
-								"group rounded-xl border p-6 transition-all hover:scale-[1.02]",
-								card.color
-							)}
-							key={card.label}
-							to={card.href}
-						>
-							<p className="text-sm text-white/60">{card.label}</p>
-							<p className={cn("mt-2 font-bold text-4xl", card.textColor)}>
-								{card.value}
-							</p>
-						</Link>
-					))}
-				</div>
-			)}
+				{isLoading ? (
+					<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+						{[1, 2, 3].map((i) => (
+							<div
+								className="h-36 animate-pulse border border-white/10 bg-white/5"
+								key={i}
+							/>
+						))}
+					</div>
+				) : (
+					<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+						{statCards.map((card) => (
+							<Link
+								className="group relative flex flex-col justify-between border border-white/10 bg-neutral-950 p-6 transition-colors hover:border-white/30 hover:bg-neutral-900"
+								key={card.label}
+								to={card.href}
+							>
+								<p className="font-mono text-[10px] text-white/55 uppercase tracking-[0.35em]">
+									{card.label}
+								</p>
+								<p
+									className={`mt-6 font-black text-6xl tracking-[-0.04em] ${card.accent ? "text-primary" : "text-white"}`}
+								>
+									{card.value}
+								</p>
+								<span className="absolute right-4 bottom-4 font-mono text-[10px] text-white/30 uppercase tracking-[0.35em] transition-colors group-hover:text-white/60">
+									View →
+								</span>
+							</Link>
+						))}
+					</div>
+				)}
+			</section>
 
-			<div>
-				<h2 className="font-semibold text-xl">Quick Actions</h2>
-				<div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+			<section>
+				<div className="mb-5 flex items-center gap-3">
+					<span className="font-mono text-[10px] text-white/55 uppercase tracking-[0.35em]">
+						// Quick actions
+					</span>
+					<span className="h-px flex-1 bg-white/10" />
+				</div>
+				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 					{quickActions.map((action) => (
 						<Link
-							className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-4 transition-all hover:border-white/20 hover:bg-white/10"
+							className="group flex items-center gap-4 border border-white/10 bg-transparent p-5 transition-colors hover:border-white/30 hover:bg-white/5"
 							key={action.label}
 							to={action.href}
 						>
-							<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10">
-								{action.icon}
+							<div className="flex h-12 w-12 items-center justify-center border-2 border-white/20 transition-colors group-hover:border-white">
+								<action.Icon className="h-5 w-5 text-white/70 group-hover:text-white" />
 							</div>
-							<span className="font-medium">{action.label}</span>
+							<span className="font-mono text-[11px] uppercase tracking-[0.25em] text-white/80 group-hover:text-white">
+								{action.label}
+							</span>
 						</Link>
 					))}
 				</div>
-			</div>
+			</section>
 		</div>
 	);
 }
