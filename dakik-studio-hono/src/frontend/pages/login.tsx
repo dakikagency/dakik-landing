@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Noise from "../components/noise";
@@ -79,46 +78,23 @@ export function LoginPage() {
 
 	return (
 		<div className="relative min-h-screen bg-black text-white">
-			<div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
+			<div className="grid grid-cols-1 lg:min-h-screen lg:grid-cols-2">
 				{/* Left column — typographic hero */}
-				<section className="relative flex min-h-[40vh] flex-col justify-between overflow-hidden border-neutral-900 border-b px-[clamp(1.5rem,5vw,4rem)] py-[clamp(2rem,6vh,4rem)] lg:min-h-screen lg:border-r lg:border-b-0">
-					<motion.div
-						initial={{ opacity: 0, y: -10 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.4, ease: [0.25, 0.25, 0.25, 0.75] }}
-						className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3"
-					>
+				<section className="relative flex flex-col gap-4 overflow-hidden border-neutral-900 border-b px-[clamp(1.5rem,5vw,4rem)] py-[clamp(1.25rem,4vh,4rem)] lg:min-h-screen lg:justify-between lg:gap-0 lg:border-r lg:border-b-0">
+					<div className="hidden flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 lg:flex">
 						<span className="font-mono text-[11px] text-white/55 uppercase tracking-[0.35em]">
 							// Access
 						</span>
 						<span className="hidden h-px w-12 bg-white/20 sm:block" />
 						<span className="text-sm text-white/55">Dakik Studio workspace</span>
-					</motion.div>
+					</div>
 
-					<motion.h1
-						initial={{ opacity: 0, y: 20 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{
-							duration: 0.5,
-							delay: 0.1,
-							ease: [0.25, 0.25, 0.25, 0.75],
-						}}
-						className="my-8 font-black text-[clamp(3.5rem,12vw,9rem)] uppercase leading-[0.85] tracking-[-0.04em] lg:my-0 lg:leading-[0.8em]"
-					>
+					<h1 className="font-black text-[clamp(2.75rem,11vw,9rem)] uppercase leading-[0.85] tracking-[-0.04em] lg:my-0 lg:leading-[0.8em]">
 						<span className="block">Log</span>
 						<span className="block">In.</span>
-					</motion.h1>
+					</h1>
 
-					<motion.div
-						initial={{ opacity: 0, y: 20 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{
-							duration: 0.5,
-							delay: 0.25,
-							ease: [0.25, 0.25, 0.25, 0.75],
-						}}
-						className="flex flex-col gap-4"
-					>
+					<div className="hidden flex-col gap-4 lg:flex">
 						<p className="max-w-[36ch] text-base text-white/70 leading-snug sm:text-lg">
 							Return to your projects, invoices, and meetings. No fluff, just
 							work.
@@ -135,24 +111,15 @@ export function LoginPage() {
 								← Back to site
 							</a>
 						</div>
-					</motion.div>
+					</div>
 
 					<Noise patternAlpha={20} patternRefreshInterval={3} />
 				</section>
 
 				{/* Right column — form */}
-				<section className="flex flex-col justify-center px-[clamp(1.5rem,5vw,4rem)] py-[clamp(2rem,6vh,5rem)]">
-					<motion.div
-						initial={{ opacity: 0, y: 10 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{
-							duration: 0.5,
-							delay: 0.2,
-							ease: [0.25, 0.25, 0.25, 0.75],
-						}}
-						className="mx-auto w-full max-w-md"
-					>
-						<div className="mb-8 flex items-center gap-3">
+				<section className="flex flex-col justify-center px-[clamp(1.5rem,5vw,4rem)] py-[clamp(1rem,3vh,5rem)] lg:py-[clamp(2rem,6vh,5rem)]">
+					<div className="mx-auto w-full max-w-md">
+						<div className="mb-5 flex items-center gap-3 lg:mb-8">
 							<span className="font-mono text-[11px] text-white/55 uppercase tracking-[0.35em]">
 								// Sign in
 							</span>
@@ -192,7 +159,7 @@ export function LoginPage() {
 							<span className="text-sm">Continue with Google</span>
 						</button>
 
-						<div className="relative my-8">
+						<div className="relative my-5 lg:my-8">
 							<div className="absolute inset-0 flex items-center">
 								<div className="w-full border-white/10 border-t" />
 							</div>
@@ -203,7 +170,7 @@ export function LoginPage() {
 							</div>
 						</div>
 
-						<form className="space-y-5" onSubmit={handleSubmit}>
+						<form className="space-y-4 lg:space-y-5" onSubmit={handleSubmit}>
 							<div>
 								<label
 									className="mb-2 block font-mono text-[10px] text-white/55 uppercase tracking-[0.35em]"
@@ -283,7 +250,7 @@ export function LoginPage() {
 							)}
 						</form>
 
-						<p className="mt-8 text-center font-mono text-[10px] text-white/45 uppercase tracking-[0.35em]">
+						<p className="mt-5 text-center font-mono text-[10px] text-white/45 uppercase tracking-[0.35em] lg:mt-8">
 							// New here?{" "}
 							<a
 								className="text-white/70 transition-colors hover:text-white"
@@ -292,7 +259,7 @@ export function LoginPage() {
 								Start a project →
 							</a>
 						</p>
-					</motion.div>
+					</div>
 				</section>
 			</div>
 		</div>
