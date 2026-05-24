@@ -94,10 +94,10 @@ export function BlogCard({
 
 					<h3
 						className={cn(
-							"font-black uppercase leading-[0.95] tracking-[-0.03em] transition-colors group-hover:text-black/60",
+							"break-words font-black uppercase leading-[0.95] tracking-[-0.03em] transition-colors group-hover:text-black/60",
 							isLead
-								? "text-3xl sm:text-4xl lg:text-5xl"
-								: "text-xl lg:text-2xl",
+								? "text-2xl sm:text-4xl lg:text-5xl"
+								: "text-lg sm:text-xl lg:text-2xl",
 						)}
 					>
 						{title}

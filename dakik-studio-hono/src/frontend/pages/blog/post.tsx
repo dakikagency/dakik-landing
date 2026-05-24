@@ -6,7 +6,6 @@ import { Link, useParams } from "react-router-dom";
 import { BlogCard } from "../../components/blog/blog-card";
 import { BlogContent } from "../../components/blog/blog-content";
 import { ShareArticle } from "../../components/blog/share-article";
-import { TableOfContents } from "../../components/blog/table-of-contents";
 import { Footer } from "../../components/landing/footer";
 import { Navbar } from "../../components/landing/navbar";
 import {
@@ -14,7 +13,6 @@ import {
 	type BlogPostFull,
 	type BlogPostSummary,
 	calculateReadTime,
-	extractHeadings,
 	formatDate,
 } from "../../lib/blog";
 
@@ -40,9 +38,9 @@ function BackLink() {
 
 function PageShell({ children }: { children: React.ReactNode }) {
 	return (
-		<div className="min-h-screen bg-white text-black">
+		<div className="min-h-screen overflow-x-hidden bg-white text-black">
 			<Navbar />
-			<main className="mx-auto max-w-7xl px-[clamp(1.5rem,6vw,6rem)] pt-32 pb-32">
+			<main className="mx-auto max-w-5xl px-[clamp(1.25rem,5vw,5rem)] pt-24 pb-20 lg:pt-32 lg:pb-32">
 				{children}
 			</main>
 			<Footer />
@@ -62,10 +60,6 @@ export function BlogPostPage() {
 	const related = data?.related ?? [];
 	const readTime = useMemo(
 		() => (post ? calculateReadTime(post.content) : 0),
-		[post],
-	);
-	const headings = useMemo(
-		() => (post ? extractHeadings(post.content) : []),
 		[post],
 	);
 
@@ -102,7 +96,7 @@ export function BlogPostPage() {
 					<span className="font-mono text-[11px] text-black/55 uppercase tracking-[0.35em]">
 						404
 					</span>
-					<h1 className="mt-4 font-black text-[clamp(2.5rem,6vw,5rem)] uppercase leading-[0.9] tracking-[-0.04em]">
+					<h1 className="mt-4 font-black text-[clamp(2.25rem,6vw,5rem)] uppercase leading-[0.95] tracking-[-0.04em] break-words">
 						Article not
 						<br />
 						found.
@@ -120,52 +114,13 @@ export function BlogPostPage() {
 
 	return (
 		<PageShell>
-			<div className="mb-12">
+			<div className="mb-10 lg:mb-14">
 				<BackLink />
 			</div>
 
-			<header className="mx-auto mb-16 grid max-w-5xl grid-cols-12 gap-6 lg:mb-20">
-				<div className="col-span-12 lg:col-span-2">
-					<span className="font-mono text-[10px] text-black/55 uppercase tracking-[0.35em]">
-						{post.tags[0]?.name ?? "Article"}
-					</span>
-				</div>
-				<div className="col-span-12 lg:col-span-10">
-					<h1 className="font-black text-[clamp(2rem,5.5vw,4.5rem)] uppercase leading-[0.95] tracking-[-0.03em]">
-						{post.title}
-					</h1>
-					{post.excerpt && (
-						<p className="mt-6 max-w-[60ch] text-lg text-black/70 leading-relaxed lg:text-xl">
-							{post.excerpt}
-						</p>
-					)}
-
-					<div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 border-black/10 border-t pt-6 font-mono text-[11px] text-black/55 uppercase tracking-[0.25em]">
-						<div className="flex items-center gap-2.5">
-							<span
-								aria-hidden="true"
-								className="flex h-7 w-7 items-center justify-center rounded-full bg-black font-mono text-[9px] text-white tracking-[0.1em]"
-							>
-								{BLOG_AUTHOR.initials}
-							</span>
-							<span className="text-black">{BLOG_AUTHOR.name}</span>
-						</div>
-						<span aria-hidden="true" className="text-black/25">/</span>
-						{post.publishedAt && (
-							<>
-								<time dateTime={new Date(post.publishedAt).toISOString()}>
-									{formatDate(post.publishedAt)}
-								</time>
-								<span aria-hidden="true" className="text-black/25">/</span>
-							</>
-						)}
-						<span>{readTime} min read</span>
-					</div>
-				</div>
-			</header>
-
+			{/* 1. Cover image — full-bleed within the page padding */}
 			{post.coverImage && (
-				<div className="mx-auto mb-20 max-w-6xl overflow-hidden bg-black/5">
+				<div className="mb-10 overflow-hidden bg-black/5 lg:mb-14">
 					<img
 						alt={post.title}
 						className="h-auto w-full object-cover"
@@ -174,29 +129,65 @@ export function BlogPostPage() {
 				</div>
 			)}
 
-			<div className="mx-auto grid max-w-6xl grid-cols-12 gap-x-10 gap-y-12">
-				<aside className="col-span-12 lg:col-span-3 lg:sticky lg:top-32 lg:self-start">
-					<TableOfContents headings={headings} />
-				</aside>
-				<article className="col-span-12 lg:col-span-9 lg:max-w-[72ch]">
-					<BlogContent content={post.content} />
-					<div className="mt-16 border-black/10 border-t pt-10">
-						<ShareArticle title={post.title} url={shareUrl} />
+			{/* 2. Tag eyebrow + title + excerpt */}
+			<header className="mb-12 lg:mb-16">
+				<span className="font-mono text-[10px] text-black/55 uppercase tracking-[0.35em] sm:text-[11px]">
+					{post.tags[0]?.name ?? "Article"}
+				</span>
+				<h1 className="mt-4 font-black text-[clamp(1.875rem,5.5vw,4.25rem)] uppercase leading-[0.95] tracking-[-0.03em] break-words">
+					{post.title}
+				</h1>
+				{post.excerpt && (
+					<p className="mt-6 max-w-[60ch] text-lg text-black/70 leading-relaxed lg:text-xl">
+						{post.excerpt}
+					</p>
+				)}
+			</header>
+
+			{/* 3. Body content — full width, no ToC sidebar */}
+			<article className="mx-auto max-w-[68ch]">
+				<BlogContent content={post.content} />
+			</article>
+
+			{/* 4. Author + date + read time + share — at the end */}
+			<footer className="mx-auto mt-16 max-w-[68ch] border-black/10 border-t pt-10 lg:mt-20">
+				<div className="flex flex-wrap items-center gap-x-6 gap-y-3 font-mono text-[10px] text-black/55 uppercase tracking-[0.25em] sm:text-[11px]">
+					<div className="flex items-center gap-2.5">
+						<span
+							aria-hidden="true"
+							className="flex h-7 w-7 items-center justify-center rounded-full bg-black font-mono text-[9px] text-white tracking-[0.1em]"
+						>
+							{BLOG_AUTHOR.initials}
+						</span>
+						<span className="text-black">{BLOG_AUTHOR.name}</span>
 					</div>
-				</article>
-			</div>
+					<span aria-hidden="true" className="text-black/25">/</span>
+					{post.publishedAt && (
+						<>
+							<time dateTime={new Date(post.publishedAt).toISOString()}>
+								{formatDate(post.publishedAt)}
+							</time>
+							<span aria-hidden="true" className="text-black/25">/</span>
+						</>
+					)}
+					<span>{readTime} min read</span>
+				</div>
+				<div className="mt-8">
+					<ShareArticle title={post.title} url={shareUrl} />
+				</div>
+			</footer>
 
 			{related.length > 0 && (
-				<section className="mt-32 border-black/10 border-t pt-16">
+				<section className="mt-24 border-black/10 border-t pt-14 lg:mt-32 lg:pt-16">
 					<div className="mb-10 flex items-baseline justify-between">
-						<span className="font-mono text-[10px] text-black/55 uppercase tracking-[0.35em]">
+						<span className="font-mono text-[10px] text-black/55 uppercase tracking-[0.35em] sm:text-[11px]">
 							Keep reading
 						</span>
-						<span className="font-mono text-[10px] text-black/45 uppercase tracking-[0.35em] tabular-nums">
+						<span className="font-mono text-[10px] text-black/45 uppercase tracking-[0.35em] tabular-nums sm:text-[11px]">
 							{String(related.length).padStart(2, "0")}
 						</span>
 					</div>
-					<div className="grid gap-x-8 gap-y-16 md:grid-cols-2 lg:grid-cols-3 lg:gap-x-10">
+					<div className="grid gap-x-8 gap-y-14 md:grid-cols-2 lg:gap-x-10">
 						{related.map((p) => (
 							<BlogCard key={p.slug} {...p} />
 						))}
