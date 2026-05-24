@@ -67,7 +67,7 @@ export function PortalLayout() {
 									key={item.href}
 									to={item.href}
 								>
-									{active && <span className="mr-2 text-primary">●</span>}
+									{active && <span className="mr-2 text-white">●</span>}
 									{item.label}
 								</NavLink>
 							);
@@ -170,7 +170,7 @@ export function PortalLayout() {
 										onClick={() => setIsMobileNavOpen(false)}
 										to={item.href}
 									>
-										{active && <span className="mr-2 text-primary">●</span>}
+										{active && <span className="mr-2 text-white">●</span>}
 										{item.label}
 									</Link>
 								);

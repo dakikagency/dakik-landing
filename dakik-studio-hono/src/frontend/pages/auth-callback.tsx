@@ -22,7 +22,7 @@ export function AuthCallbackPage() {
 	return (
 		<div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black text-white">
 			<div className="flex flex-col items-center gap-6">
-				<div className="h-6 w-6 animate-spin border-2 border-white/20 border-t-primary" />
+				<div className="h-6 w-6 animate-spin border-2 border-white/20 border-t-white" />
 				<span className="font-mono text-[11px] text-white/55 uppercase tracking-[0.35em]">
 					// Redirecting
 				</span>

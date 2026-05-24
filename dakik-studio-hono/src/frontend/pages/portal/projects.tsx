@@ -4,17 +4,14 @@ import { api, type Project } from "../../lib/api";
 import { cn } from "../../lib/utils";
 
 const statusConfig: Record<string, { label: string; tone: string }> = {
-	PENDING: { label: "Pending", tone: "text-amber-400 border-amber-500/40" },
-	IN_PROGRESS: {
-		label: "In Progress",
-		tone: "text-primary border-primary/40",
+	PENDING: { label: "Pending", tone: "text-white/80 border-white/30" },
+	IN_PROGRESS: { label: "In Progress", tone: "text-white border-white/60" },
+	ON_HOLD: { label: "On Hold", tone: "text-white/60 border-white/20" },
+	COMPLETED: { label: "Completed", tone: "text-white/50 border-white/20" },
+	CANCELLED: {
+		label: "Cancelled",
+		tone: "text-white/60 border-white/40 border-dashed",
 	},
-	ON_HOLD: { label: "On Hold", tone: "text-orange-400 border-orange-500/40" },
-	COMPLETED: {
-		label: "Completed",
-		tone: "text-emerald-400 border-emerald-500/40",
-	},
-	CANCELLED: { label: "Cancelled", tone: "text-red-400 border-red-500/40" },
 };
 
 export function PortalProjects() {
@@ -58,8 +55,8 @@ export function PortalProjects() {
 			</header>
 
 			{error && (
-				<div className="border border-red-500/30 bg-red-500/5 p-4 font-mono text-[11px] text-red-300 uppercase tracking-[0.2em]">
-					// {error}
+				<div className="border-2 border-white bg-white/[0.02] p-4 font-mono text-[11px] text-white uppercase tracking-[0.2em]">
+					// Error: {error}
 				</div>
 			)}
 

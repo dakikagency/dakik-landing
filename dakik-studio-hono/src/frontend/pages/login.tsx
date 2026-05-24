@@ -180,8 +180,8 @@ export function LoginPage() {
 								</label>
 								<input
 									autoComplete="email"
-									className={`block w-full border bg-transparent px-4 py-3 text-white placeholder-white/30 transition-colors focus:border-primary focus:outline-none ${
-										emailError ? "border-red-500" : "border-white/20"
+									className={`block w-full border bg-transparent px-4 py-3 text-white placeholder-white/30 transition-colors focus:border-white focus:outline-none ${
+										emailError ? "border-2 border-white" : "border border-white/20"
 									}`}
 									id="email"
 									name="email"
@@ -196,7 +196,7 @@ export function LoginPage() {
 									onBlur={() => validateEmail(email)}
 								/>
 								{emailError && (
-									<p className="mt-2 font-mono text-[10px] text-red-500 uppercase tracking-[0.2em]">
+									<p className="mt-2 font-mono text-[10px] text-white uppercase tracking-[0.2em]">
 										{emailError}
 									</p>
 								)}
@@ -211,8 +211,8 @@ export function LoginPage() {
 								</label>
 								<input
 									autoComplete="current-password"
-									className={`block w-full border bg-transparent px-4 py-3 text-white placeholder-white/30 transition-colors focus:border-primary focus:outline-none ${
-										passwordError ? "border-red-500" : "border-white/20"
+									className={`block w-full border bg-transparent px-4 py-3 text-white placeholder-white/30 transition-colors focus:border-white focus:outline-none ${
+										passwordError ? "border-2 border-white" : "border border-white/20"
 									}`}
 									id="password"
 									name="password"
@@ -227,7 +227,7 @@ export function LoginPage() {
 									onBlur={() => validatePassword(password)}
 								/>
 								{passwordError && (
-									<p className="mt-2 font-mono text-[10px] text-red-500 uppercase tracking-[0.2em]">
+									<p className="mt-2 font-mono text-[10px] text-white uppercase tracking-[0.2em]">
 										{passwordError}
 									</p>
 								)}
@@ -244,7 +244,7 @@ export function LoginPage() {
 							</button>
 
 							{authError && (
-								<p className="text-center font-mono text-[10px] text-red-500 uppercase tracking-[0.2em]">
+								<p className="text-center font-mono text-[10px] text-white uppercase tracking-[0.2em]">
 									{authError}
 								</p>
 							)}

@@ -4,10 +4,13 @@ import { api, type Invoice } from "../../lib/api";
 import { cn } from "../../lib/utils";
 
 const statusConfig: Record<string, { label: string; tone: string }> = {
-	UNPAID: { label: "Unpaid", tone: "text-red-400 border-red-500/40" },
-	PENDING: { label: "Pending", tone: "text-amber-400 border-amber-500/40" },
-	PAID: { label: "Paid", tone: "text-emerald-400 border-emerald-500/40" },
-	OVERDUE: { label: "Overdue", tone: "text-orange-400 border-orange-500/40" },
+	UNPAID: { label: "Unpaid", tone: "text-white border-white/60" },
+	PENDING: { label: "Pending", tone: "text-white/80 border-white/30" },
+	PAID: { label: "Paid", tone: "text-white/50 border-white/20" },
+	OVERDUE: {
+		label: "Overdue",
+		tone: "text-white border-white border-dashed",
+	},
 };
 
 export function PortalInvoices() {
@@ -78,8 +81,8 @@ export function PortalInvoices() {
 			</header>
 
 			{error && (
-				<div className="border border-red-500/30 bg-red-500/5 p-4 font-mono text-[11px] text-red-300 uppercase tracking-[0.2em]">
-					// {error}
+				<div className="border-2 border-white bg-white/[0.02] p-4 font-mono text-[11px] text-white uppercase tracking-[0.2em]">
+					// Error: {error}
 				</div>
 			)}
 
@@ -89,12 +92,7 @@ export function PortalInvoices() {
 						<p className="font-mono text-[10px] text-white/55 uppercase tracking-[0.35em]">
 							// Total outstanding
 						</p>
-						<p
-							className={cn(
-								"mt-2 font-black text-5xl tracking-[-0.04em]",
-								outstanding > 0 ? "text-primary" : "text-white"
-							)}
-						>
+						<p className="mt-2 font-black text-5xl text-white tracking-[-0.04em]">
 							{formatCurrency(outstanding)}
 						</p>
 					</div>

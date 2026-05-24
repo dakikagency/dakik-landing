@@ -4,12 +4,12 @@ import { api, type Meeting } from "../../lib/api";
 import { cn } from "../../lib/utils";
 
 const statusConfig: Record<string, { label: string; tone: string }> = {
-	SCHEDULED: {
-		label: "Scheduled",
-		tone: "text-emerald-400 border-emerald-500/40",
+	SCHEDULED: { label: "Scheduled", tone: "text-white border-white/60" },
+	COMPLETED: { label: "Completed", tone: "text-white/50 border-white/20" },
+	CANCELLED: {
+		label: "Cancelled",
+		tone: "text-white/60 border-white/40 border-dashed",
 	},
-	COMPLETED: { label: "Completed", tone: "text-white/70 border-white/30" },
-	CANCELLED: { label: "Cancelled", tone: "text-red-400 border-red-500/40" },
 };
 
 export function PortalMeetings() {
@@ -98,8 +98,8 @@ export function PortalMeetings() {
 			</header>
 
 			{error && (
-				<div className="border border-red-500/30 bg-red-500/5 p-4 font-mono text-[11px] text-red-300 uppercase tracking-[0.2em]">
-					// {error}
+				<div className="border-2 border-white bg-white/[0.02] p-4 font-mono text-[11px] text-white uppercase tracking-[0.2em]">
+					// Error: {error}
 				</div>
 			)}
 

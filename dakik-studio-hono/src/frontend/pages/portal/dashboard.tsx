@@ -70,7 +70,6 @@ export function PortalDashboard() {
 			label: "Pending Invoices",
 			value: stats.pendingInvoices,
 			href: "/portal/invoices",
-			accent: stats.pendingInvoices > 0,
 		},
 		{
 			label: "Upcoming Meetings",
@@ -110,8 +109,8 @@ export function PortalDashboard() {
 			</header>
 
 			{error && (
-				<div className="border border-red-500/30 bg-red-500/5 p-4 font-mono text-[11px] text-red-300 uppercase tracking-[0.2em]">
-					// {error}
+				<div className="border-2 border-white bg-white/[0.02] p-4 font-mono text-[11px] text-white uppercase tracking-[0.2em]">
+					// Error: {error}
 				</div>
 			)}
 
@@ -142,9 +141,7 @@ export function PortalDashboard() {
 								<p className="font-mono text-[10px] text-white/55 uppercase tracking-[0.35em]">
 									{card.label}
 								</p>
-								<p
-									className={`mt-6 font-black text-6xl tracking-[-0.04em] ${card.accent ? "text-primary" : "text-white"}`}
-								>
+								<p className="mt-6 font-black text-6xl text-white tracking-[-0.04em]">
 									{card.value}
 								</p>
 								<span className="absolute right-4 bottom-4 font-mono text-[10px] text-white/30 uppercase tracking-[0.35em] transition-colors group-hover:text-white/60">
