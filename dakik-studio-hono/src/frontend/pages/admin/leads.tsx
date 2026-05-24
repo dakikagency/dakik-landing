@@ -257,9 +257,10 @@ export function AdminLeads() {
 		}
 	}
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: only fetch on mount; subsequent fetches triggered by handlers
 	useEffect(() => {
 		fetchLeads();
-	}, [fetchLeads]);
+	}, []);
 
 	async function handleCreate(data: LeadFormData) {
 		try {

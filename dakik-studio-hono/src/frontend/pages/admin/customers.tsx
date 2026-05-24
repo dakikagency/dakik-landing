@@ -168,9 +168,10 @@ export function AdminCustomers() {
 		}
 	}
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: only fetch on mount; subsequent fetches triggered by handlers
 	useEffect(() => {
 		fetchCustomers();
-	}, [fetchCustomers]);
+	}, []);
 
 	async function handleUpdate(data: CustomerFormData) {
 		if (!editingCustomer) {

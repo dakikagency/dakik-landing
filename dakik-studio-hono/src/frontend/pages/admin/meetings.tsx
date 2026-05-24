@@ -317,9 +317,10 @@ export function AdminMeetings() {
 		}
 	}
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: only fetch on mount; subsequent fetches triggered by handlers
 	useEffect(() => {
 		fetchMeetings();
-	}, [fetchMeetings]);
+	}, []);
 
 	async function handleCreate(data: MeetingFormData) {
 		try {

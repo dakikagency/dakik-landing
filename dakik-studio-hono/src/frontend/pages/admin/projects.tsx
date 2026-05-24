@@ -280,9 +280,10 @@ export function AdminProjects() {
 		}
 	}
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: only fetch on mount; subsequent fetches triggered by handlers
 	useEffect(() => {
 		fetchProjects();
-	}, [fetchProjects]);
+	}, []);
 
 	async function handleCreate(data: ProjectFormData) {
 		try {

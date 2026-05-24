@@ -314,9 +314,10 @@ export function AdminInvoices() {
 		}
 	}
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: only fetch on mount; subsequent fetches triggered by handlers
 	useEffect(() => {
 		fetchInvoices();
-	}, [fetchInvoices]);
+	}, []);
 
 	async function handleCreate(data: InvoiceFormData) {
 		try {

@@ -18,7 +18,7 @@ export function AdminLayout() {
 				onLogout={handleLogout}
 			/>
 
-			<div className="relative z-50 flex flex-1 flex-col rounded-2xl border border-white/10 bg-neutral-950 text-white shadow-lg">
+			<div className="relative flex flex-1 flex-col overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 text-white shadow-lg">
 				<header className="flex h-14 items-center gap-4 border-white/10 border-b px-4 lg:hidden">
 					<button
 						className=""
