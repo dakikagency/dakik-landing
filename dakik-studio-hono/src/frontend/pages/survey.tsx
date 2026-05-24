@@ -1,12 +1,12 @@
 import { useHead } from "@unhead/react";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { cn } from "../lib/utils";
 
-const TOTAL_STEPS = 4;
-type Step = 1 | 2 | 3 | 4;
+const TOTAL_STEPS = 5;
+type Step = 1 | 2 | 3 | 4 | 5;
 
 interface FormState {
 	projectType: string;
@@ -33,10 +33,6 @@ interface ChipOption {
 	value: string;
 }
 
-/**
- * Conversational labels mapped to ProjectType enum on the backend.
- * The user sees plain English; the database gets the enum.
- */
 const PROJECT_TYPES: readonly ChipOption[] = [
 	{ label: "A website or app", value: "WEB_MOBILE" },
 	{ label: "A brand or rebrand", value: "BRAND_IDENTITY" },
@@ -58,7 +54,16 @@ const SOURCES: readonly ChipOption[] = [
 	{ label: "Other", value: "Other" },
 ];
 
+const MEETING_DURATION_MINS = 30;
+const MEETING_WINDOW_DAYS = 14;
+
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+interface BookedMeeting {
+	date: string;
+	startTime: string;
+	meetUrl?: string;
+}
 
 export function SurveyPage() {
 	useHead({
@@ -67,7 +72,7 @@ export function SurveyPage() {
 			{
 				name: "description",
 				content:
-					"Tell us what you want to build. Four short questions, no sales pitch.",
+					"Tell us what you want to build. A handful of questions, then pick a time.",
 			},
 			{ name: "robots", content: "noindex" },
 		],
@@ -80,17 +85,12 @@ export function SurveyPage() {
 	>({});
 	const [submitting, setSubmitting] = useState(false);
 	const [submitError, setSubmitError] = useState<string | null>(null);
-	const [success, setSuccess] = useState(false);
+	const [leadId, setLeadId] = useState<string | null>(null);
+	const [bookedMeeting, setBookedMeeting] = useState<BookedMeeting | null>(null);
 
 	const goNext = () => setStep((s) => Math.min(s + 1, TOTAL_STEPS) as Step);
 	const goBack = () => setStep((s) => Math.max(s - 1, 1) as Step);
 
-	/**
-	 * On chip-style questions, selecting an option auto-advances after a brief
-	 * pause. The pause lets the user see their selection register before the
-	 * panel transitions — important confirmation cue. ~350ms feels snappy
-	 * without being abrupt.
-	 */
 	const selectAndAdvance = (field: keyof FormState, value: string) => {
 		setForm((prev) => ({ ...prev, [field]: value }));
 		setTimeout(goNext, 350);
@@ -105,8 +105,7 @@ export function SurveyPage() {
 		const next: Partial<Record<keyof FormState, string>> = {};
 		if (!form.name.trim()) next.name = "Required";
 		if (!form.email.trim()) next.email = "Required";
-		else if (!emailRegex.test(form.email))
-			next.email = "Doesn't look right";
+		else if (!emailRegex.test(form.email)) next.email = "Doesn't look right";
 		setErrors(next);
 		return Object.keys(next).length === 0;
 	};
@@ -117,7 +116,7 @@ export function SurveyPage() {
 		if (!validateContact()) return;
 		setSubmitting(true);
 		try {
-			await api.leads.create({
+			const res = await api.leads.create({
 				name: form.name,
 				email: form.email,
 				projectType: form.projectType || undefined,
@@ -126,7 +125,8 @@ export function SurveyPage() {
 				source: form.source || undefined,
 				status: "NEW",
 			});
-			setSuccess(true);
+			setLeadId(res.lead.id);
+			goNext();
 		} catch (err) {
 			setSubmitError(
 				err instanceof Error
@@ -138,8 +138,12 @@ export function SurveyPage() {
 		}
 	};
 
-	if (success) {
-		return <SuccessScreen />;
+	const handleMeetingBooked = (meeting: BookedMeeting) => {
+		setBookedMeeting(meeting);
+	};
+
+	if (bookedMeeting) {
+		return <SuccessScreen meeting={bookedMeeting} />;
 	}
 
 	return (
@@ -256,16 +260,24 @@ export function SurveyPage() {
 						</Question>
 
 						{submitError && (
-							<div className="mt-8 border border-red-500/30 bg-red-500/10 px-4 py-3 font-mono text-[11px] text-red-400 uppercase tracking-[0.25em]">
-								{submitError}
+							<div className="mt-8 border-2 border-white bg-white/[0.02] px-4 py-3 font-mono text-[11px] text-white uppercase tracking-[0.25em]">
+								// Error: {submitError}
 							</div>
 						)}
 					</form>
 				)}
+
+				{step === 5 && leadId && (
+					<MeetingStep
+						leadId={leadId}
+						lead={{ name: form.name, email: form.email }}
+						onBooked={handleMeetingBooked}
+					/>
+				)}
 			</main>
 
 			<nav className="flex items-center justify-between px-[clamp(1.5rem,6vw,6rem)] pb-12">
-				{step > 1 ? (
+				{step > 1 && step < 5 ? (
 					<button
 						className="group inline-flex items-center gap-3 font-mono text-[11px] text-white/55 uppercase tracking-[0.35em] transition-colors hover:text-white"
 						onClick={goBack}
@@ -296,7 +308,7 @@ export function SurveyPage() {
 						form="contact-form"
 						type="submit"
 					>
-						{submitting ? "Sending…" : "Send it"}
+						{submitting ? "Sending…" : "Continue"}
 						{!submitting && <ArrowRight className="size-4" />}
 					</button>
 				)}
@@ -408,24 +420,287 @@ function FieldInput({
 				autoFocus={autoFocus}
 				className={cn(
 					"w-full border-b-2 bg-transparent pb-3 text-xl text-white placeholder:text-white/20 focus:outline-none lg:text-2xl",
-					error
-						? "border-red-500/50"
-						: "border-white/20 focus:border-white",
+					error ? "border-white" : "border-white/20 focus:border-white",
 				)}
 				onChange={(e) => onChange(e.target.value)}
 				type={type}
 				value={value}
 			/>
 			{error && (
-				<span className="mt-2 block font-mono text-[10px] text-red-400 uppercase tracking-[0.25em]">
-					{error}
+				<span className="mt-2 block font-mono text-[10px] text-white uppercase tracking-[0.25em]">
+					// {error}
 				</span>
 			)}
 		</label>
 	);
 }
 
-function SuccessScreen() {
+interface AvailabilityResponse {
+	slots: Array<{
+		date: string;
+		times: Array<{ start: string; end: string; available: boolean }>;
+	}>;
+}
+
+function MeetingStep({
+	leadId,
+	lead,
+	onBooked,
+}: {
+	leadId: string;
+	lead: { name: string; email: string };
+	onBooked: (m: BookedMeeting) => void;
+}) {
+	const [availability, setAvailability] = useState<AvailabilityResponse | null>(
+		null,
+	);
+	const [loading, setLoading] = useState(true);
+	const [loadError, setLoadError] = useState<string | null>(null);
+	const [selectedDate, setSelectedDate] = useState<string | null>(null);
+	const [selectedStart, setSelectedStart] = useState<string | null>(null);
+	const [booking, setBooking] = useState(false);
+	const [bookingError, setBookingError] = useState<string | null>(null);
+
+	useEffect(() => {
+		const fetchSlots = async () => {
+			try {
+				const today = new Date();
+				const end = new Date();
+				end.setDate(end.getDate() + MEETING_WINDOW_DAYS);
+				const res = await api.availability.getSlots({
+					startDate: today.toISOString().split("T")[0],
+					endDate: end.toISOString().split("T")[0],
+					duration: MEETING_DURATION_MINS,
+				});
+				setAvailability(res);
+				// Default to first day that has at least one available slot.
+				const firstAvailableDay = res.slots.find((d) =>
+					d.times.some((t) => t.available),
+				);
+				if (firstAvailableDay) {
+					setSelectedDate(firstAvailableDay.date);
+				} else if (res.slots.length > 0) {
+					setSelectedDate(res.slots[0].date);
+				}
+			} catch (err) {
+				setLoadError(
+					err instanceof Error ? err.message : "Couldn't load availability",
+				);
+			} finally {
+				setLoading(false);
+			}
+		};
+		fetchSlots();
+	}, []);
+
+	const selectedDay = availability?.slots.find((d) => d.date === selectedDate);
+	const availableTimes = selectedDay?.times.filter((t) => t.available) ?? [];
+
+	const bookSlot = async (startTime: string) => {
+		if (!selectedDate) return;
+		setSelectedStart(startTime);
+		setBooking(true);
+		setBookingError(null);
+		try {
+			const res = await api.meetings.create({
+				leadId,
+				title: `Intro call · ${lead.name}`,
+				description: `Project intake call with ${lead.name} (${lead.email}).`,
+				date: selectedDate,
+				startTime,
+				duration: MEETING_DURATION_MINS,
+			});
+			onBooked({
+				date: selectedDate,
+				startTime,
+				meetUrl: res.meeting.meetUrl,
+			});
+		} catch (err) {
+			setBookingError(
+				err instanceof Error
+					? err.message
+					: "Couldn't book that slot. Try another.",
+			);
+			setSelectedStart(null);
+		} finally {
+			setBooking(false);
+		}
+	};
+
+	return (
+		<div>
+			<h1 className="font-black text-[clamp(2.25rem,7vw,5rem)] uppercase leading-[0.92] tracking-[-0.04em]">
+				Pick a time.
+			</h1>
+			<p className="mt-4 max-w-[48ch] text-base text-white/55 leading-relaxed lg:text-lg">
+				A {MEETING_DURATION_MINS}-minute intro call with Erdeniz. We'll confirm
+				by email and add Google Meet.
+			</p>
+
+			{loading && (
+				<div className="mt-10 font-mono text-[11px] text-white/55 uppercase tracking-[0.35em]">
+					// Loading availability…
+				</div>
+			)}
+
+			{loadError && (
+				<div className="mt-10 border-2 border-white bg-white/[0.02] px-4 py-3 font-mono text-[11px] text-white uppercase tracking-[0.25em]">
+					// Error: {loadError}
+				</div>
+			)}
+
+			{!loading && !loadError && availability && (
+				<div className="mt-10 space-y-8">
+					<DateStrip
+						days={availability.slots}
+						selected={selectedDate}
+						onSelect={(d) => {
+							setSelectedDate(d);
+							setSelectedStart(null);
+							setBookingError(null);
+						}}
+					/>
+
+					<TimeGrid
+						times={availableTimes}
+						selectedStart={selectedStart}
+						disabled={booking}
+						onSelect={bookSlot}
+					/>
+
+					{availableTimes.length === 0 && selectedDate && (
+						<p className="font-mono text-[11px] text-white/55 uppercase tracking-[0.35em]">
+							// Nothing free this day — try another
+						</p>
+					)}
+
+					{bookingError && (
+						<div className="border-2 border-white bg-white/[0.02] px-4 py-3 font-mono text-[11px] text-white uppercase tracking-[0.25em]">
+							// Error: {bookingError}
+						</div>
+					)}
+
+					{booking && (
+						<div className="font-mono text-[11px] text-white/55 uppercase tracking-[0.35em]">
+							// Booking {selectedStart}…
+						</div>
+					)}
+				</div>
+			)}
+		</div>
+	);
+}
+
+function DateStrip({
+	days,
+	selected,
+	onSelect,
+}: {
+	days: Array<{ date: string; times: Array<{ available: boolean }> }>;
+	selected: string | null;
+	onSelect: (date: string) => void;
+}) {
+	return (
+		<div>
+			<span className="mb-3 block font-mono text-[10px] text-white/55 uppercase tracking-[0.35em]">
+				// Date
+			</span>
+			<div className="-mx-2 flex gap-2 overflow-x-auto px-2 pb-2">
+				{days.map((day) => {
+					const dt = new Date(`${day.date}T00:00:00`);
+					const dayName = dt.toLocaleDateString("en-US", { weekday: "short" });
+					const dayNum = dt.getDate();
+					const monthName = dt.toLocaleDateString("en-US", { month: "short" });
+					const isSelected = day.date === selected;
+					const hasAvailability = day.times.some((t) => t.available);
+
+					return (
+						<button
+							className={cn(
+								"flex shrink-0 flex-col items-center gap-1 border-2 px-4 py-3 transition-colors",
+								isSelected
+									? "border-white bg-white text-black"
+									: hasAvailability
+										? "border-white/20 text-white hover:border-white/60"
+										: "border-white/10 text-white/30 hover:border-white/20",
+							)}
+							key={day.date}
+							onClick={() => onSelect(day.date)}
+							type="button"
+						>
+							<span className="font-mono text-[9px] uppercase tracking-[0.25em] opacity-70">
+								{dayName}
+							</span>
+							<span className="font-black text-xl leading-none tracking-tight">
+								{dayNum}
+							</span>
+							<span className="font-mono text-[9px] uppercase tracking-[0.25em] opacity-70">
+								{monthName}
+							</span>
+						</button>
+					);
+				})}
+			</div>
+		</div>
+	);
+}
+
+function TimeGrid({
+	times,
+	selectedStart,
+	disabled,
+	onSelect,
+}: {
+	times: Array<{ start: string; end: string; available: boolean }>;
+	selectedStart: string | null;
+	disabled: boolean;
+	onSelect: (start: string) => void;
+}) {
+	if (times.length === 0) return null;
+
+	return (
+		<div>
+			<span className="mb-3 block font-mono text-[10px] text-white/55 uppercase tracking-[0.35em]">
+				// Time
+			</span>
+			<div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
+				{times.map((slot) => {
+					const isSelected = slot.start === selectedStart;
+					return (
+						<button
+							className={cn(
+								"flex h-11 items-center justify-center border-2 font-mono text-xs uppercase tracking-wider transition-colors",
+								isSelected
+									? "border-white bg-white text-black"
+									: "border-white/20 text-white hover:border-white",
+								disabled && "cursor-not-allowed opacity-40",
+							)}
+							disabled={disabled}
+							key={slot.start}
+							onClick={() => onSelect(slot.start)}
+							type="button"
+						>
+							{slot.start}
+						</button>
+					);
+				})}
+			</div>
+		</div>
+	);
+}
+
+function SuccessScreen({ meeting }: { meeting: BookedMeeting }) {
+	const dt = new Date(`${meeting.date}T${meeting.startTime}:00`);
+	const dateLabel = dt.toLocaleDateString("en-US", {
+		weekday: "long",
+		month: "long",
+		day: "numeric",
+	});
+	const timeLabel = dt.toLocaleTimeString("en-US", {
+		hour: "numeric",
+		minute: "2-digit",
+	});
+
 	return (
 		<div className="relative flex min-h-screen flex-col bg-black text-white">
 			<div
@@ -434,7 +709,7 @@ function SuccessScreen() {
 			/>
 			<header className="flex items-baseline justify-between px-[clamp(1.5rem,6vw,6rem)] pt-12">
 				<span className="font-mono text-[11px] text-white/55 uppercase tracking-[0.35em]">
-					Done
+					// Booked
 				</span>
 				<Link
 					className="font-mono text-[11px] text-white/55 uppercase tracking-[0.35em] transition-colors hover:text-white"
@@ -445,22 +720,53 @@ function SuccessScreen() {
 			</header>
 			<main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-[clamp(1.5rem,6vw,6rem)] py-16">
 				<h1 className="font-black text-[clamp(3rem,8vw,7rem)] uppercase leading-[0.9] tracking-[-0.04em]">
-					Got it.
+					See you then.
 				</h1>
 				<p className="mt-6 max-w-[48ch] text-lg text-white/75 leading-relaxed lg:text-xl">
-					We'll be in touch within a couple of working days. If it's urgent,
-					email{" "}
-					<a
-						className="text-white underline decoration-white/30 underline-offset-4 transition-colors hover:decoration-white"
-						href="mailto:hello@dakik.co.uk"
-					>
-						hello@dakik.co.uk
-					</a>{" "}
-					and we'll bump it.
+					Your call is on the calendar — a confirmation with the Google Meet
+					link is heading to your inbox.
 				</p>
-				<div className="mt-12">
+
+				<dl className="mt-10 grid gap-6 border-white/10 border-y py-8 sm:grid-cols-3">
+					<div>
+						<dt className="font-mono text-[10px] text-white/45 uppercase tracking-[0.35em]">
+							// Date
+						</dt>
+						<dd className="mt-2 font-bold text-lg uppercase tracking-tight">
+							{dateLabel}
+						</dd>
+					</div>
+					<div>
+						<dt className="font-mono text-[10px] text-white/45 uppercase tracking-[0.35em]">
+							// Time
+						</dt>
+						<dd className="mt-2 font-bold text-lg uppercase tracking-tight">
+							{timeLabel}
+						</dd>
+					</div>
+					<div>
+						<dt className="font-mono text-[10px] text-white/45 uppercase tracking-[0.35em]">
+							// Duration
+						</dt>
+						<dd className="mt-2 font-bold text-lg uppercase tracking-tight">
+							{MEETING_DURATION_MINS} min
+						</dd>
+					</div>
+				</dl>
+
+				<div className="mt-12 flex flex-wrap gap-3">
+					{meeting.meetUrl && (
+						<a
+							className="inline-flex items-center gap-3 border-2 border-white bg-white px-6 py-3 font-medium text-base text-black uppercase tracking-wider transition-colors hover:bg-transparent hover:text-white"
+							href={meeting.meetUrl}
+							rel="noopener noreferrer"
+							target="_blank"
+						>
+							Open Meet link
+						</a>
+					)}
 					<Link
-						className="inline-flex items-center gap-3 border-2 border-white bg-white px-6 py-3 font-medium text-base text-black uppercase tracking-wider transition-colors hover:bg-transparent hover:text-white"
+						className="inline-flex items-center gap-3 border-2 border-white/20 px-6 py-3 font-medium text-base text-white/80 uppercase tracking-wider transition-colors hover:border-white hover:text-white"
 						to="/"
 					>
 						<ArrowLeft className="size-4" />

@@ -52,8 +52,12 @@ export function createLeadRouter() {
 			return c.json({ error: "Email is required" }, 400);
 		}
 
-		const lead = await db.lead.create({
-			data: {
+		// Upsert by email so re-submissions update the existing lead instead of
+		// crashing on the @unique constraint. Returns the lead either way so the
+		// caller can use leadId to book a meeting in the next step.
+		const lead = await db.lead.upsert({
+			where: { email: body.email },
+			create: {
 				email: body.email,
 				name: body.name,
 				projectType: body.projectType,
@@ -61,9 +65,16 @@ export function createLeadRouter() {
 				details: body.details,
 				source: body.source,
 			},
+			update: {
+				...(body.name && { name: body.name }),
+				...(body.projectType && { projectType: body.projectType }),
+				...(body.budget && { budget: body.budget }),
+				...(body.details && { details: body.details }),
+				...(body.source && { source: body.source }),
+			},
 		});
 
-		return c.json({ lead }, 201);
+		return c.json({ lead }, 200);
 	});
 
 	leads.put("/:id", async (c) => {
