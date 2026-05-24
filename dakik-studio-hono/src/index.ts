@@ -10,6 +10,18 @@ import type { CloudflareEnv } from "./types/cloudflare";
 
 const app = new Hono<{ Bindings: CloudflareEnv }>();
 
+// Canonicalise www → apex with a 301. Runs before any other middleware
+// so the redirect short-circuits CORS, logging, DB middleware, etc.
+// Avoids duplicate-canonical SEO and cookie-domain edge cases.
+app.use("*", async (c, next) => {
+	const url = new URL(c.req.url);
+	if (url.hostname === "www.dakik.co.uk") {
+		url.hostname = "dakik.co.uk";
+		return c.redirect(url.toString(), 301);
+	}
+	return next();
+});
+
 app.use("*", cors);
 app.use("*", logger);
 app.onError(errorHandler);
