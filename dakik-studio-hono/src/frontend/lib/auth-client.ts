@@ -76,26 +76,6 @@ export async function signInWithEmail(
 }
 
 /**
- * Sign up with email and password.
- */
-export async function signUpWithEmail(
-	email: string,
-	password: string,
-	name?: string,
-): Promise<{ user: Session["user"] } | { error: string }> {
-	const result = await authClient.signUp.email({
-		email,
-		password,
-		name: name ?? email.split("@")[0],
-	});
-	if (result.error) {
-		return { error: result.error.message ?? "Sign up failed" };
-	}
-	const data = result.data as unknown as { user: Session["user"] };
-	return { user: data.user };
-}
-
-/**
  * Sign in with Google OAuth.
  */
 export async function signInWithGoogle(): Promise<void> {

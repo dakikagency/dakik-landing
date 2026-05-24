@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import Noise from "../components/noise";
 import { useSession } from "../hooks/useSession";
 
 export function AuthCallbackPage() {
@@ -19,11 +20,14 @@ export function AuthCallbackPage() {
 	}, [user, isLoading, navigate]);
 
 	return (
-		<div className="flex min-h-screen items-center justify-center bg-white">
-			<div className="flex flex-col items-center gap-3">
-				<div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-black" />
-				<p className="text-gray-500 text-sm">Redirecting...</p>
+		<div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black text-white">
+			<div className="flex flex-col items-center gap-6">
+				<div className="h-6 w-6 animate-spin border-2 border-white/20 border-t-primary" />
+				<span className="font-mono text-[11px] text-white/55 uppercase tracking-[0.35em]">
+					// Redirecting
+				</span>
 			</div>
+			<Noise patternAlpha={20} patternRefreshInterval={3} />
 		</div>
 	);
 }
