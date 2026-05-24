@@ -31,6 +31,12 @@ export function createAuth(env: EnvVars) {
 		// (especially OAuth redirect_uri) matches what Google sees.
 		basePath: "/api/auth",
 		trustedOrigins: [env.CORS_ORIGIN],
+		logger: {
+			level: "debug",
+			log(level, message, ...args) {
+				console.log(`[better-auth ${level}] ${message}`, ...args);
+			},
+		},
 		advanced: {
 			cookiePrefix: "dakik-auth",
 			useSecureCookies: env.ENVIRONMENT === "production",
