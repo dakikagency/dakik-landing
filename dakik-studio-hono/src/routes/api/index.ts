@@ -1,7 +1,8 @@
 import { Hono } from "hono";
+import { createAuth } from "../../lib/auth";
 import { dbMiddleware } from "../../middleware/db";
+import type { CloudflareEnv } from "../../types/cloudflare";
 import { createAdminRouter } from "./admin";
-import { createAuthHandler } from "./auth";
 import { createAutomationsRouter } from "./automations";
 import { createAvailabilityRouter } from "./availability";
 import { createBlogRouter } from "./blog";
@@ -14,16 +15,15 @@ import { createMeetingRouter } from "./meetings";
 import { createProjectRouter } from "./projects";
 import { createSurveyQuestionsRouter } from "./survey-questions";
 import { createStripeWebhookRouter } from "./webhooks/stripe";
-import type { CloudflareEnv } from "../../types/cloudflare";
-import type { Auth } from "../../lib/auth";
 
 /**
  * API router for /api/*.
  *
- * Note: created once at module load and mounted via app.route("/api", ...).
- * Env arrives per-request via c.env (Workers pass it through fetch's second
- * arg), which is why the auth handler is built lazily on first request — it
- * needs env to construct, but env isn't available at module-load time.
+ * Mounted via app.route("/api", ...). Env arrives per-request via c.env;
+ * downstream handlers should construct env-dependent things (auth, db) at
+ * call time, NOT cache them at module level — Cloudflare Workers binds
+ * I/O objects to the request that opened them and refuses cross-request
+ * reuse with "Cannot perform I/O on behalf of a different request."
  *
  * dbMiddleware is mounted INSIDE this router so c.get("db") is available to
  * every handler. (Mounting it outside on app would set it on the outer
@@ -34,12 +34,13 @@ export function createApiRouter() {
 
 	api.use("*", dbMiddleware);
 
-	let cachedAuth: Auth | undefined;
+	// Build the better-auth instance per request. Caching it at module scope
+	// would also cache the PrismaClient inside, whose underlying sockets are
+	// bound to whichever request opened them — the next request would crash
+	// with the cross-request I/O error.
 	api.on(["POST", "GET"], "/auth/*", (c) => {
-		if (!cachedAuth) {
-			cachedAuth = createAuthHandler(c.env).auth;
-		}
-		return cachedAuth.handler(c.req.raw);
+		const auth = createAuth(c.env);
+		return auth.handler(c.req.raw);
 	});
 
 	api.route("/admin", createAdminRouter());
