@@ -69,31 +69,18 @@ export function Hero() {
 
 					<div className="flex-1">
 						<Reveal delay={0.1} direction="up">
-							<h1 className="font-black text-4xl uppercase leading-[0.85] tracking-[-0.03em] sm:text-6xl md:text-7xl lg:text-8xl lg:leading-[0.7em]">
-								<span className="block lg:leading-[0.6em]">WE DELIVER</span>
-								<span className="block lg:leading-[0.7em]">
-									DIGITAL PRODUCTS
-								</span>
-								<span className="block lg:flex lg:items-end lg:gap-[0.15em] lg:leading-[0.7em]">
-									<span>BLOODY WORK</span>
-									{/* Desktop-only inline button — fills remaining row width.
-									    Mobile / tablet get the separate button below. */}
-									<a
-										className="hidden lg:inline-flex group h-[0.72em] flex-1 items-center justify-center border-8 border-white bg-black px-[0.25em] transition-colors duration-300 hover:bg-white hover:text-black"
-										href="/survey"
-									>
-										<span className="text-nowrap font-medium text-lg uppercase tracking-wider">
-											Start a Project
-										</span>
-									</a>
-								</span>
+							<h1 className="font-black text-4xl uppercase leading-[0.85] tracking-[-0.03em] sm:text-6xl md:text-7xl lg:text-8xl lg:leading-[0.85]">
+								<span className="block">We Deliver</span>
+								<span className="block">Digital Products</span>
+								<span className="block">Bloody Work</span>
 							</h1>
 						</Reveal>
 
-						{/* Mobile / tablet button: full-width on phones, fit on small tablets. */}
-						<Reveal className="mt-6 lg:hidden" delay={0.2} direction="up">
+						{/* Full-width CTA sits below the headline at every breakpoint.
+						    Border weight scales: 4px on phones (softer), 8px on desktop. */}
+						<Reveal className="mt-8 lg:mt-10" delay={0.2} direction="up">
 							<a
-								className="group inline-flex w-full items-center justify-center border-4 border-white bg-black px-8 py-4 font-medium text-base uppercase tracking-wider transition-colors duration-300 hover:bg-white hover:text-black sm:w-auto"
+								className="group flex w-full items-center justify-center border-4 border-white bg-black px-8 py-5 font-medium text-base uppercase tracking-wider transition-colors duration-300 hover:bg-white hover:text-black lg:border-8 lg:py-7 lg:text-lg"
 								href="/survey"
 							>
 								Start a Project
