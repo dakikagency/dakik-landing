@@ -34,25 +34,41 @@ import { SurveyPage } from "./pages/survey";
 import { TermsOfServicePage } from "./pages/terms-of-service";
 
 /**
- * Hostname-based routing.
+ * Hostname-based routing. One worker, one bundle, four distinct experiences
+ * picked from window.location.hostname at boot:
  *
- * icons.dakik.co.uk serves the standalone Dakik Icons app (public browser at /,
- * admin CRUD at /admin). dakik.co.uk serves the main marketing + portal app
- * (everything except daicons). One worker, one bundle, two distinct experiences
- * — picked by Host header at request time.
+ *   icons.dakik.co.uk → Dakik Icons (SVG icon library)
+ *   bits.dakik.co.uk  → Dakik Bits  (React component library)
+ *   flow.dakik.co.uk  → Dakik Flow  (automation playbooks)
+ *   dakik.co.uk       → main marketing + portal app (everything else)
  *
- * SSR-safe: window check defaults to "main" during build so the bundle ships
- * with both route sets compiled.
+ * Each subdomain serves a public browser at `/`, an `/admin` CRUD gated by
+ * RequireAdmin, and the shared `/login` + `/auth/callback` flow. The backend
+ * (Hono router + API + DB) is shared across all four hosts.
+ *
+ * SSR-safe: window check defaults to main host during build.
  */
 const hostname =
 	typeof window !== "undefined" ? window.location.hostname : "";
-const isIconsHost =
-	hostname === "icons.dakik.co.uk" || hostname.startsWith("icons.");
+
+type SubdomainKind = "icons" | "bits" | "flow" | "main";
+function detectSubdomain(): SubdomainKind {
+	if (hostname.startsWith("icons.")) return "icons";
+	if (hostname.startsWith("bits.")) return "bits";
+	if (hostname.startsWith("flow.")) return "flow";
+	return "main";
+}
+
+const subdomain = detectSubdomain();
+
+const sharedAuthRoutes = [
+	{ path: "login", element: <LoginPage /> },
+	{ path: "auth/callback", element: <AuthCallbackPage /> },
+];
 
 const iconsRoutes = [
 	{ index: true, element: <DaiconsPage /> },
-	{ path: "login", element: <LoginPage /> },
-	{ path: "auth/callback", element: <AuthCallbackPage /> },
+	...sharedAuthRoutes,
 	{
 		path: "admin",
 		element: (
@@ -64,21 +80,46 @@ const iconsRoutes = [
 	},
 ];
 
+const bitsRoutes = [
+	{ index: true, element: <DacompsPage /> },
+	...sharedAuthRoutes,
+	{
+		path: "admin",
+		element: (
+			<RequireAdmin>
+				<AdminLayout />
+			</RequireAdmin>
+		),
+		children: [{ index: true, element: <AdminDacomps /> }],
+	},
+];
+
+const flowRoutes = [
+	{ index: true, element: <AutomationsIndexPage /> },
+	{ path: ":slug", element: <AutomationDetailPage /> },
+	...sharedAuthRoutes,
+	{
+		path: "admin",
+		element: (
+			<RequireAdmin>
+				<AdminLayout />
+			</RequireAdmin>
+		),
+		children: [{ index: true, element: <AdminAutomations /> }],
+	},
+];
+
 const mainRoutes = [
 	{ index: true, element: <LandingPage /> },
 	{ path: "about", element: <AboutPage /> },
 	{ path: "contact", element: <ContactPage /> },
 	{ path: "blog", element: <BlogIndexPage /> },
 	{ path: "blog/:slug", element: <BlogPostPage /> },
-	{ path: "automations", element: <AutomationsIndexPage /> },
-	{ path: "automations/:slug", element: <AutomationDetailPage /> },
-	{ path: "dacomps", element: <DacompsPage /> },
-	{ path: "login", element: <LoginPage /> },
+	...sharedAuthRoutes,
 	{ path: "survey", element: <SurveyPage /> },
 	{ path: "cookies", element: <CookiesPage /> },
 	{ path: "privacy-policy", element: <PrivacyPolicyPage /> },
 	{ path: "terms-of-service", element: <TermsOfServicePage /> },
-	{ path: "auth/callback", element: <AuthCallbackPage /> },
 	{ path: "portal-access-denied", element: <PortalAccessDeniedPage /> },
 	{
 		path: "admin",
@@ -95,8 +136,6 @@ const mainRoutes = [
 			{ path: "invoices", element: <AdminInvoices /> },
 			{ path: "meetings", element: <AdminMeetings /> },
 			{ path: "blog", element: <AdminBlog /> },
-			{ path: "automations", element: <AdminAutomations /> },
-			{ path: "dacomps", element: <AdminDacomps /> },
 		],
 	},
 	{
@@ -111,11 +150,18 @@ const mainRoutes = [
 	},
 ];
 
+const routesForSubdomain: Record<SubdomainKind, typeof mainRoutes> = {
+	icons: iconsRoutes,
+	bits: bitsRoutes,
+	flow: flowRoutes,
+	main: mainRoutes,
+};
+
 export const router = createBrowserRouter([
 	{
 		path: "/",
 		element: <App />,
-		children: isIconsHost ? iconsRoutes : mainRoutes,
+		children: routesForSubdomain[subdomain],
 	},
 ]);
 

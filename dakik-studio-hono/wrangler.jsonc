@@ -29,7 +29,9 @@
   "routes": [
     { "pattern": "dakik.co.uk", "custom_domain": true },
     { "pattern": "www.dakik.co.uk", "custom_domain": true },
-    { "pattern": "icons.dakik.co.uk", "custom_domain": true }
+    { "pattern": "icons.dakik.co.uk", "custom_domain": true },
+    { "pattern": "bits.dakik.co.uk", "custom_domain": true },
+    { "pattern": "flow.dakik.co.uk", "custom_domain": true }
   ],
 
   "vars": {

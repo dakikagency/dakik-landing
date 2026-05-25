@@ -19,10 +19,8 @@ const STATIC_SITEMAP_PATHS: Array<{
 }> = [
 	{ path: "/", priority: 1.0, changefreq: "weekly" },
 	{ path: "/about", priority: 0.7, changefreq: "monthly" },
-	{ path: "/automations", priority: 0.8, changefreq: "weekly" },
 	{ path: "/blog", priority: 0.8, changefreq: "weekly" },
 	{ path: "/contact", priority: 0.6, changefreq: "yearly" },
-	{ path: "/dacomps", priority: 0.8, changefreq: "monthly" },
 	{ path: "/survey", priority: 0.9, changefreq: "monthly" },
 	{ path: "/login", priority: 0.4, changefreq: "yearly" },
 	{ path: "/cookies", priority: 0.3, changefreq: "yearly" },
@@ -36,6 +34,8 @@ const LEGACY_REDIRECTS: Record<string, string> = {
 	"/privacy": "/privacy-policy",
 	"/terms": "/terms-of-service",
 	"/daicons": "https://icons.dakik.co.uk",
+	"/dacomps": "https://bits.dakik.co.uk",
+	"/automations": "https://flow.dakik.co.uk",
 };
 
 // Permanent redirects from legacy Next.js URLs to their canonical SPA routes.

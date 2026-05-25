@@ -5,8 +5,8 @@ import { cn } from "../../lib/utils";
 
 const navLinks = [
 	{ href: "https://icons.dakik.co.uk", label: "Icons" },
-	{ href: "/dacomps", label: "daComps" },
-	{ href: "/automations", label: "Automations" },
+	{ href: "https://bits.dakik.co.uk", label: "Bits" },
+	{ href: "https://flow.dakik.co.uk", label: "Flow" },
 	{ href: "/blog", label: "Blog" },
 	{ href: "/privacy-policy", label: "Privacy" },
 ] as const;

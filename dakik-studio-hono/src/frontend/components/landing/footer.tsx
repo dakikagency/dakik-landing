@@ -5,7 +5,8 @@ import { cn } from "../../lib/utils";
 
 const resourceLinks = [
 	{ name: "Dakik Icons", href: "https://icons.dakik.co.uk" },
-	{ name: "daComps", href: "/dacomps" },
+	{ name: "Dakik Bits", href: "https://bits.dakik.co.uk" },
+	{ name: "Dakik Flow", href: "https://flow.dakik.co.uk" },
 	{ name: "Blog", href: "/blog" },
 	{ name: "About", href: "/about" },
 	{ name: "Contact", href: "/contact" },
