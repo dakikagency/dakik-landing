@@ -30,7 +30,6 @@ const navItems = [
 	{ href: "/admin/blog", label: "Blog", icon: FileTextIcon },
 	{ href: "/admin/automations", label: "Automations", icon: SparklesIcon },
 	{ href: "/admin/dacomps", label: "Components", icon: BoxIcon },
-	{ href: "/admin/daicons", label: "Icons", icon: ShapesIcon },
 ];
 
 export function Sidebar({ isMobileOpen, onClose, onLogout }: SidebarProps) {

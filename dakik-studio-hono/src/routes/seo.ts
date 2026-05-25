@@ -23,7 +23,6 @@ const STATIC_SITEMAP_PATHS: Array<{
 	{ path: "/blog", priority: 0.8, changefreq: "weekly" },
 	{ path: "/contact", priority: 0.6, changefreq: "yearly" },
 	{ path: "/dacomps", priority: 0.8, changefreq: "monthly" },
-	{ path: "/daicons", priority: 0.8, changefreq: "monthly" },
 	{ path: "/survey", priority: 0.9, changefreq: "monthly" },
 	{ path: "/login", priority: 0.4, changefreq: "yearly" },
 	{ path: "/cookies", priority: 0.3, changefreq: "yearly" },
@@ -36,6 +35,7 @@ const STATIC_SITEMAP_PATHS: Array<{
 const LEGACY_REDIRECTS: Record<string, string> = {
 	"/privacy": "/privacy-policy",
 	"/terms": "/terms-of-service",
+	"/daicons": "https://icons.dakik.co.uk",
 };
 
 // Permanent redirects from legacy Next.js URLs to their canonical SPA routes.

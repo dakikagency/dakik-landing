@@ -33,58 +33,89 @@ import { PrivacyPolicyPage } from "./pages/privacy-policy";
 import { SurveyPage } from "./pages/survey";
 import { TermsOfServicePage } from "./pages/terms-of-service";
 
+/**
+ * Hostname-based routing.
+ *
+ * icons.dakik.co.uk serves the standalone Dakik Icons app (public browser at /,
+ * admin CRUD at /admin). dakik.co.uk serves the main marketing + portal app
+ * (everything except daicons). One worker, one bundle, two distinct experiences
+ * — picked by Host header at request time.
+ *
+ * SSR-safe: window check defaults to "main" during build so the bundle ships
+ * with both route sets compiled.
+ */
+const hostname =
+	typeof window !== "undefined" ? window.location.hostname : "";
+const isIconsHost =
+	hostname === "icons.dakik.co.uk" || hostname.startsWith("icons.");
+
+const iconsRoutes = [
+	{ index: true, element: <DaiconsPage /> },
+	{ path: "login", element: <LoginPage /> },
+	{ path: "auth/callback", element: <AuthCallbackPage /> },
+	{
+		path: "admin",
+		element: (
+			<RequireAdmin>
+				<AdminLayout />
+			</RequireAdmin>
+		),
+		children: [{ index: true, element: <AdminDaicons /> }],
+	},
+];
+
+const mainRoutes = [
+	{ index: true, element: <LandingPage /> },
+	{ path: "about", element: <AboutPage /> },
+	{ path: "contact", element: <ContactPage /> },
+	{ path: "blog", element: <BlogIndexPage /> },
+	{ path: "blog/:slug", element: <BlogPostPage /> },
+	{ path: "automations", element: <AutomationsIndexPage /> },
+	{ path: "automations/:slug", element: <AutomationDetailPage /> },
+	{ path: "dacomps", element: <DacompsPage /> },
+	{ path: "login", element: <LoginPage /> },
+	{ path: "survey", element: <SurveyPage /> },
+	{ path: "cookies", element: <CookiesPage /> },
+	{ path: "privacy-policy", element: <PrivacyPolicyPage /> },
+	{ path: "terms-of-service", element: <TermsOfServicePage /> },
+	{ path: "auth/callback", element: <AuthCallbackPage /> },
+	{ path: "portal-access-denied", element: <PortalAccessDeniedPage /> },
+	{
+		path: "admin",
+		element: (
+			<RequireAdmin>
+				<AdminLayout />
+			</RequireAdmin>
+		),
+		children: [
+			{ index: true, element: <AdminDashboard /> },
+			{ path: "leads", element: <AdminLeads /> },
+			{ path: "customers", element: <AdminCustomers /> },
+			{ path: "projects", element: <AdminProjects /> },
+			{ path: "invoices", element: <AdminInvoices /> },
+			{ path: "meetings", element: <AdminMeetings /> },
+			{ path: "blog", element: <AdminBlog /> },
+			{ path: "automations", element: <AdminAutomations /> },
+			{ path: "dacomps", element: <AdminDacomps /> },
+		],
+	},
+	{
+		path: "portal",
+		element: <PortalLayout />,
+		children: [
+			{ index: true, element: <PortalDashboard /> },
+			{ path: "projects", element: <PortalProjects /> },
+			{ path: "invoices", element: <PortalInvoices /> },
+			{ path: "meetings", element: <PortalMeetings /> },
+		],
+	},
+];
+
 export const router = createBrowserRouter([
 	{
 		path: "/",
 		element: <App />,
-		children: [
-			{ index: true, element: <LandingPage /> },
-			{ path: "about", element: <AboutPage /> },
-			{ path: "contact", element: <ContactPage /> },
-			{ path: "blog", element: <BlogIndexPage /> },
-			{ path: "blog/:slug", element: <BlogPostPage /> },
-			{ path: "automations", element: <AutomationsIndexPage /> },
-			{ path: "automations/:slug", element: <AutomationDetailPage /> },
-			{ path: "dacomps", element: <DacompsPage /> },
-			{ path: "daicons", element: <DaiconsPage /> },
-			{ path: "login", element: <LoginPage /> },
-			{ path: "survey", element: <SurveyPage /> },
-			{ path: "cookies", element: <CookiesPage /> },
-			{ path: "privacy-policy", element: <PrivacyPolicyPage /> },
-			{ path: "terms-of-service", element: <TermsOfServicePage /> },
-			{ path: "auth/callback", element: <AuthCallbackPage /> },
-			{ path: "portal-access-denied", element: <PortalAccessDeniedPage /> },
-			{
-				path: "admin",
-				element: (
-					<RequireAdmin>
-						<AdminLayout />
-					</RequireAdmin>
-				),
-				children: [
-					{ index: true, element: <AdminDashboard /> },
-					{ path: "leads", element: <AdminLeads /> },
-					{ path: "customers", element: <AdminCustomers /> },
-					{ path: "projects", element: <AdminProjects /> },
-					{ path: "invoices", element: <AdminInvoices /> },
-					{ path: "meetings", element: <AdminMeetings /> },
-					{ path: "blog", element: <AdminBlog /> },
-					{ path: "automations", element: <AdminAutomations /> },
-					{ path: "daicons", element: <AdminDaicons /> },
-					{ path: "dacomps", element: <AdminDacomps /> },
-				],
-			},
-			{
-				path: "portal",
-				element: <PortalLayout />,
-				children: [
-					{ index: true, element: <PortalDashboard /> },
-					{ path: "projects", element: <PortalProjects /> },
-					{ path: "invoices", element: <PortalInvoices /> },
-					{ path: "meetings", element: <PortalMeetings /> },
-				],
-			},
-		],
+		children: isIconsHost ? iconsRoutes : mainRoutes,
 	},
 ]);
 

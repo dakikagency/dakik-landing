@@ -4,7 +4,7 @@ import { useReducedMotion } from "../../hooks/use-reduced-motion";
 import { cn } from "../../lib/utils";
 
 const resourceLinks = [
-	{ name: "daIcons", href: "/daicons" },
+	{ name: "Dakik Icons", href: "https://icons.dakik.co.uk" },
 	{ name: "daComps", href: "/dacomps" },
 	{ name: "Blog", href: "/blog" },
 	{ name: "About", href: "/about" },

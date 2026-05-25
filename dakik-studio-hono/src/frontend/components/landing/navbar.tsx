@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { cn } from "../../lib/utils";
 
 const navLinks = [
-	{ href: "/daicons", label: "daIcons" },
+	{ href: "https://icons.dakik.co.uk", label: "Icons" },
 	{ href: "/dacomps", label: "daComps" },
 	{ href: "/automations", label: "Automations" },
 	{ href: "/blog", label: "Blog" },
