@@ -20,6 +20,8 @@
       "/blog/*",
       "/automations",
       "/automations/*",
+      "/dacomps",
+      "/daicons",
       "/privacy",
       "/terms",
       "/media/*"
