@@ -53,20 +53,6 @@ export function Hero() {
 					className="relative mx-auto flex h-full flex-col px-[clamp(1rem,5vw,4rem)] pt-[clamp(6rem,15vh,10rem)] pb-[clamp(2rem,5vh,4rem)]"
 					style={{ opacity: prefersReducedMotion ? 1 : textOpacity }}
 				>
-					<div className="mb-8 flex flex-wrap items-center gap-4">
-						<Reveal delay={0.05} direction="up">
-							<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-								<span className="font-mono text-[11px] text-white/55 uppercase tracking-[0.35em]">
-									Dakik Studio
-								</span>
-								<span className="hidden h-px w-12 bg-white/20 sm:block" />
-								<span className="text-sm text-white/55">
-									Client portal and digital product studio
-								</span>
-							</div>
-						</Reveal>
-					</div>
-
 					<div className="flex-1">
 						<Reveal delay={0.1} direction="up">
 							<h1 className="font-black text-4xl uppercase leading-[0.85] tracking-[-0.03em] sm:text-6xl md:text-7xl lg:text-8xl lg:leading-[0.85]">
@@ -76,11 +62,12 @@ export function Hero() {
 							</h1>
 						</Reveal>
 
-						{/* Full-width CTA sits below the headline at every breakpoint.
-						    Border weight scales: 4px on phones (softer), 8px on desktop. */}
+						{/* CTA below headline. Capped at ~40rem on lg+ so the right edge
+						    sits roughly under "BLOODY WORK" and doesn't run under the
+						    bottom-right video tile (38vw wide, anchored to right). */}
 						<Reveal className="mt-8 lg:mt-10" delay={0.2} direction="up">
 							<a
-								className="group flex w-full items-center justify-center border-4 border-white bg-black px-8 py-5 font-medium text-base uppercase tracking-wider transition-colors duration-300 hover:bg-white hover:text-black lg:border-8 lg:py-7 lg:text-lg"
+								className="group flex w-full items-center justify-center border-4 border-white bg-black px-8 py-5 font-medium text-base uppercase tracking-wider transition-colors duration-300 hover:bg-white hover:text-black lg:max-w-[40rem] lg:border-8 lg:py-7 lg:text-lg"
 								href="/survey"
 							>
 								Start a Project
