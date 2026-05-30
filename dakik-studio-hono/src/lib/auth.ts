@@ -41,6 +41,24 @@ export function createAuth(env: EnvVars) {
 			cookiePrefix: "dakik-auth",
 			useSecureCookies: env.ENVIRONMENT === "production",
 		},
+		session: {
+			/**
+			 * Sign + serialize the session into a cookie so subsequent reads
+			 * within maxAge don't hit Postgres. Every page navigation triggers
+			 * a getSession() check, and on Neon's free tier each of those was
+			 * costing compute time. With the cookie cache, only one in every
+			 * maxAge-window's worth of checks reaches the DB.
+			 *
+			 * 5 minutes is the sweet spot: long enough to absorb most repeat
+			 * checks during a single browsing session, short enough that if we
+			 * revoke a session or change a user's role server-side, the
+			 * client picks it up within ~5 minutes without a hard reload.
+			 */
+			cookieCache: {
+				enabled: true,
+				maxAge: 5 * 60,
+			},
+		},
 		emailAndPassword: {
 			enabled: true,
 		},
