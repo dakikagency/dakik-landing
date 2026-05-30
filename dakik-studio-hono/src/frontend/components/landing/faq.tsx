@@ -103,11 +103,11 @@ export function FAQ() {
 		<section className="relative bg-white text-black" id="faq">
 			<div className="mx-auto max-w-7xl px-[clamp(1.5rem,6vw,6rem)] py-[clamp(6rem,12vh,10rem)]">
 				<div className="grid grid-cols-12 gap-x-8 gap-y-12 lg:gap-x-12">
-					<header className="col-span-12 lg:col-span-4 lg:sticky lg:top-24 lg:self-start">
+					<header className="col-span-12 min-w-0 lg:col-span-5 lg:sticky lg:top-24 lg:self-start">
 						<span className="font-mono text-[11px] text-black/55 uppercase tracking-[0.35em]">
 							FAQ
 						</span>
-						<h2 className="mt-4 font-black text-[clamp(2.5rem,6vw,5rem)] uppercase leading-[0.9] tracking-[-0.03em]">
+						<h2 className="mt-4 font-black text-[clamp(2rem,4vw,3.5rem)] uppercase leading-[0.9] tracking-[-0.03em]">
 							Frequently
 							<br />
 							asked.
@@ -124,7 +124,7 @@ export function FAQ() {
 						</p>
 					</header>
 
-					<div className="col-span-12 lg:col-span-8">
+					<div className="col-span-12 min-w-0 lg:col-span-7">
 						<div className="border-black/10 border-b">
 							{faqs.map((faq, index) => (
 								<AccordionItem
