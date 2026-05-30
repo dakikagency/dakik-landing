@@ -1,5 +1,37 @@
 const API_BASE = "/api";
 
+/**
+ * Translate raw backend error strings into copy a survey-taker / customer
+ * can act on. We do this at the API-client level rather than per-form so
+ * every page (survey, portal, admin, etc.) gets the same friendly fallback
+ * for the same underlying failure mode.
+ */
+function friendlyError(raw: string, status?: number): string {
+	const msg = raw.toLowerCase();
+
+	// Neon / Postgres compute or storage quota exhaustion. The DB returns
+	// the raw text verbatim through the worker, and surfacing it as-is
+	// makes the product look broken when it's just a billing situation.
+	if (
+		msg.includes("compute time quota") ||
+		msg.includes("compute quota") ||
+		msg.includes("quota exceeded") ||
+		msg.includes("upgrade your plan")
+	) {
+		return "We're having a brief backend issue — email hello@dakik.co.uk and we'll get back to you within the day.";
+	}
+
+	// Any other 5xx — server got the request but something on our side broke.
+	if ((status && status >= 500) || msg.startsWith("http 5")) {
+		return "Something on our end isn't responding right now. Try again in a minute, or email hello@dakik.co.uk.";
+	}
+
+	// 4xx and validation errors keep their original message (they're
+	// usually about user input — "Email is required", "Lead not found",
+	// etc.) so we leave them alone.
+	return raw;
+}
+
 async function fetchApi<T>(
 	endpoint: string,
 	options?: RequestInit & {
@@ -22,19 +54,30 @@ async function fetchApi<T>(
 		}
 	}
 
-	const response = await fetch(url, {
-		...fetchOptions,
-		headers: {
-			"Content-Type": "application/json",
-			...fetchOptions?.headers,
-		},
-	});
+	let response: Response;
+	try {
+		response = await fetch(url, {
+			...fetchOptions,
+			headers: {
+				"Content-Type": "application/json",
+				...fetchOptions?.headers,
+			},
+		});
+	} catch {
+		// Network-level failure (offline, DNS, CORS, fetch aborted). Distinct
+		// from a 5xx because the server never even got the request.
+		throw new Error(
+			"Couldn't reach our servers — check your connection and try again.",
+		);
+	}
 
 	if (!response.ok) {
 		const error = (await response
 			.json()
 			.catch(() => ({ error: "Request failed" }))) as { error?: string };
-		throw new Error(error.error || `HTTP ${response.status}`);
+		throw new Error(
+			friendlyError(error.error || `HTTP ${response.status}`, response.status),
+		);
 	}
 
 	return response.json();
