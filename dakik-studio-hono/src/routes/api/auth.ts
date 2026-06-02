@@ -1,7 +1,7 @@
 import { createAuth } from "../../lib/auth";
 import type { EnvVars } from "../../lib/env";
 
-export function createAuthHandler(env: EnvVars) {
+export function createAuthHandler(env: EnvVars & { DB: D1Database }) {
 	const auth = createAuth(env);
 	return {
 		auth,

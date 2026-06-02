@@ -13,8 +13,8 @@ export function createLeadRouter() {
 		}
 		if (search) {
 			where.OR = [
-				{ email: { contains: search, mode: "insensitive" } },
-				{ name: { contains: search, mode: "insensitive" } },
+				{ email: { contains: search } },
+				{ name: { contains: search } },
 			];
 		}
 

@@ -11,9 +11,9 @@ export function createCustomerRouter() {
 		const where: Record<string, unknown> = {};
 		if (search) {
 			where.OR = [
-				{ user: { email: { contains: search, mode: "insensitive" } } },
-				{ user: { name: { contains: search, mode: "insensitive" } } },
-				{ companyName: { contains: search, mode: "insensitive" } },
+				{ user: { email: { contains: search } } },
+				{ user: { name: { contains: search } } },
+				{ companyName: { contains: search } },
 			];
 		}
 

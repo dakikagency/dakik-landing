@@ -12,6 +12,15 @@ dist/
 # Wrangler
 .dev.vars
 
+# Prisma + D1 local artifacts (regenerable from schema + Neon snapshot)
+prisma/dev.db
+prisma/dev.db-journal
+prisma/d1-init.sql
+scripts/d1-data.sql
+
+# Use bun, not npm
+package-lock.json
+
 # IDE
 .idea/
 .vscode/

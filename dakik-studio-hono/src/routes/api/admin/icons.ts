@@ -20,10 +20,14 @@ export function createAdminIconsRouter() {
 			where.category = category;
 		}
 		if (search) {
+			// SQLite's LIKE is case-insensitive for ASCII by default, so we
+			// drop the Postgres-specific `mode: "insensitive"` here. The old
+			// `keywords: { has }` array operator becomes `contains` since
+			// keywords is now a single delimited string.
 			where.OR = [
-				{ name: { contains: search, mode: "insensitive" } },
-				{ slug: { contains: search, mode: "insensitive" } },
-				{ keywords: { has: search.toLowerCase() } },
+				{ name: { contains: search } },
+				{ slug: { contains: search } },
+				{ keywords: { contains: search.toLowerCase() } },
 			];
 		}
 

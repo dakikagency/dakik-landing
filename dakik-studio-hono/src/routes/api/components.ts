@@ -20,8 +20,8 @@ export function createComponentsRouter() {
 		if (category) where.category = category;
 		if (search) {
 			where.OR = [
-				{ name: { contains: search, mode: "insensitive" } },
-				{ description: { contains: search, mode: "insensitive" } },
+				{ name: { contains: search } },
+				{ description: { contains: search } },
 			];
 		}
 

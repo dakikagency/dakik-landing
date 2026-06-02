@@ -20,8 +20,8 @@ export function createAdminComponentsRouter() {
 		}
 		if (search) {
 			where.OR = [
-				{ name: { contains: search, mode: "insensitive" } },
-				{ slug: { contains: search, mode: "insensitive" } },
+				{ name: { contains: search } },
+				{ slug: { contains: search } },
 			];
 		}
 

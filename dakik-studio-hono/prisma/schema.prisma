@@ -10,8 +10,11 @@ generator client {
 // Datasource
 // =============================================================================
 
+// SQLite for Cloudflare D1. Prisma 7 dropped `url` from the schema; the
+// connection comes from the PrismaD1 driver adapter at runtime, and any
+// local-tooling URL lives in prisma.config.ts.
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 // =============================================================================
@@ -345,7 +348,7 @@ model Invoice {
   projectId   String?
   invoiceDate DateTime      @default(now())
   dueDate     DateTime?
-  amount      Decimal       @db.Decimal(10, 2)
+  amount      Decimal
   description String?
   status      InvoiceStatus @default(UNPAID)
   fileUrl     String
@@ -527,7 +530,7 @@ model Icon {
   slug       String   @unique
   category   String
   svgContent String
-  keywords   String[]
+  keywords   String   @default("")
   isCustom   Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -569,7 +572,7 @@ model Asset {
 model EmailLog {
   id      String      @id @default(cuid())
   userId  String
-  to      String[]
+  to      String
   subject String
   body    String
   status  EmailStatus
@@ -682,7 +685,7 @@ model Webhook {
   id        String   @id @default(cuid())
   url       String
   secret    String?
-  events    String[]
+  events    String
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

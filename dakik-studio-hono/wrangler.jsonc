@@ -47,6 +47,14 @@
     }
   ],
 
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "dakik-studio",
+      "database_id": "fa44c798-e860-4927-96d2-e376bd3ce21a"
+    }
+  ],
+
   "observability": {
     "enabled": true
   }

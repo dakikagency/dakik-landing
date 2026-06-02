@@ -8,20 +8,17 @@ const ADMIN_EMAILS = ["erdeniz@dakik.co.uk"];
 /**
  * Wire better-auth to Prisma via better-auth's own prismaAdapter.
  *
- * Previously this passed a raw `@prisma/adapter-pg` (PrismaPg) directly to
- * better-auth's `database` option — which made better-auth fall back to its
- * Kysely-style query interface and crash on the first DB write with
- * `TypeError: db.insertInto is not a function`. The fix is to use
- * better-auth's prismaAdapter, which wraps a PrismaClient and translates
- * better-auth's internal calls to Prisma model methods (db.user.create,
- * db.session.findFirst, etc.).
+ * Previously this used provider: "postgresql" against Neon. After the
+ * May 2026 migration to Cloudflare D1 the underlying engine is SQLite;
+ * better-auth's prismaAdapter supports both, only the `provider` string
+ * changes.
  */
-export function createAuth(env: EnvVars) {
+export function createAuth(env: EnvVars & { DB: D1Database }) {
 	const db = getDb(env);
 
 	return betterAuth({
 		database: prismaAdapter(db, {
-			provider: "postgresql",
+			provider: "sqlite",
 		}),
 		baseURL: env.BETTER_AUTH_URL,
 		// Match the actual route mount: api router is mounted at /api in

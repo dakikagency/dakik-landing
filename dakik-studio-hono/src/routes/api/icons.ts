@@ -11,7 +11,7 @@ export function createIconsRouter() {
 		if (category) where.category = category;
 		if (search) {
 			where.OR = [
-				{ name: { contains: search, mode: "insensitive" } },
+				{ name: { contains: search } },
 				{ keywords: { has: search } },
 			];
 		}

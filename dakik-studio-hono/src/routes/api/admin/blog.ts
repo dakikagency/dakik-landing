@@ -23,8 +23,8 @@ export function createAdminBlogRouter() {
 		}
 		if (search) {
 			where.OR = [
-				{ title: { contains: search, mode: "insensitive" } },
-				{ slug: { contains: search, mode: "insensitive" } },
+				{ title: { contains: search } },
+				{ slug: { contains: search } },
 			];
 		}
 
