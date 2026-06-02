@@ -156,10 +156,17 @@ export function Footer() {
 				</div>
 			</div>
 
-			<div className="-mb-20 flex items-center justify-center pb-8 lg:-mb-32">
+			<div className="-mb-[0.18em] flex items-center justify-center overflow-hidden px-[clamp(1rem,5vw,4rem)] pb-8">
+				{/* Font size is derived from the footer's own content width
+				    (viewport minus the two gutters) divided by the measured
+				    advance ratio of "dakik" at this weight/tracking (~2.484, with
+				    2.5 for a hair of slack). That makes the wordmark span flush
+				    between the gutters at every breakpoint instead of overflowing.
+				    whitespace-nowrap stops the inline-block letters from wrapping
+				    when the line lands right at the container edge. */}
 				<h1
 					aria-label="dakik"
-					className="font-black font-display text-[clamp(18px,32vw,620px)] text-white leading-[0.9em] tracking-tight lg:mt-[0.05em] lg:leading-[0.85]"
+					className="whitespace-nowrap font-black font-display text-[calc((100vw_-_2_*_clamp(1rem,5vw,4rem))_/_2.5)] text-white leading-[0.8] tracking-tight"
 				>
 					{dakikLetters.map((letter) => (
 						<span aria-hidden="true" className="inline-block" key={letter.id}>
