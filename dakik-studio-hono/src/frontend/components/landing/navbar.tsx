@@ -33,12 +33,13 @@ export function Navbar() {
 	}, []);
 
 	return (
-		<motion.header
-			className={cn(
-				"fixed top-0 right-0 left-0 z-50 text-white mix-blend-difference"
-			)}
-		>
-			<nav className="mx-auto px-[clamp(1rem,5vw,4rem)]">
+		<motion.header className={cn("fixed top-0 right-0 left-0 z-50")}>
+			{/* Top bar carries the mix-blend-difference so the logo, desktop
+			    links, and hamburger stay legible over any section scrolling
+			    behind them. The mobile dropdown below is deliberately OUTSIDE
+			    this blended layer — inside it, a solid background would be
+			    inverted by the difference formula instead of painting opaque. */}
+			<nav className="mx-auto px-[clamp(1rem,5vw,4rem)] text-white mix-blend-difference">
 				<div className="flex h-20 items-center justify-between">
 					<a
 						aria-label="Dakik Studio home"
@@ -128,74 +129,77 @@ export function Navbar() {
 					</motion.button>
 				</div>
 				<hr className="border-0.5 border-gray-800/60" />
+			</nav>
 
-				<AnimatePresence>
-					{isOpen && (
-						<motion.div
-							animate={{ opacity: 1, height: "auto" }}
-							className="overflow-hidden md:hidden"
-							exit={{ opacity: 0, height: 0 }}
-							initial={{ opacity: 0, height: 0 }}
-							transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-						>
-							<div className="space-y-1 pt-2 pb-6">
-								{navLinks.map((link, index) => (
-									<motion.div
-										animate={{ opacity: 1, x: 0 }}
-										initial={{ opacity: 0, x: -20 }}
-										key={link.href}
-										transition={{
-											delay: index * 0.05,
-											duration: 0.3,
-										}}
-									>
-										<a
-											className="block rounded-lg px-3 py-2.5 font-medium text-base transition-colors hover:bg-white/10"
-											href={link.href}
-											onClick={closeMenu}
-										>
-											{link.label}
-										</a>
-									</motion.div>
-								))}
+			{/* Mobile dropdown — solid black, full-bleed, NOT inside the blended
+			    layer, so it reads as an opaque panel and the links stay crisp
+			    white-on-black instead of inverting against the page behind. */}
+			<AnimatePresence>
+				{isOpen && (
+					<motion.div
+						animate={{ opacity: 1, height: "auto" }}
+						className="overflow-hidden border-white/10 border-b bg-black text-white md:hidden"
+						exit={{ opacity: 0, height: 0 }}
+						initial={{ opacity: 0, height: 0 }}
+						transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+					>
+						<div className="mx-auto space-y-1 px-[clamp(1rem,5vw,4rem)] pt-2 pb-6">
+							{navLinks.map((link, index) => (
 								<motion.div
 									animate={{ opacity: 1, x: 0 }}
 									initial={{ opacity: 0, x: -20 }}
+									key={link.href}
 									transition={{
-										delay: navLinks.length * 0.05,
+										delay: index * 0.05,
 										duration: 0.3,
 									}}
 								>
 									<a
-										className="block rounded-lg px-3 py-2.5 font-medium text-base transition-colors hover:bg-white/10"
-										href="/login"
+										className="block px-3 py-3 font-mono text-[11px] text-white/70 uppercase tracking-[0.25em] transition-colors hover:bg-white/5 hover:text-white"
+										href={link.href}
 										onClick={closeMenu}
 									>
-										Customer Login
+										{link.label}
 									</a>
 								</motion.div>
-								<motion.div
-									animate={{ opacity: 1, y: 0 }}
-									className="pt-4"
-									initial={{ opacity: 0, y: 10 }}
-									transition={{
-										delay: (navLinks.length + 1) * 0.05,
-										duration: 0.3,
-									}}
+							))}
+							<motion.div
+								animate={{ opacity: 1, x: 0 }}
+								initial={{ opacity: 0, x: -20 }}
+								transition={{
+									delay: navLinks.length * 0.05,
+									duration: 0.3,
+								}}
+							>
+								<a
+									className="block border-white/10 border-t px-3 pt-4 pb-3 font-mono text-[11px] text-white/70 uppercase tracking-[0.25em] transition-colors hover:text-white"
+									href="/login"
+									onClick={closeMenu}
 								>
-									<a
-										className="block w-full rounded-full bg-red-500 px-5 py-3 text-center font-medium text-base text-white transition-colors hover:bg-red-600"
-										href="/survey"
-										onClick={closeMenu}
-									>
-										Start a Project
-									</a>
-								</motion.div>
-							</div>
-						</motion.div>
-					)}
-				</AnimatePresence>
-			</nav>
+									Customer Login
+								</a>
+							</motion.div>
+							<motion.div
+								animate={{ opacity: 1, y: 0 }}
+								className="pt-4"
+								initial={{ opacity: 0, y: 10 }}
+								transition={{
+									delay: (navLinks.length + 1) * 0.05,
+									duration: 0.3,
+								}}
+							>
+								<a
+									className="block w-full border-2 border-white bg-white px-5 py-4 text-center font-medium text-base text-black uppercase tracking-wider transition-colors hover:bg-black hover:text-white"
+									href="/survey"
+									onClick={closeMenu}
+								>
+									Start a Project
+								</a>
+							</motion.div>
+						</div>
+					</motion.div>
+				)}
+			</AnimatePresence>
 		</motion.header>
 	);
 }
