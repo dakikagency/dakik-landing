@@ -72,7 +72,7 @@ function Panel({ step }: { step: Step }) {
 	return (
 		<article className="relative h-full w-screen shrink-0">
 			{/* Top labels — anchored to top */}
-			<div className="absolute inset-x-[clamp(1.5rem,6vw,6rem)] top-[clamp(2rem,10vh,6rem)] flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
+			<div className="absolute inset-x-[clamp(1.5rem,6vw,6rem)] top-[clamp(5.5rem,12vh,7rem)] flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
 				<span className="font-mono text-[10px] text-black/55 uppercase tracking-[0.35em] sm:text-[11px]">
 					{step.num} / {TOTAL_LABEL} · {step.label}
 				</span>
@@ -151,12 +151,7 @@ export function ServicesSection() {
 	if (prefersReducedMotion) {
 		return (
 			<section className="bg-white text-black" id="services">
-				<header className="mx-auto max-w-6xl px-[clamp(1.5rem,6vw,6rem)] pt-24 pb-8">
-					<span className="font-mono text-[11px] text-black/55 uppercase tracking-[0.35em]">
-						How we work
-					</span>
-				</header>
-				<div className="divide-y divide-black/10">
+				<div className="divide-y divide-black/10 pt-[clamp(4rem,10vh,7rem)]">
 					{steps.map((step) => (
 						<div className="min-h-[80vh]" key={step.num}>
 							<Panel step={step} />
@@ -175,12 +170,6 @@ export function ServicesSection() {
 			style={{ height: `${steps.length * 100}vh` }}
 		>
 			<div className="sticky top-0 h-screen w-full overflow-hidden">
-				<div className="absolute top-[clamp(2rem,8vh,5rem)] left-[clamp(1.5rem,6vw,6rem)] z-10">
-					<span className="font-mono text-[11px] text-black/55 uppercase tracking-[0.35em]">
-						How we work
-					</span>
-				</div>
-
 				<div className="absolute bottom-[clamp(2rem,6vh,4rem)] left-1/2 z-10 flex -translate-x-1/2 items-center gap-2">
 					{steps.map((s, i) => (
 						<Dot
