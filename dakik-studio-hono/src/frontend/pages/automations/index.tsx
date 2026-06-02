@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useHead } from "@unhead/react";
 import { ArrowLeft, ArrowRight, Search } from "lucide-react";
+import { DakikMark } from "../../components/shared/dakik-mark";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import Noise from "../../components/noise";
@@ -46,11 +47,9 @@ export function AutomationsIndexPage() {
 
 	return (
 		<div className="relative min-h-screen overflow-hidden bg-black text-white">
-			<header className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-[clamp(1.5rem,5vw,4rem)] pt-10">
+			<header className="relative z-10 mx-auto flex items-center justify-between px-[clamp(1rem,5vw,4rem)] pt-10">
 				<div className="flex items-center gap-3">
-					<div className="flex h-9 w-9 items-center justify-center border-2 border-white bg-black font-black text-lg">
-						D
-					</div>
+					<DakikMark className="h-9 w-auto shrink-0" />
 					<div className="flex flex-col leading-none">
 						<span className="font-black text-sm uppercase tracking-[-0.02em]">
 							Dakik
@@ -69,7 +68,7 @@ export function AutomationsIndexPage() {
 				</a>
 			</header>
 
-			<main className="relative z-10 mx-auto max-w-7xl px-[clamp(1.5rem,5vw,4rem)] pt-16 pb-20">
+			<main className="relative z-10 mx-auto px-[clamp(1rem,5vw,4rem)] pt-16 pb-20">
 				<section className="mb-12 max-w-3xl">
 					<p className="font-mono text-[10px] text-white/55 uppercase tracking-[0.35em]">
 						// Automation playbooks
@@ -114,7 +113,7 @@ export function AutomationsIndexPage() {
 				)}
 			</main>
 
-			<footer className="relative z-10 mx-auto flex max-w-7xl items-center justify-between border-white/10 border-t px-[clamp(1.5rem,5vw,4rem)] py-8">
+			<footer className="relative z-10 mx-auto flex items-center justify-between border-white/10 border-t px-[clamp(1rem,5vw,4rem)] py-8">
 				<span className="font-mono text-[10px] text-white/40 uppercase tracking-[0.35em]">
 					// Dakik Flow · MIT
 				</span>
