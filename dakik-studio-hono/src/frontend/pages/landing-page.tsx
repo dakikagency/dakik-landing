@@ -9,7 +9,7 @@ import {
 export function LandingPage() {
 	return (
 		<div className="min-h-screen bg-black text-white">
-			<Navbar />
+			<Navbar transparentAtTop />
 			<main>
 				<Hero />
 				<ServicesSection />

@@ -11,9 +11,25 @@ const navLinks = [
 	{ href: "/privacy-policy", label: "Privacy" },
 ] as const;
 
-export function Navbar() {
+/**
+ * @param transparentAtTop - opt-in for pages with a dark hero (e.g. the
+ *   landing page). When set, the bar is transparent at the very top and
+ *   only paints a solid surface once scrolled. Light-background pages
+ *   (blog, about, contact) leave this off so the bar is always solid and
+ *   the white nav links stay legible.
+ */
+export function Navbar({
+	transparentAtTop = false,
+}: {
+	transparentAtTop?: boolean;
+}) {
 	const [isOpen, setIsOpen] = useState(false);
-	const [_isScrolled, setIsScrolled] = useState(false);
+	const [isScrolled, setIsScrolled] = useState(false);
+
+	// A solid, opaque bar is the legible default. We only allow the bar to
+	// go transparent when a page explicitly opts in AND we're still at the
+	// top of a (dark) hero.
+	const isSolid = !transparentAtTop || isScrolled;
 
 	const handleScroll = useCallback(() => {
 		setIsScrolled(window.scrollY > 10);
@@ -33,23 +49,32 @@ export function Navbar() {
 	}, []);
 
 	return (
-		<motion.header className={cn("fixed top-0 right-0 left-0 z-50")}>
-			{/* Top bar carries the mix-blend-difference so the logo, desktop
-			    links, and hamburger stay legible over any section scrolling
-			    behind them. The mobile dropdown below is deliberately OUTSIDE
-			    this blended layer — inside it, a solid background would be
-			    inverted by the difference formula instead of painting opaque. */}
-			<nav className="mx-auto px-[clamp(1rem,5vw,4rem)] text-white mix-blend-difference">
+		<motion.header
+			className={cn(
+				"fixed top-0 right-0 left-0 z-50 text-white transition-colors duration-300",
+				// Solid, backdrop-blurred surface keeps the white nav links
+				// legible over ANY background (dark hero, white blog page, or a
+				// white section scrolling underneath). We dropped the previous
+				// mix-blend-difference trick: blend modes only composite against
+				// backdrops in the same stacking context, so framer-motion's
+				// transformed sections (each its own context) broke it — the bar
+				// fell back to white-on-white and vanished.
+				isSolid
+					? "border-white/10 border-b bg-black/85 backdrop-blur-md"
+					: "bg-transparent",
+			)}
+		>
+			<nav className="mx-auto px-[clamp(1rem,5vw,4rem)]">
 				<div className="flex h-20 items-center justify-between">
 					<a
 						aria-label="Dakik Studio home"
 						className="flex flex-row items-center gap-2 font-bold text-base tracking-tight text-white transition-opacity hover:opacity-70 lg:text-xl"
 						href="/"
 					>
-						{/* Inlined SVG so currentColor resolves to text-white. Loading
-						    the same file via <img> sandboxes the SVG; its `fill:
-						    currentColor` defaults to black, which then disappears under
-						    the header's mix-blend-difference. */}
+						{/* Inlined SVG so currentColor resolves to the header's
+						    text-white. Loading the same file via <img> sandboxes the
+						    SVG; its `fill: currentColor` would default to black and be
+						    invisible against the dark/transparent bar. */}
 						<svg
 							aria-hidden="true"
 							className="h-12 w-auto shrink-0"
@@ -128,12 +153,10 @@ export function Navbar() {
 						</AnimatePresence>
 					</motion.button>
 				</div>
-				<hr className="border-0.5 border-gray-800/60" />
 			</nav>
 
-			{/* Mobile dropdown — solid black, full-bleed, NOT inside the blended
-			    layer, so it reads as an opaque panel and the links stay crisp
-			    white-on-black instead of inverting against the page behind. */}
+			{/* Mobile dropdown — solid black, full-bleed opaque panel so the
+			    links stay crisp white-on-black over any page behind it. */}
 			<AnimatePresence>
 				{isOpen && (
 					<motion.div
