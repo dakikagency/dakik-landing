@@ -1,27 +1,58 @@
 import { useQuery } from "@tanstack/react-query";
 import { useHead } from "@unhead/react";
-import { ArrowLeft, Search } from "lucide-react";
-import { DakikMark } from "../components/shared/dakik-mark";
+import { ArrowLeft, Check, Copy, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import Noise from "../components/noise";
+import { DakikMark } from "../components/shared/dakik-mark";
 import { cn } from "../lib/utils";
 
-interface ComponentDoc {
-	id: string;
-	slug: string;
+/** One entry from the Dakik Bits shadcn registry index (`/registry.json`). */
+interface RegistryItem {
 	name: string;
-	category: string;
-	description?: string | null;
-	preview?: string | null;
+	type: string;
+	title?: string;
+	description?: string;
+	categories?: string[];
 }
 
-async function fetchComponents(): Promise<{
-	components: ComponentDoc[];
-	total: number;
-}> {
-	const res = await fetch("/api/components?limit=200");
-	if (!res.ok) throw new Error("Failed to load components");
+interface RegistryIndex {
+	name: string;
+	homepage: string;
+	items: RegistryItem[];
+}
+
+async function fetchRegistry(): Promise<RegistryIndex> {
+	const res = await fetch("/registry.json");
+	if (!res.ok) throw new Error("Failed to load registry");
 	return res.json();
+}
+
+const installCmd = (name: string) => `npx shadcn add @dakik/${name}`;
+
+function CopyButton({ text }: { text: string }) {
+	const [copied, setCopied] = useState(false);
+	return (
+		<button
+			aria-label="Copy install command"
+			className="shrink-0 text-white/40 transition-colors hover:text-white"
+			onClick={async () => {
+				try {
+					await navigator.clipboard.writeText(text);
+					setCopied(true);
+					setTimeout(() => setCopied(false), 1200);
+				} catch {
+					/* clipboard unavailable */
+				}
+			}}
+			type="button"
+		>
+			{copied ? (
+				<Check className="size-3.5 text-emerald-400" />
+			) : (
+				<Copy className="size-3.5" />
+			)}
+		</button>
+	);
 }
 
 export function DacompsPage() {
@@ -29,38 +60,39 @@ export function DacompsPage() {
 	const [category, setCategory] = useState<string | null>(null);
 
 	useHead({
-		title: "Dakik Bits — React component library",
+		title: "Dakik Bits — React component registry",
 		meta: [
 			{
 				name: "description",
 				content:
-					"A curated component library by Dakik Studio. Browse production-ready React components with code, props, and previews.",
+					"A shadcn registry of production-ready React components by Dakik Studio. Install any component with the shadcn CLI.",
 			},
 		],
 	});
 
 	const { data, isLoading } = useQuery({
-		queryKey: ["components"],
-		queryFn: fetchComponents,
+		queryKey: ["registry"],
+		queryFn: fetchRegistry,
 	});
 
-	const components = data?.components ?? [];
+	const items = data?.items ?? [];
 	const categories = useMemo(() => {
-		const set = new Set(components.map((c) => c.category));
+		const set = new Set(items.map((c) => c.categories?.[0] ?? "Components"));
 		return Array.from(set).sort();
-	}, [components]);
+	}, [items]);
 
 	const filtered = useMemo(() => {
-		return components.filter((c) => {
-			if (category && c.category !== category) return false;
+		return items.filter((c) => {
+			if (category && (c.categories?.[0] ?? "Components") !== category) return false;
 			if (!search) return true;
 			const q = search.toLowerCase();
 			return (
 				c.name.toLowerCase().includes(q) ||
+				(c.title ?? "").toLowerCase().includes(q) ||
 				(c.description ?? "").toLowerCase().includes(q)
 			);
 		});
-	}, [components, category, search]);
+	}, [items, category, search]);
 
 	return (
 		<div className="relative min-h-screen overflow-hidden bg-black text-white">
@@ -88,15 +120,21 @@ export function DacompsPage() {
 			<main className="relative z-10 mx-auto px-[clamp(1rem,5vw,4rem)] pt-16 pb-20">
 				<section className="mb-12 max-w-3xl">
 					<p className="font-mono text-[10px] text-white/55 uppercase tracking-[0.35em]">
-						// React components
+						// shadcn registry
 					</p>
 					<h1 className="mt-4 font-black text-[clamp(3rem,10vw,8rem)] uppercase leading-[0.85] tracking-[-0.04em]">
 						Bits.
 					</h1>
 					<p className="mt-6 max-w-[52ch] text-base text-white/70 leading-snug sm:text-lg">
-						Production-ready React components with code, props, and previews.
-						Drop them in and ship.
+						Production-ready React components, installable straight from the
+						shadcn CLI. Drop them in and ship.
 					</p>
+					<div className="mt-6 inline-flex items-center gap-3 border border-white/15 bg-white/[0.03] px-4 py-2.5">
+						<code className="font-mono text-[12px] text-white/80">
+							npx shadcn add @dakik/button
+						</code>
+						<CopyButton text={installCmd("button")} />
+					</div>
 				</section>
 
 				<div className="grid gap-10 lg:grid-cols-[220px_minmax(0,1fr)]">
@@ -126,10 +164,8 @@ export function DacompsPage() {
 									onClick={() => setCategory(null)}
 									type="button"
 								>
-									{category === null && (
-										<span className="mr-2 text-white">●</span>
-									)}
-									All ({components.length})
+									{category === null && <span className="mr-2 text-white">●</span>}
+									All ({items.length})
 								</button>
 								{categories.map((c) => (
 									<button
@@ -143,9 +179,7 @@ export function DacompsPage() {
 										onClick={() => setCategory(c)}
 										type="button"
 									>
-										{category === c && (
-											<span className="mr-2 text-white">●</span>
-										)}
+										{category === c && <span className="mr-2 text-white">●</span>}
 										{c}
 									</button>
 								))}
@@ -156,7 +190,7 @@ export function DacompsPage() {
 					<section>
 						{isLoading && (
 							<p className="font-mono text-[11px] text-white/55 uppercase tracking-[0.35em]">
-								// Loading components…
+								// Loading registry…
 							</p>
 						)}
 
@@ -164,30 +198,29 @@ export function DacompsPage() {
 							<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
 								{filtered.map((c) => (
 									<article
-										className="group relative flex flex-col border border-white/10 bg-neutral-950 transition-colors hover:border-white/30"
-										key={c.slug}
+										className="group relative flex flex-col border border-white/10 bg-neutral-950 p-5 transition-colors hover:border-white/30"
+										key={c.name}
 									>
-										<div className="aspect-[4/3] overflow-hidden border-white/10 border-b bg-white/[0.02]">
-											{c.preview && (
-												<img
-													alt={c.name}
-													className="h-full w-full object-cover"
-													src={c.preview}
-												/>
-											)}
-										</div>
-										<div className="flex-1 p-5">
+										<div className="min-w-0">
 											<span className="font-mono text-[10px] text-white/50 uppercase tracking-[0.35em]">
-												// {c.category}
+												// {c.categories?.[0] ?? "Components"}
 											</span>
 											<h3 className="mt-2 font-bold text-base uppercase tracking-tight">
-												{c.name}
+												{c.title ?? c.name}
 											</h3>
-											{c.description && (
-												<p className="mt-2 line-clamp-2 text-sm text-white/55">
-													{c.description}
-												</p>
-											)}
+										</div>
+
+										{c.description && (
+											<p className="mt-2 line-clamp-2 flex-1 text-sm text-white/55">
+												{c.description}
+											</p>
+										)}
+
+										<div className="mt-4 flex items-center gap-2 border border-white/10 bg-black/40 px-3 py-2">
+											<code className="flex-1 truncate font-mono text-[11px] text-white/70">
+												npx shadcn add @dakik/{c.name}
+											</code>
+											<CopyButton text={installCmd(c.name)} />
 										</div>
 									</article>
 								))}

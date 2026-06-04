@@ -10,7 +10,9 @@
     "build:frontend": "vite build",
     "deploy": "wrangler deploy",
     "cf-typegen": "wrangler types",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "build:registry": "node scripts/build-bits-registry.mjs",
+    "seed:registry": "node scripts/seed-registry-sql.mjs"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.4.0",
