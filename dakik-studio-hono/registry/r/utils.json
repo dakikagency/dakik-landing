@@ -1,0 +1,22 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "utils",
+  "type": "registry:lib",
+  "title": "cn (utils)",
+  "description": "Tailwind class-merge helper (clsx + tailwind-merge).",
+  "author": "Dakik Studio <https://dakik.co.uk>",
+  "categories": [
+    "Utilities"
+  ],
+  "dependencies": [
+    "clsx",
+    "tailwind-merge"
+  ],
+  "files": [
+    {
+      "path": "registry/react/lib/utils.ts",
+      "content": "import { type ClassValue, clsx } from \"clsx\";\nimport { twMerge } from \"tailwind-merge\";\n\nexport const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs));\n",
+      "type": "registry:lib"
+    }
+  ]
+}

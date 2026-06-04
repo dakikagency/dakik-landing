@@ -170,8 +170,8 @@ export function ComponentForm({
 						<Field label="Category *">
 							<input
 								className={inputClass}
-								onChange={(e) => update("category", e.target.value.toLowerCase())}
-								placeholder="forms, layout, navigation..."
+								onChange={(e) => update("category", e.target.value)}
+								placeholder="Forms, Layout, Navigation…"
 								required
 								value={values.category}
 							/>
@@ -195,25 +195,33 @@ export function ComponentForm({
 						/>
 					</Field>
 
-					<Field label="Props (JSON)">
+					<Field label="Registry metadata (JSON)">
 						<textarea
 							className={`${inputMono} min-h-[120px] ${
 								propsError ? "border-red-500/40" : ""
 							}`}
 							onChange={(e) => update("props", e.target.value)}
-							placeholder='{"size": {"type": "string", "default": "md"}}'
+							placeholder='{"type":"registry:ui","author":"Dakik Studio","dependencies":["@ark-ui/react"],"registryDependencies":["https://bits.dakik.co.uk/r/button.json"],"file":{"path":"registry/react/components/button.tsx","type":"registry:ui"}}'
 							value={values.props}
 						/>
+						<p className="mt-1 text-white/40 text-xs">
+							Served verbatim at <span className="font-mono">/r/&lt;slug&gt;.json</span>:
+							shadcn <span className="font-mono">type</span>, npm{" "}
+							<span className="font-mono">dependencies</span>,{" "}
+							<span className="font-mono">registryDependencies</span>,{" "}
+							<span className="font-mono">cssVars</span>/<span className="font-mono">css</span>,
+							and the <span className="font-mono">file</span> path/type.
+						</p>
 						{propsError && (
 							<p className="mt-1 text-red-400 text-xs">{propsError}</p>
 						)}
 					</Field>
 
-					<Field label="Main code *">
+					<Field label="Component source *">
 						<textarea
 							className={`${inputMono} min-h-[200px] leading-relaxed`}
 							onChange={(e) => update("code", e.target.value)}
-							placeholder="export function Button() { ... }"
+							placeholder="export const Button = (props) => { ... }"
 							required
 							value={values.code}
 						/>

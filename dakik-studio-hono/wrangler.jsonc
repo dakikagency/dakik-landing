@@ -24,7 +24,9 @@
       "/daicons",
       "/privacy",
       "/terms",
-      "/media/*"
+      "/media/*",
+      "/registry.json",
+      "/r/*"
     ]
   },
 

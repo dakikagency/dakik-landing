@@ -5,6 +5,7 @@ import { logger } from "./middleware/logger";
 import { createApiRouter } from "./routes/api";
 import { healthRoute } from "./routes/health";
 import { mediaRoute } from "./routes/media";
+import { createRegistryRouter } from "./routes/registry";
 import { seoRoute } from "./routes/seo";
 import type { CloudflareEnv } from "./types/cloudflare";
 
@@ -34,5 +35,10 @@ app.route("/api", createApiRouter());
 
 app.route("/", mediaRoute);
 app.route("/", seoRoute);
+
+// Dakik Bits shadcn registry — /registry.json + /r/:name.json, served from D1.
+// These paths are in wrangler.jsonc `run_worker_first` so the worker (not the
+// static assets) answers them.
+app.route("/", createRegistryRouter());
 
 export default app;

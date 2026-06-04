@@ -112,10 +112,13 @@ export function AdminDacomps() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="font-bold text-2xl tracking-tight">Dacomps</h1>
+					<h1 className="font-bold text-2xl tracking-tight">Bits registry</h1>
 					<p className="mt-1 text-sm text-white/60">
-						Component documentation library. One main code block per
-						component, plus optional companion files (CSS, types, README).
+						The Dakik Bits shadcn registry. Each row is served live at{" "}
+						<span className="font-mono text-white/80">/r/&lt;slug&gt;.json</span> and
+						installable via{" "}
+						<span className="font-mono text-white/80">npx shadcn add @dakik/&lt;slug&gt;</span>.
+						Edits to the source or registry metadata go live immediately — no rebuild.
 					</p>
 				</div>
 				<button
