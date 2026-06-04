@@ -8,7 +8,7 @@
     "dev:frontend": "vite",
     "build": "wrangler deploy --dry-run",
     "build:frontend": "vite build",
-    "deploy": "wrangler deploy",
+    "deploy": "vite build && wrangler deploy",
     "cf-typegen": "wrangler types",
     "check-types": "tsc --noEmit",
     "build:registry": "node scripts/build-bits-registry.mjs",
