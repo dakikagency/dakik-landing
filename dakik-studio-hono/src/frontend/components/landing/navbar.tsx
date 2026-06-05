@@ -16,14 +16,19 @@ const navLinks = [
  * @param transparentAtTop - opt-in for pages with a dark hero (e.g. the
  *   landing page). When set, the bar is transparent at the very top and
  *   only paints a solid surface once scrolled. Light-background pages
- *   (blog, about, contact) leave this off so the bar is always solid and
- *   the white nav links stay legible.
+ *   (blog, about, contact) leave this off so the bar is always solid.
+ * @param theme - "dark" (default) paints a black bar with white text;
+ *   "light" paints a white bar with black text for white-background pages
+ *   like the blog so the header blends with the page.
  */
 export function Navbar({
 	transparentAtTop = false,
+	theme = "dark",
 }: {
 	transparentAtTop?: boolean;
+	theme?: "dark" | "light";
 }) {
+	const isLight = theme === "light";
 	const [isOpen, setIsOpen] = useState(false);
 	const [isScrolled, setIsScrolled] = useState(false);
 
@@ -52,16 +57,17 @@ export function Navbar({
 	return (
 		<motion.header
 			className={cn(
-				"fixed top-0 right-0 left-0 z-50 text-white transition-colors duration-300",
-				// Solid, backdrop-blurred surface keeps the white nav links
-				// legible over ANY background (dark hero, white blog page, or a
-				// white section scrolling underneath). We dropped the previous
-				// mix-blend-difference trick: blend modes only composite against
-				// backdrops in the same stacking context, so framer-motion's
-				// transformed sections (each its own context) broke it — the bar
-				// fell back to white-on-white and vanished.
+				"fixed top-0 right-0 left-0 z-50 transition-colors duration-300",
+				isLight ? "text-black" : "text-white",
+				// Solid, backdrop-blurred surface keeps the nav links legible over
+				// ANY background. We dropped the previous mix-blend-difference
+				// trick: blend modes only composite against backdrops in the same
+				// stacking context, so framer-motion's transformed sections (each
+				// its own context) broke it — the bar fell back to invisible.
 				isSolid
-					? "border-white/10 border-b bg-black/85 backdrop-blur-md"
+					? isLight
+						? "border-black/10 border-b bg-white/85 backdrop-blur-md"
+						: "border-white/10 border-b bg-black/85 backdrop-blur-md"
 					: "bg-transparent",
 			)}
 		>
@@ -69,7 +75,7 @@ export function Navbar({
 				<div className="flex h-20 items-center justify-between">
 					<a
 						aria-label="Dakik Studio home"
-						className="flex flex-row items-center gap-2 font-bold text-base tracking-tight text-white transition-opacity hover:opacity-70 lg:text-xl"
+						className="flex flex-row items-center gap-2 font-bold text-base tracking-tight transition-opacity hover:opacity-70 lg:text-xl"
 						href="/"
 					>
 						{/* Brandmark inherits the header's text-white via currentColor.
@@ -105,7 +111,10 @@ export function Navbar({
 					<motion.button
 						aria-expanded={isOpen}
 						aria-label={isOpen ? "Close menu" : "Open menu"}
-						className="flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-white/10 md:hidden"
+						className={cn(
+							"flex h-10 w-10 items-center justify-center rounded-lg transition-colors md:hidden",
+							isLight ? "hover:bg-black/5" : "hover:bg-white/10",
+						)}
 						onClick={toggleMenu}
 						type="button"
 						whileTap={{ scale: 0.95 }}
@@ -143,7 +152,12 @@ export function Navbar({
 				{isOpen && (
 					<motion.div
 						animate={{ opacity: 1, height: "auto" }}
-						className="overflow-hidden border-white/10 border-b bg-black text-white md:hidden"
+						className={cn(
+							"overflow-hidden border-b md:hidden",
+							isLight
+								? "border-black/10 bg-white text-black"
+								: "border-white/10 bg-black text-white",
+						)}
 						exit={{ opacity: 0, height: 0 }}
 						initial={{ opacity: 0, height: 0 }}
 						transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
@@ -160,7 +174,12 @@ export function Navbar({
 									}}
 								>
 									<a
-										className="block px-3 py-3 font-mono text-[11px] text-white/70 uppercase tracking-[0.25em] transition-colors hover:bg-white/5 hover:text-white"
+										className={cn(
+										"block px-3 py-3 font-mono text-[11px] uppercase tracking-[0.25em] transition-colors",
+										isLight
+											? "text-black/70 hover:bg-black/5 hover:text-black"
+											: "text-white/70 hover:bg-white/5 hover:text-white",
+									)}
 										href={link.href}
 										onClick={closeMenu}
 									>
@@ -177,7 +196,12 @@ export function Navbar({
 								}}
 							>
 								<a
-									className="block border-white/10 border-t px-3 pt-4 pb-3 font-mono text-[11px] text-white/70 uppercase tracking-[0.25em] transition-colors hover:text-white"
+									className={cn(
+										"block border-t px-3 pt-4 pb-3 font-mono text-[11px] uppercase tracking-[0.25em] transition-colors",
+										isLight
+											? "border-black/10 text-black/70 hover:text-black"
+											: "border-white/10 text-white/70 hover:text-white",
+									)}
 									href="/login"
 									onClick={closeMenu}
 								>
@@ -194,7 +218,12 @@ export function Navbar({
 								}}
 							>
 								<a
-									className="block w-full border-2 border-white bg-white px-5 py-4 text-center font-medium text-base text-black uppercase tracking-wider transition-colors hover:bg-black hover:text-white"
+									className={cn(
+										"block w-full border-2 px-5 py-4 text-center font-medium text-base uppercase tracking-wider transition-colors",
+										isLight
+											? "border-black bg-black text-white hover:bg-white hover:text-black"
+											: "border-white bg-white text-black hover:bg-black hover:text-white",
+									)}
 									href="/survey"
 									onClick={closeMenu}
 								>

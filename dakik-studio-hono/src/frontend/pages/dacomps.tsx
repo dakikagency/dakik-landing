@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useHead } from "@unhead/react";
 import { ArrowLeft, Check, Copy, Search } from "lucide-react";
+import { pageHead } from "../lib/head";
 import { useMemo, useState } from "react";
 import Noise from "../components/noise";
 import { DakikMark } from "../components/shared/dakik-mark";
@@ -59,16 +60,14 @@ export function DacompsPage() {
 	const [search, setSearch] = useState("");
 	const [category, setCategory] = useState<string | null>(null);
 
-	useHead({
-		title: "Dakik Bits — React component registry",
-		meta: [
-			{
-				name: "description",
-				content:
-					"A shadcn registry of production-ready React components by Dakik Studio. Install any component with the shadcn CLI.",
-			},
-		],
-	});
+	useHead(
+		pageHead({
+			title: "Dakik Bits — React component registry",
+			description:
+				"A shadcn registry of production-ready React components by Dakik Studio. Install any component with the shadcn CLI.",
+			canonical: "https://bits.dakik.co.uk/",
+		}),
+	);
 
 	const { data, isLoading } = useQuery({
 		queryKey: ["registry"],

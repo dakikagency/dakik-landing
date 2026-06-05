@@ -27,7 +27,7 @@ export function BlogContent({ content, className }: BlogContentProps) {
 						const text = String(children);
 						return (
 							<h1
-								className="mt-14 mb-6 break-words font-black text-2xl uppercase leading-[0.98] tracking-[-0.03em] sm:text-3xl lg:text-4xl"
+								className="mt-14 mb-6 break-words font-black text-2xl uppercase leading-[1.2] tracking-[-0.03em] sm:text-3xl lg:text-4xl"
 								id={slugifyHeading(text)}
 							>
 								{children}
@@ -38,7 +38,7 @@ export function BlogContent({ content, className }: BlogContentProps) {
 						const text = String(children);
 						return (
 							<h2
-								className="mt-12 mb-5 break-words font-black text-xl uppercase leading-[0.98] tracking-[-0.02em] sm:text-2xl lg:text-3xl"
+								className="mt-12 mb-5 break-words font-black text-xl uppercase leading-[1.2] tracking-[-0.02em] sm:text-2xl lg:text-3xl"
 								id={slugifyHeading(text)}
 							>
 								{children}
@@ -49,7 +49,7 @@ export function BlogContent({ content, className }: BlogContentProps) {
 						const text = String(children);
 						return (
 							<h3
-								className="mt-10 mb-3 break-words font-bold text-lg uppercase tracking-[-0.01em] sm:text-xl"
+								className="mt-10 mb-3 break-words font-bold text-lg uppercase leading-[1.2] tracking-[-0.01em] sm:text-xl"
 								id={slugifyHeading(text)}
 							>
 								{children}
@@ -57,12 +57,12 @@ export function BlogContent({ content, className }: BlogContentProps) {
 						);
 					},
 					h4: ({ children }) => (
-						<h4 className="mt-8 mb-3 break-words font-bold text-base tracking-tight sm:text-lg">
+						<h4 className="mt-8 mb-3 break-words font-bold text-base leading-[1.2] tracking-tight sm:text-lg">
 							{children}
 						</h4>
 					),
 					p: ({ children }) => (
-						<p className="mb-6 break-words text-base text-black/75 leading-[1.7] lg:text-lg lg:leading-[1.75]">
+						<p className="mb-6 break-words text-base text-black/75 leading-[1.4] lg:text-lg">
 							{children}
 						</p>
 					),
@@ -79,18 +79,18 @@ export function BlogContent({ content, className }: BlogContentProps) {
 						</a>
 					),
 					ul: ({ children }) => (
-						<ul className="mb-6 ml-6 list-disc space-y-2 text-base text-black/75 leading-[1.75] lg:text-lg marker:text-black/40">
+						<ul className="mb-6 ml-6 list-disc space-y-2 text-base text-black/75 leading-[1.4] lg:text-lg marker:text-black/40">
 							{children}
 						</ul>
 					),
 					ol: ({ children }) => (
-						<ol className="mb-6 ml-6 list-decimal space-y-2 text-base text-black/75 leading-[1.75] lg:text-lg marker:text-black/40">
+						<ol className="mb-6 ml-6 list-decimal space-y-2 text-base text-black/75 leading-[1.4] lg:text-lg marker:text-black/40">
 							{children}
 						</ol>
 					),
 					li: ({ children }) => <li className="pl-2">{children}</li>,
 					blockquote: ({ children }) => (
-						<blockquote className="my-10 border-black border-l-2 pl-6 text-black/85 text-xl italic leading-relaxed lg:text-2xl">
+						<blockquote className="my-10 border-black border-l-2 pl-6 text-black/85 text-xl italic leading-[1.4] lg:text-2xl">
 							{children}
 						</blockquote>
 					),

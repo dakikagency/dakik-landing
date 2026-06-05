@@ -9,24 +9,21 @@
     "directory": "dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
+    // Route every navigation through the worker (for per-request SSR + the
+    // hostname-aware catch-all), but let the asset layer serve static files
+    // directly — negative patterns bypass the worker entirely (free-tier safe).
     "run_worker_first": [
-      "/api",
-      "/api/*",
-      "/health",
-      "/health/*",
-      "/sitemap.xml",
-      "/robots.txt",
-      "/blog",
-      "/blog/*",
-      "/automations",
-      "/automations/*",
-      "/dacomps",
-      "/daicons",
-      "/privacy",
-      "/terms",
-      "/media/*",
-      "/registry.json",
-      "/r/*"
+      "/*",
+      "!/assets/*",
+      "!/landing/*",
+      "!/dakik_logo.svg",
+      "!/image.png",
+      "!/og-default.png",
+      "!/favicon.ico",
+      "!/video.mp4",
+      "!/faq.mp4",
+      "!/faq2.mp4",
+      "!/faq3.mp4"
     ]
   },
 

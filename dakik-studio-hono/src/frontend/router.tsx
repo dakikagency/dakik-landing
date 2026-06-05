@@ -1,4 +1,4 @@
-import { createBrowserRouter, Outlet } from "react-router-dom";
+import { Outlet, type RouteObject } from "react-router-dom";
 import { AdminLayout } from "./components/admin/admin-layout";
 import { RequireAdmin } from "./components/auth/require-admin";
 import { PortalLayout } from "./components/portal/portal-layout";
@@ -48,25 +48,31 @@ import { TermsOfServicePage } from "./pages/terms-of-service";
  *
  * SSR-safe: window check defaults to main host during build.
  */
-const hostname =
-	typeof window !== "undefined" ? window.location.hostname : "";
+export type SubdomainKind = "icons" | "bits" | "flow" | "main";
 
-type SubdomainKind = "icons" | "bits" | "flow" | "main";
-function detectSubdomain(): SubdomainKind {
+/**
+ * Map a hostname to its subdomain experience. Takes the hostname explicitly so
+ * it is SSR-safe: the worker passes the request Host header, the browser passes
+ * `window.location.hostname`. No module-scope `window` access (which would crash
+ * when the SSR bundle imports this module).
+ */
+export function detectSubdomain(hostname: string): SubdomainKind {
 	if (hostname.startsWith("icons.")) return "icons";
 	if (hostname.startsWith("bits.")) return "bits";
 	if (hostname.startsWith("flow.")) return "flow";
 	return "main";
 }
 
-const subdomain = detectSubdomain();
+function App() {
+	return <Outlet />;
+}
 
-const sharedAuthRoutes = [
+const sharedAuthRoutes: RouteObject[] = [
 	{ path: "login", element: <LoginPage /> },
 	{ path: "auth/callback", element: <AuthCallbackPage /> },
 ];
 
-const iconsRoutes = [
+const iconsRoutes: RouteObject[] = [
 	{ index: true, element: <DaiconsPage /> },
 	...sharedAuthRoutes,
 	{
@@ -80,7 +86,7 @@ const iconsRoutes = [
 	},
 ];
 
-const bitsRoutes = [
+const bitsRoutes: RouteObject[] = [
 	{ index: true, element: <DacompsPage /> },
 	...sharedAuthRoutes,
 	{
@@ -94,7 +100,7 @@ const bitsRoutes = [
 	},
 ];
 
-const flowRoutes = [
+const flowRoutes: RouteObject[] = [
 	{ index: true, element: <AutomationsIndexPage /> },
 	{ path: ":slug", element: <AutomationDetailPage /> },
 	...sharedAuthRoutes,
@@ -109,7 +115,7 @@ const flowRoutes = [
 	},
 ];
 
-const mainRoutes = [
+const mainRoutes: RouteObject[] = [
 	{ index: true, element: <LandingPage /> },
 	{ path: "about", element: <AboutPage /> },
 	{ path: "contact", element: <ContactPage /> },
@@ -150,21 +156,24 @@ const mainRoutes = [
 	},
 ];
 
-const routesForSubdomain: Record<SubdomainKind, typeof mainRoutes> = {
+const routesForSubdomain: Record<SubdomainKind, RouteObject[]> = {
 	icons: iconsRoutes,
 	bits: bitsRoutes,
 	flow: flowRoutes,
 	main: mainRoutes,
 };
 
-export const router = createBrowserRouter([
-	{
-		path: "/",
-		element: <App />,
-		children: routesForSubdomain[subdomain],
-	},
-]);
-
-function App() {
-	return <Outlet />;
+/**
+ * Build the route tree for a given subdomain. Shared by the client
+ * (`createBrowserRouter` in main.tsx) and the server (`createStaticHandler` in
+ * entry-server.tsx) so both render an identical tree for hydration.
+ */
+export function createRoutes(subdomain: SubdomainKind): RouteObject[] {
+	return [
+		{
+			path: "/",
+			element: <App />,
+			children: routesForSubdomain[subdomain],
+		},
+	];
 }

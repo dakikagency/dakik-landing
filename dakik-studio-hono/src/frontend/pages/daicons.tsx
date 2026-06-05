@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useHead } from "@unhead/react";
 import { ArrowLeft, Check, Copy, Search } from "lucide-react";
+import { pageHead } from "../lib/head";
 import { DakikMark } from "../components/shared/dakik-mark";
 import { useMemo, useState } from "react";
 import Noise from "../components/noise";
@@ -56,16 +57,14 @@ function IconTile({ icon }: { icon: Icon }) {
 export function DaiconsPage() {
 	const [search, setSearch] = useState("");
 
-	useHead({
-		title: "Dakik Icons — Free SVG icon set",
-		meta: [
-			{
-				name: "description",
-				content:
-					"A free, curated SVG icon set crafted for product UI. Search, click to copy, drop into your project.",
-			},
-		],
-	});
+	useHead(
+		pageHead({
+			title: "Dakik Icons — Free SVG icon set",
+			description:
+				"A free, curated SVG icon set crafted for product UI. Search, click to copy, drop into your project.",
+			canonical: "https://icons.dakik.co.uk/",
+		}),
+	);
 
 	const { data, isLoading } = useQuery({
 		queryKey: ["icons"],

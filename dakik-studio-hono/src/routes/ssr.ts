@@ -1,0 +1,199 @@
+import type { QueryKey } from "@tanstack/react-query";
+import type { Context, Hono } from "hono";
+import type { SubdomainKind } from "../frontend/router";
+import { readShellHtml, renderSsrHtml, SITE_NAME } from "../lib/seo";
+import { renderApp } from "../ssr/render";
+import type { CloudflareEnv } from "../types/cloudflare";
+
+type App = Hono<{ Bindings: CloudflareEnv }>;
+type Ctx = Context<{ Bindings: CloudflareEnv }>;
+
+// First path segments on flow.dakik.co.uk that are NOT automation slugs.
+const FLOW_RESERVED = new Set(["login", "auth", "admin", "api", "media", "health"]);
+
+interface ArticleLike {
+	title: string;
+	excerpt?: string | null;
+	coverImage?: string | null;
+	publishedAt?: string | null;
+	updatedAt?: string | null;
+}
+
+function subdomainOf(hostname: string): SubdomainKind {
+	if (hostname.startsWith("icons.")) return "icons";
+	if (hostname.startsWith("bits.")) return "bits";
+	if (hostname.startsWith("flow.")) return "flow";
+	return "main";
+}
+
+/**
+ * Serve the static asset / SPA shell for this request. env.ASSETS.fetch returns
+ * a response with IMMUTABLE headers, which the cors middleware would crash on
+ * when it tries to add headers — so copy into a fresh, mutable Response.
+ */
+async function serveShell(c: Ctx): Promise<Response> {
+	const res = await c.env.ASSETS.fetch(c.req.raw);
+	return new Response(res.body, res);
+}
+
+/**
+ * Fetch the exact JSON the browser would, by calling our own endpoint through
+ * the Hono app. Guarantees the seeded React Query cache matches the client's
+ * `queryFn` output byte-for-byte (no hydration drift). Returns null on any error
+ * so the caller can fall back gracefully.
+ */
+async function prefetch(app: App, c: Ctx, path: string): Promise<unknown | null> {
+	try {
+		const res = await app.request(path, undefined, c.env);
+		if (!res.ok) return null;
+		return await res.json();
+	} catch {
+		return null;
+	}
+}
+
+function articleJsonLd(a: ArticleLike, url: string): Record<string, unknown> {
+	return {
+		"@context": "https://schema.org",
+		"@type": "Article",
+		headline: a.title,
+		description: a.excerpt ?? undefined,
+		image: a.coverImage ? [a.coverImage] : undefined,
+		datePublished: a.publishedAt ?? undefined,
+		dateModified: a.updatedAt ?? undefined,
+		mainEntityOfPage: { "@type": "WebPage", "@id": url },
+		publisher: {
+			"@type": "Organization",
+			name: SITE_NAME,
+			url: "https://dakik.co.uk",
+		},
+	};
+}
+
+/**
+ * Render a route on the worker and return a full HTML response. On ANY failure,
+ * degrade to the plain SPA shell (the client then renders + unhead populates the
+ * head) — the live site never breaks because SSR threw.
+ */
+async function ssrRespond(
+	app: App,
+	c: Ctx,
+	subdomain: SubdomainKind,
+	prefetched: Array<[QueryKey, unknown]>,
+	jsonLd?: Record<string, unknown>,
+): Promise<Response> {
+	try {
+		const shell = await readShellHtml(c.env);
+		const { appHtml, headTags, dehydratedState } = await renderApp({
+			url: c.req.url,
+			subdomain,
+			prefetched,
+		});
+		const head = jsonLd
+			? `${headTags}<script type="application/ld+json">${JSON.stringify(
+					jsonLd,
+				).replace(/</g, "\\u003c")}</script>`
+			: headTags;
+		const html = renderSsrHtml(shell, { headTags: head, appHtml, dehydratedState });
+		return c.html(html, 200, {
+			"Cache-Control": "public, max-age=60, s-maxage=300",
+		});
+	} catch (err) {
+		console.error(
+			"SSR_RENDER_FAILED",
+			err instanceof Error ? `${err.message}\n${err.stack}` : String(err),
+		);
+		return serveShell(c);
+	}
+}
+
+export function registerSsrRoutes(app: App): void {
+	// Subdomain home pages (icons / bits / flow). Apex + www stay client-rendered.
+	app.get("/", async (c) => {
+		const subdomain = subdomainOf(c.req.header("host") ?? "");
+		if (subdomain === "main") {
+			return serveShell(c);
+		}
+		const cfg = {
+			icons: { path: "/api/icons?limit=2000", key: ["icons"] },
+			bits: { path: "/registry.json", key: ["registry"] },
+			flow: { path: "/api/automations", key: ["automations", "list"] },
+		}[subdomain];
+
+		const data = await prefetch(app, c, cfg.path);
+		const prefetched: Array<[QueryKey, unknown]> = data
+			? [[cfg.key, data]]
+			: [];
+		return ssrRespond(app, c, subdomain, prefetched);
+	});
+
+	// Blog index (apex).
+	app.get("/blog", async (c) => {
+		const data = await prefetch(app, c, "/api/blog");
+		const prefetched: Array<[QueryKey, unknown]> = data
+			? [[["blog", "list"], data]]
+			: [];
+		return ssrRespond(app, c, "main", prefetched);
+	});
+
+	// Blog post (apex). JSON-LD Article injected for crawlers.
+	app.get("/blog/:slug", async (c) => {
+		const slug = c.req.param("slug");
+		const data = await prefetch(app, c, `/api/blog/${encodeURIComponent(slug)}`);
+		if (!data) {
+			// Unknown/unpublished post → let the SPA render its 404 UI.
+			return serveShell(c);
+		}
+		const post = (data as { post?: ArticleLike }).post;
+		const jsonLd = post
+			? articleJsonLd(post, `https://dakik.co.uk/blog/${slug}`)
+			: undefined;
+		return ssrRespond(app, c, "main", [[["blog", "post", slug], data]], jsonLd);
+	});
+
+	// Catch-all (LAST): flow automation detail SSR + asset/shell delegation for
+	// every other navigation. Runs because `run_worker_first: ["/*", ...]` routes
+	// all non-asset paths through the worker.
+	app.all("*", async (c) => {
+		const url = new URL(c.req.url);
+		const subdomain = subdomainOf(c.req.header("host") ?? "");
+		const segments = url.pathname.split("/").filter(Boolean);
+
+		// flow.dakik.co.uk/<slug> → SSR the automation detail page.
+		if (
+			subdomain === "flow" &&
+			segments.length === 1 &&
+			!FLOW_RESERVED.has(segments[0])
+		) {
+			const slug = segments[0];
+			const data = await prefetch(
+				app,
+				c,
+				`/api/automations/${encodeURIComponent(slug)}`,
+			);
+			if (data) {
+				const automation = (data as { automation?: ArticleLike }).automation;
+				const jsonLd = automation
+					? articleJsonLd(automation, `https://flow.dakik.co.uk/${slug}`)
+					: undefined;
+				return ssrRespond(
+					app,
+					c,
+					"flow",
+					[[["automations", "post", slug], data]],
+					jsonLd,
+				);
+			}
+		}
+
+		// Worker-owned API/health/media paths shouldn't reach here; if they do
+		// (no sub-route matched), don't mask them with the SPA shell.
+		if (/^\/(api|health|media)(\/|$)/.test(url.pathname)) {
+			return c.notFound();
+		}
+
+		// Everything else (apex CSR routes, unknown paths, any stray static file)
+		// → the asset layer, which serves the file or the SPA shell fallback.
+		return serveShell(c);
+	});
+}

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useHead } from "@unhead/react";
 import { BlogCard } from "../../components/blog/blog-card";
+import { pageHead } from "../../lib/head";
 import { Footer } from "../../components/landing/footer";
 import { Navbar } from "../../components/landing/navbar";
 import type { BlogPostSummary } from "../../lib/blog";
@@ -12,18 +13,14 @@ async function fetchPosts(): Promise<{ posts: BlogPostSummary[] }> {
 }
 
 export function BlogIndexPage() {
-	useHead({
-		title: "Blog · Dakik Studio",
-		meta: [
-			{
-				name: "description",
-				content:
-					"Articles on design systems, web performance, and product engineering from the Dakik Studio team.",
-			},
-			{ property: "og:title", content: "Blog · Dakik Studio" },
-			{ property: "og:type", content: "website" },
-		],
-	});
+	useHead(
+		pageHead({
+			title: "Blog · Dakik Studio",
+			description:
+				"Articles on design systems, web performance, and product engineering from the Dakik Studio team.",
+			canonical: "https://dakik.co.uk/blog",
+		}),
+	);
 
 	const { data, isLoading, isError } = useQuery({
 		queryKey: ["blog", "list"],
@@ -36,7 +33,7 @@ export function BlogIndexPage() {
 
 	return (
 		<div className="min-h-screen overflow-x-hidden bg-white text-black">
-			<Navbar />
+			<Navbar theme="light" />
 			<main className="mx-auto max-w-7xl px-[clamp(1.25rem,5vw,5rem)] pt-24 pb-20 lg:pt-32 lg:pb-32">
 				<header className="mb-16 grid grid-cols-12 gap-6 lg:mb-28">
 					<div className="col-span-12 lg:col-span-8">
@@ -49,7 +46,7 @@ export function BlogIndexPage() {
 							the studio.
 						</h1>
 					</div>
-					<p className="col-span-12 max-w-[44ch] self-end text-base text-black/65 leading-relaxed lg:col-span-4 lg:text-lg">
+					<p className="col-span-12 max-w-[44ch] self-end text-base text-black/65 leading-[1.4] lg:col-span-4 lg:text-lg">
 						Design systems, web performance, and product engineering —
 						written from the ground floor.
 					</p>
@@ -73,32 +70,29 @@ export function BlogIndexPage() {
 				)}
 
 				{lead && (
-					<section className="mb-20 border-black/10 border-b pb-14 lg:mb-32 lg:pb-24">
-						<div className="mb-6 flex items-baseline justify-between">
-							<span className="font-mono text-[10px] text-black/55 uppercase tracking-[0.35em] sm:text-[11px]">
-								Latest
-							</span>
-							<span className="font-mono text-[10px] text-black/45 uppercase tracking-[0.35em] tabular-nums sm:text-[11px]">
-								01
-							</span>
-						</div>
-						<BlogCard {...lead} variant="lead" />
+					<section className="mb-20 border-black/10 border-b pb-16 lg:mb-28 lg:pb-24">
+						<BlogCard {...lead} variant="featured" />
 					</section>
 				)}
 
 				{rest.length > 0 && (
 					<section>
-						<div className="mb-10 flex items-baseline justify-between">
-							<span className="font-mono text-[10px] text-black/55 uppercase tracking-[0.35em] sm:text-[11px]">
-								Archive
-							</span>
-							<span className="font-mono text-[10px] text-black/45 uppercase tracking-[0.35em] tabular-nums sm:text-[11px]">
-								{String(rest.length).padStart(2, "0")} posts
-							</span>
-						</div>
-						<div className="grid gap-x-8 gap-y-14 md:grid-cols-2 lg:gap-x-12">
+						<div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-10">
+							<div className="flex flex-col justify-center">
+								<span className="font-mono text-[10px] text-black/55 uppercase tracking-[0.35em] sm:text-[11px]">
+									Archive
+								</span>
+								<h2 className="mt-4 font-black text-3xl uppercase leading-[0.95] tracking-[-0.03em] lg:text-4xl">
+									More from
+									<br />
+									the journal.
+								</h2>
+								<span className="mt-4 font-mono text-[10px] text-black/45 uppercase tracking-[0.35em] tabular-nums sm:text-[11px]">
+									{String(rest.length).padStart(2, "0")} posts
+								</span>
+							</div>
 							{rest.map((post) => (
-								<BlogCard key={post.slug} {...post} />
+								<BlogCard key={post.slug} {...post} variant="compact" />
 							))}
 						</div>
 					</section>

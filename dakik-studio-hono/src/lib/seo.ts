@@ -73,16 +73,56 @@ function buildHeadTags(meta: SeoMeta): string {
 	].join("");
 }
 
-export function injectSeoIntoShell(shellHtml: string, meta: SeoMeta): string {
-	const tags = buildHeadTags(meta);
+/**
+ * Remove the static SEO tags baked into the built index.html shell (title,
+ * description, canonical, og:*, twitter:*) so they don't conflict with the
+ * dynamic tags we inject — whether those come from unhead (SSR happy path) or
+ * from `buildHeadTags` (fallback). Keeps charset/viewport/robots/googlebot and
+ * the build's asset <script>/<link> tags.
+ */
+function stripStaticSeo(html: string): string {
+	return html
+		.replace(/[ \t]*<title>[\s\S]*?<\/title>\s*\n?/i, "")
+		.replace(/[ \t]*<meta\s+name="description"[^>]*>\s*\n?/i, "")
+		.replace(/[ \t]*<link\s+rel="canonical"[^>]*>\s*\n?/i, "")
+		.replace(/[ \t]*<meta\s+property="og:[^"]*"[^>]*>\s*\n?/gi, "")
+		.replace(/[ \t]*<meta\s+name="twitter:[^"]*"[^>]*>\s*\n?/gi, "");
+}
 
-	let html = shellHtml;
-	html = html.replace(/<title>[\s\S]*?<\/title>/i, "");
-
+function injectIntoHead(html: string, tags: string): string {
 	if (html.includes("</head>")) {
 		return html.replace("</head>", `${tags}</head>`);
 	}
 	return html.replace("<head>", `<head>${tags}`);
+}
+
+export function injectSeoIntoShell(shellHtml: string, meta: SeoMeta): string {
+	return injectIntoHead(stripStaticSeo(shellHtml), buildHeadTags(meta));
+}
+
+/**
+ * Assemble a full SSR response: strip the static SEO block, inject unhead's
+ * rendered `headTags`, mount the server-rendered `appHtml` into #root, and embed
+ * the dehydrated React Query cache for the client to hydrate. The state JSON
+ * escapes `<` so a `</script>` inside (e.g.) blog markdown can't break out.
+ */
+export function renderSsrHtml(
+	shellHtml: string,
+	parts: { headTags: string; appHtml: string; dehydratedState: unknown },
+): string {
+	let html = injectIntoHead(stripStaticSeo(shellHtml), parts.headTags);
+	html = html.replace(
+		'<div id="root"></div>',
+		`<div id="root">${parts.appHtml}</div>`,
+	);
+	const stateJson = JSON.stringify(parts.dehydratedState).replace(
+		/</g,
+		"\\u003c",
+	);
+	const script = `<script>window.__DAKIK_SSR__=${stateJson}</script>`;
+	return html.includes("</body>")
+		? html.replace("</body>", `${script}</body>`)
+		: `${html}${script}`;
 }
 
 export async function readShellHtml(env: CloudflareEnv): Promise<string> {

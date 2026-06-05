@@ -25,6 +25,8 @@ export interface BlogPostSummary {
 	coverImage?: string | null;
 	publishedAt: string | null;
 	tags: BlogTag[];
+	/** Precomputed on the server so summary cards can show "N min read". */
+	readingTime?: number;
 }
 
 export interface BlogPostFull extends BlogPostSummary {

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useHead } from "@unhead/react";
 import { ArrowLeft, ArrowRight, Calendar, Clock, Download } from "lucide-react";
+import { pageHead } from "../../lib/head";
 import { DakikMark } from "../../components/shared/dakik-mark";
 import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -80,21 +81,17 @@ export function AutomationDetailPage() {
 		[automation],
 	);
 
-	useHead({
-		title: automation
-			? `${automation.title} · Dakik Flow`
-			: "Dakik Flow",
-		meta: automation
-			? [
-					{ name: "description", content: automation.excerpt ?? "" },
-					{ property: "og:title", content: automation.title },
-					{ property: "og:type", content: "article" },
-					...(automation.coverImage
-						? [{ property: "og:image", content: automation.coverImage }]
-						: []),
-				]
-			: [],
-	});
+	useHead(
+		automation
+			? pageHead({
+					title: `${automation.title} · Dakik Flow`,
+					description: automation.excerpt ?? "",
+					canonical: `https://flow.dakik.co.uk/${automation.slug}`,
+					image: automation.coverImage,
+					type: "article",
+				})
+			: { title: "Dakik Flow" },
+	);
 
 	if (isLoading) {
 		return (

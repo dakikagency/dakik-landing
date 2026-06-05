@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useHead } from "@unhead/react";
 import { ArrowLeft, ArrowRight, Search } from "lucide-react";
+import { pageHead } from "../../lib/head";
 import { DakikMark } from "../../components/shared/dakik-mark";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -18,16 +19,14 @@ async function fetchAutomations(): Promise<{
 export function AutomationsIndexPage() {
 	const [search, setSearch] = useState("");
 
-	useHead({
-		title: "Dakik Flow — Automation playbooks",
-		meta: [
-			{
-				name: "description",
-				content:
-					"Ready-to-use automation playbooks built and maintained by Dakik Studio.",
-			},
-		],
-	});
+	useHead(
+		pageHead({
+			title: "Dakik Flow — Automation playbooks",
+			description:
+				"Ready-to-use automation playbooks built and maintained by Dakik Studio.",
+			canonical: "https://flow.dakik.co.uk/",
+		}),
+	);
 
 	const { data, isLoading } = useQuery({
 		queryKey: ["automations", "list"],

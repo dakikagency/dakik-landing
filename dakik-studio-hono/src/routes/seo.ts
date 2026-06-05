@@ -128,68 +128,8 @@ async function renderShell(c: { env: CloudflareEnv }, meta: SeoMeta) {
 	});
 }
 
-seoRoute.get("/blog", async (c) => {
-	const base = getBaseUrl(c.env);
-	return renderShell(c, {
-		title: `Blog · ${SITE_NAME}`,
-		description:
-			"Articles on design systems, web performance, and product engineering from the Dakik Studio team.",
-		canonical: `${base}/blog`,
-		ogType: "website",
-	});
-});
-
-seoRoute.get("/blog/:slug", async (c) => {
-	const slug = c.req.param("slug");
-	const base = getBaseUrl(c.env);
-	const db = getDb(c.env);
-
-	const post = await db.blogPost.findUnique({
-		where: { slug },
-		select: {
-			slug: true,
-			title: true,
-			excerpt: true,
-			coverImage: true,
-			publishedAt: true,
-			updatedAt: true,
-			published: true,
-		},
-	});
-
-	if (!post || !post.published) {
-		return c.notFound();
-	}
-
-	const description = post.excerpt ?? SITE_DESCRIPTION;
-	const canonical = `${base}/blog/${post.slug}`;
-	const image = post.coverImage ?? undefined;
-
-	return renderShell(c, {
-		title: `${post.title} · ${SITE_NAME}`,
-		description,
-		canonical,
-		ogType: "article",
-		ogImage: image,
-		publishedTime: post.publishedAt?.toISOString(),
-		modifiedTime: post.updatedAt.toISOString(),
-		jsonLd: {
-			"@context": "https://schema.org",
-			"@type": "Article",
-			headline: post.title,
-			description,
-			image: image ? [image] : undefined,
-			datePublished: post.publishedAt?.toISOString(),
-			dateModified: post.updatedAt.toISOString(),
-			mainEntityOfPage: { "@type": "WebPage", "@id": canonical },
-			publisher: {
-				"@type": "Organization",
-				name: SITE_NAME,
-				url: base,
-			},
-		},
-	});
-});
+// /blog and /blog/:slug are served with full SSR (server-rendered body + head +
+// dehydrated React Query cache) by registerSsrRoutes in routes/ssr.ts.
 
 seoRoute.get("/automations", async (c) => {
 	const base = getBaseUrl(c.env);
