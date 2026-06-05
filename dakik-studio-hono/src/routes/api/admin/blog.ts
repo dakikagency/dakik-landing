@@ -1,5 +1,30 @@
 import { Hono } from "hono";
 
+/** DDMMYYYY, e.g. 17092026 — used to disambiguate a duplicate slug. */
+function dateSuffix(d: Date): string {
+	const day = String(d.getUTCDate()).padStart(2, "0");
+	const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+	return `${day}${month}${d.getUTCFullYear()}`;
+}
+
+/**
+ * In-house slug uniqueness. Returns `base` if free; otherwise `base-DDMMYYYY`,
+ * then `base-DDMMYYYY-2`, `-3`, … so a create never hits the unique-index error.
+ */
+async function ensureUniqueSlug(
+	exists: (slug: string) => Promise<boolean>,
+	base: string,
+): Promise<string> {
+	if (!(await exists(base))) return base;
+	const dated = `${base}-${dateSuffix(new Date())}`;
+	if (!(await exists(dated))) return dated;
+	for (let n = 2; n < 50; n++) {
+		const candidate = `${dated}-${n}`;
+		if (!(await exists(candidate))) return candidate;
+	}
+	return `${dated}-${Date.now()}`;
+}
+
 /**
  * Admin CRUD for BlogPost. Mounted at /api/admin/blog.
  * All routes require admin auth (enforced by the parent admin router).
@@ -52,6 +77,7 @@ export function createAdminBlogRouter() {
 
 	blog.post("/", async (c) => {
 		const db = c.get("db");
+		const user = c.get("user");
 		const body = await c.req.json();
 
 		if (!body.title || !body.slug || !body.content) {
@@ -60,20 +86,33 @@ export function createAdminBlogRouter() {
 
 		const tagSlugs: string[] = Array.isArray(body.tags) ? body.tags : [];
 
+		// In-house slug governance: guarantee a unique slug (append the date,
+		// then a counter, if the requested one is already taken).
+		const slug = await ensureUniqueSlug(
+			async (s) =>
+				Boolean(await db.blogPost.findUnique({ where: { slug: s } })),
+			String(body.slug),
+		);
+
+		// Automated (token) callers always publish immediately; the admin UI
+		// keeps its own draft/publish toggle.
+		const published =
+			user?.id === "service:ingest" ? true : Boolean(body.published);
+
 		const post = await db.blogPost.create({
 			data: {
 				title: body.title,
-				slug: body.slug,
+				slug,
 				excerpt: body.excerpt ?? null,
 				content: body.content,
 				coverImage: body.coverImage ?? null,
-				published: Boolean(body.published),
-				publishedAt: body.published ? new Date() : null,
+				published,
+				publishedAt: published ? new Date() : null,
 				tags: tagSlugs.length
 					? {
-							connectOrCreate: tagSlugs.map((slug) => ({
-								where: { slug },
-								create: { slug, name: slug },
+							connectOrCreate: tagSlugs.map((s) => ({
+								where: { slug: s },
+								create: { slug: s, name: s },
 							})),
 						}
 					: undefined,

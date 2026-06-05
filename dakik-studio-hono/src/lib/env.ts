@@ -33,6 +33,10 @@ const envSchema = z.object({
 	GOOGLE_CALENDAR_REFRESH_TOKEN: z.string().optional().default(""),
 	GOOGLE_CALENDAR_ID: z.string().optional().default(""),
 
+	// Blog ingest — static machine token for automated callers (the RSS cron)
+	// hitting POST /api/admin/blog. Optional so local/dev without it still boots.
+	BLOG_INGEST_TOKEN: z.string().optional().default(""),
+
 	// Environment
 	ENVIRONMENT: z
 		.enum(["development", "production", "preview"])
