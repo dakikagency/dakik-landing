@@ -44,8 +44,10 @@ function BackLink() {
 }
 
 function PageShell({ children }: { children: React.ReactNode }) {
+	// overflow-x-clip (not -hidden) prevents horizontal scroll WITHOUT creating
+	// a scroll container, which would otherwise break the sticky TOC sidebar.
 	return (
-		<div className="min-h-screen overflow-x-hidden bg-white text-black">
+		<div className="min-h-screen overflow-x-clip bg-white text-black">
 			<Navbar theme="light" />
 			<main className="mx-auto max-w-6xl px-[clamp(1.25rem,5vw,5rem)] pt-24 pb-20 lg:pt-32 lg:pb-32">
 				{children}

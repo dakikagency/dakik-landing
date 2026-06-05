@@ -7,24 +7,33 @@ export function useActiveSection(ids: string[]): string {
 	useEffect(() => {
 		if (!ids.length) return;
 
-		const observer = new IntersectionObserver(
-			(entries) => {
-				const intersecting = entries
-					.filter((e) => e.isIntersecting)
-					.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-				if (intersecting.length > 0) {
-					setActiveId(intersecting[0].target.id);
+		// Scroll-spy with a "reading line" one third of the way down the
+		// viewport. The active section is the last heading whose top has
+		// scrolled above that line. Computed directly on scroll — cheap for a
+		// short TOC, and (unlike a rAF throttle) keeps working when the page
+		// reports hidden, e.g. headless/preview environments.
+		const compute = () => {
+			const line = window.innerHeight / 3;
+			let current = ids[0];
+			for (const id of ids) {
+				const el = document.getElementById(id);
+				if (!el) continue;
+				if (el.getBoundingClientRect().top <= line) {
+					current = id;
+				} else {
+					break;
 				}
-			},
-			{ rootMargin: "0px 0px -65% 0px", threshold: 0 },
-		);
+			}
+			setActiveId((prev) => (prev === current ? prev : current));
+		};
 
-		for (const id of ids) {
-			const el = document.getElementById(id);
-			if (el) observer.observe(el);
-		}
-
-		return () => observer.disconnect();
+		compute();
+		window.addEventListener("scroll", compute, { passive: true });
+		window.addEventListener("resize", compute, { passive: true });
+		return () => {
+			window.removeEventListener("scroll", compute);
+			window.removeEventListener("resize", compute);
+		};
 	}, [ids]);
 
 	return activeId;

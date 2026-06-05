@@ -27,7 +27,7 @@ export function BlogContent({ content, className }: BlogContentProps) {
 						const text = String(children);
 						return (
 							<h1
-								className="mt-14 mb-6 break-words font-black text-2xl uppercase leading-[1.2] tracking-[-0.03em] sm:text-3xl lg:text-4xl"
+								className="mt-14 mb-6 scroll-mt-28 break-words font-black text-2xl uppercase leading-[1.2] tracking-[-0.03em] sm:text-3xl lg:text-4xl"
 								id={slugifyHeading(text)}
 							>
 								{children}
@@ -38,7 +38,7 @@ export function BlogContent({ content, className }: BlogContentProps) {
 						const text = String(children);
 						return (
 							<h2
-								className="mt-12 mb-5 break-words font-black text-xl uppercase leading-[1.2] tracking-[-0.02em] sm:text-2xl lg:text-3xl"
+								className="mt-12 mb-5 scroll-mt-28 break-words font-black text-xl uppercase leading-[1.2] tracking-[-0.02em] sm:text-2xl lg:text-3xl"
 								id={slugifyHeading(text)}
 							>
 								{children}
@@ -49,7 +49,7 @@ export function BlogContent({ content, className }: BlogContentProps) {
 						const text = String(children);
 						return (
 							<h3
-								className="mt-10 mb-3 break-words font-bold text-lg uppercase leading-[1.2] tracking-[-0.01em] sm:text-xl"
+								className="mt-10 mb-3 scroll-mt-28 break-words font-bold text-lg uppercase leading-[1.2] tracking-[-0.01em] sm:text-xl"
 								id={slugifyHeading(text)}
 							>
 								{children}
