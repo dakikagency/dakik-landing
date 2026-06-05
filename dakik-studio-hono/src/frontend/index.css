@@ -2,6 +2,9 @@
 
 @theme {
 	--color-background: #000000;
+	/* Tailwind's container scale tops out at 7xl (80rem); add 8xl so
+	   max-w-8xl is available (used by the wide blog detail layout). */
+	--container-8xl: 88rem;
 }
 
 :root {

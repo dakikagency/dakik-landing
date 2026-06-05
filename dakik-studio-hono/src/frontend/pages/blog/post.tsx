@@ -49,7 +49,7 @@ function PageShell({ children }: { children: React.ReactNode }) {
 	return (
 		<div className="min-h-screen overflow-x-clip bg-white text-black">
 			<Navbar theme="light" />
-			<main className="mx-auto max-w-6xl px-[clamp(1.25rem,5vw,5rem)] pt-24 pb-20 lg:pt-32 lg:pb-32">
+			<main className="mx-auto max-w-8xl px-[clamp(1.25rem,5vw,5rem)] pt-24 pb-20 lg:pt-32 lg:pb-32">
 				{children}
 			</main>
 			<Footer />
@@ -179,7 +179,7 @@ export function BlogPostPage() {
 					<span className="font-mono text-[10px] text-black/55 uppercase tracking-[0.35em] sm:text-[11px]">
 						{post.tags[0]?.name ?? "Article"}
 					</span>
-					<h1 className="mt-3 break-words font-black text-[clamp(1.875rem,5.5vw,4rem)] uppercase leading-[1.1] tracking-[-0.03em]">
+					<h1 className="mt-3 break-words font-black text-[clamp(2rem,4vw,2.5rem)] uppercase leading-[1.2] tracking-[-0.03em]">
 						{post.title}
 					</h1>
 					{post.excerpt && (
@@ -192,7 +192,7 @@ export function BlogPostPage() {
 					</div>
 				</header>
 				{post.coverImage && (
-					<div className="relative aspect-[4/3] overflow-hidden bg-black/5 lg:aspect-[5/4]">
+					<div className="relative aspect-[4/3] overflow-hidden bg-black/5 lg:aspect-[16/10]">
 						<img
 							alt={post.title}
 							className="absolute inset-0 h-full w-full object-cover"
