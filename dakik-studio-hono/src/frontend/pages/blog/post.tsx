@@ -159,11 +159,6 @@ export function BlogPostPage() {
 
 	return (
 		<PageShell>
-			{/* Back nav */}
-			<div className="mb-10 lg:mb-12">
-				<BackLink />
-			</div>
-
 			{/* Hero — title, excerpt and byline first (readable immediately) beside
 			    a height-capped cover. Stacks title-first on mobile; splits with the
 			    cover on the right at lg. */}
