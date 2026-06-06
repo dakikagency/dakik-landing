@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "npm run build:client+ssr && wrangler dev src/index.ts --port 8787",
     "dev:frontend": "vite",
     "build": "wrangler deploy --dry-run",
