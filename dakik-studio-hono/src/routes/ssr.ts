@@ -159,6 +159,17 @@ export function registerSsrRoutes(app: App): void {
 		const subdomain = subdomainOf(c.req.header("host") ?? "");
 		const segments = url.pathname.split("/").filter(Boolean);
 
+		// Probes for dotfiles/dotdirs (/.env, /.env.local, /.git/*, /.DS_Store …)
+		// get a real 404 — never the SPA shell (200) and never a stray asset such
+		// as dist/.DS_Store served straight off the asset layer. /.well-known/*
+		// stays allowed (ACME, security.txt, apple-app-site-association).
+		if (
+			segments.some((s) => s.startsWith(".")) &&
+			!url.pathname.startsWith("/.well-known/")
+		) {
+			return c.notFound();
+		}
+
 		// flow.dakik.co.uk/<slug> → SSR the automation detail page.
 		if (
 			subdomain === "flow" &&

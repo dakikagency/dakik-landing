@@ -37,6 +37,34 @@ export function createAuth(env: EnvVars & { DB: D1Database }) {
 		advanced: {
 			cookiePrefix: "dakik-auth",
 			useSecureCookies: env.ENVIRONMENT === "production",
+			// Behind Cloudflare the socket peer is always an edge IP; the real
+			// client IP arrives in `cf-connecting-ip`. better-auth defaults to
+			// reading only `x-forwarded-for`, so it could not resolve an IP and
+			// silently SKIPPED all rate limiting ("Rate limiting skipped: could
+			// not determine client IP address" in the logs). Trust CF's header
+			// first, with XFF as a fallback for any non-CF path / local proxy.
+			ipAddress: {
+				ipAddressHeaders: ["cf-connecting-ip", "x-forwarded-for"],
+			},
+		},
+		// With a client IP now resolvable, better-auth's limiter actually runs.
+		// Its built-in rules already cap /sign-in*, /sign-up*, /change-password*
+		// and /change-email* at 3 requests / 10s. We enable the limiter
+		// explicitly (not only in prod), set a sane global ceiling, and add
+		// longer-window caps to blunt sustained credential stuffing / signup spam.
+		//
+		// NOTE: storage defaults to in-memory, which on Cloudflare Workers is
+		// per-isolate and best-effort — fine against naive single-isolate bursts,
+		// but the AUTHORITATIVE control is a Cloudflare WAF rate-limit rule on
+		// `/api/auth/*` (edge-enforced, counts across colos). See deploy notes.
+		rateLimit: {
+			enabled: true,
+			window: 60,
+			max: 100,
+			customRules: {
+				"/sign-in/email": { window: 300, max: 10 },
+				"/sign-up/email": { window: 3600, max: 5 },
+			},
 		},
 		session: {
 			/**
