@@ -1,7 +1,7 @@
 import { useHead } from "@unhead/react";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { cn } from "../lib/utils";
 
@@ -59,7 +59,7 @@ const MEETING_WINDOW_DAYS = 14;
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-interface BookedMeeting {
+export interface BookedMeeting {
 	date: string;
 	startTime: string;
 	meetUrl?: string;
@@ -86,7 +86,7 @@ export function SurveyPage() {
 	const [submitting, setSubmitting] = useState(false);
 	const [submitError, setSubmitError] = useState<string | null>(null);
 	const [leadId, setLeadId] = useState<string | null>(null);
-	const [bookedMeeting, setBookedMeeting] = useState<BookedMeeting | null>(null);
+	const navigate = useNavigate();
 
 	const goNext = () => setStep((s) => Math.min(s + 1, TOTAL_STEPS) as Step);
 	const goBack = () => setStep((s) => Math.max(s - 1, 1) as Step);
@@ -139,12 +139,8 @@ export function SurveyPage() {
 	};
 
 	const handleMeetingBooked = (meeting: BookedMeeting) => {
-		setBookedMeeting(meeting);
+		navigate("/survey/confirmed", { state: { meeting } });
 	};
-
-	if (bookedMeeting) {
-		return <SuccessScreen meeting={bookedMeeting} />;
-	}
 
 	return (
 		<div className="relative flex min-h-screen flex-col bg-black text-white">
@@ -689,7 +685,7 @@ function TimeGrid({
 	);
 }
 
-function SuccessScreen({ meeting }: { meeting: BookedMeeting }) {
+export function SuccessScreen({ meeting }: { meeting: BookedMeeting }) {
 	const dt = new Date(`${meeting.date}T${meeting.startTime}:00`);
 	const dateLabel = dt.toLocaleDateString("en-US", {
 		weekday: "long",

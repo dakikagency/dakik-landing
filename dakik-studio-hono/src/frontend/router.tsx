@@ -31,6 +31,7 @@ import { PortalMeetings } from "./pages/portal/meetings";
 import { PortalProjects } from "./pages/portal/projects";
 import { PrivacyPolicyPage } from "./pages/privacy-policy";
 import { SurveyPage } from "./pages/survey";
+import { SurveyConfirmedPage } from "./pages/survey-confirmed";
 import { TermsOfServicePage } from "./pages/terms-of-service";
 
 /**
@@ -123,6 +124,7 @@ const mainRoutes: RouteObject[] = [
 	{ path: "blog/:slug", element: <BlogPostPage /> },
 	...sharedAuthRoutes,
 	{ path: "survey", element: <SurveyPage /> },
+	{ path: "survey/confirmed", element: <SurveyConfirmedPage /> },
 	{ path: "cookies", element: <CookiesPage /> },
 	{ path: "privacy-policy", element: <PrivacyPolicyPage /> },
 	{ path: "terms-of-service", element: <TermsOfServicePage /> },
