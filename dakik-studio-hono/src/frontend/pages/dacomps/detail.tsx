@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowUpRight, ChevronDown } from "lucide-react";
 import { Component, Suspense, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { bitsDemos } from "../../components/bits-demos";
+import { bitsDemoSlugs } from "../../components/bits-demos/slugs";
 import Noise from "../../components/noise";
 import { pageHead } from "../../lib/head";
 import { cn } from "../../lib/utils";
@@ -299,17 +300,18 @@ class PreviewBoundary extends Component<
 }
 
 function LivePreview({ slug }: { slug: string }) {
-	const Demo = bitsDemos[slug];
-	// Demos are interactive client code — skip them during SSR/hydration so the
-	// server markup (placeholder) always matches the first client render.
+	// Demos are client-only (bitsDemos is empty during SSR), so gate on mount:
+	// server markup and the hydration render both show the placeholder, then
+	// the demo chunk swaps in. `bitsDemoSlugs` decides if this section exists
+	// at all — it's SSR-safe, so both sides agree on the page structure.
 	const [mounted, setMounted] = useState(false);
 	useEffect(() => setMounted(true), []);
-	if (!Demo) return null;
+	const Demo = mounted ? bitsDemos[slug] : undefined;
 
 	return (
 		<div className="mt-10 border border-white/10 bg-neutral-950">
 			<div className="flex min-h-[360px] w-full items-center justify-center px-6 py-12 sm:px-10">
-				{mounted ? (
+				{Demo ? (
 					<PreviewBoundary key={slug}>
 						<Suspense
 							fallback={<PreviewMessage>// Rendering preview…</PreviewMessage>}
@@ -544,7 +546,7 @@ export function DacompsDetailPage() {
 							</a>
 						)}
 
-						{bitsDemos[doc.slug] ? (
+						{bitsDemoSlugs.has(doc.slug) ? (
 							<LivePreview slug={doc.slug} />
 						) : (
 							doc.preview &&

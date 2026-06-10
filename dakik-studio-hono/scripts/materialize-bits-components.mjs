@@ -57,7 +57,12 @@ for (const file of fs.readdirSync(registryDir).sort()) {
 	for (const f of item.files ?? []) {
 		const target = path.join(outDir, targetOf(f.path));
 		fs.mkdirSync(path.dirname(target), { recursive: true });
-		fs.writeFileSync(target, BANNER + f.content);
+		// chart's types track recharts v3, but the preview pins recharts v2 —
+		// rolldown (Vite 8) miscompiles v3's es-toolkit/compat dep into
+		// self-referential `var t=t()` code that throws at runtime.
+		const header =
+			item.name === "chart" ? `${BANNER}// @ts-nocheck\n\n` : BANNER;
+		fs.writeFileSync(target, header + f.content);
 		written++;
 	}
 	if (item.css) css += `\n/* ${item.name} */\n${cssText(item.css)}`;
