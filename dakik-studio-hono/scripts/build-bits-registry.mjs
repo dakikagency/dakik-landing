@@ -182,7 +182,19 @@ async function buildItem(slug) {
     out.registryDependencies = item.registryDependencies.map(repoint);
   if (item.cssVars) out.cssVars = item.cssVars;
   if (item.css) out.css = item.css;
-  out.files = item.files;
+  // Upstream bug (circular-progress): a bare trailing-slash import that no
+  // bundler can resolve — `ark` lives in the /factory entry point.
+  out.files = item.files.map((f) =>
+    f.content
+      ? {
+          ...f,
+          content: f.content.replaceAll(
+            'from "@ark-ui/react/"',
+            'from "@ark-ui/react/factory"',
+          ),
+        }
+      : f,
+  );
 
   return out;
 }

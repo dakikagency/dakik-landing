@@ -2930,7 +2930,7 @@ export const CheckboxIndicator = (
 ',NULL,true,strftime('%Y-%m-%d %H:%M:%f','now'),strftime('%Y-%m-%d %H:%M:%f','now'));
 INSERT OR REPLACE INTO "component_doc" ("id","name","slug","category","description","props","code","preview","published","createdAt","updatedAt") VALUES ('cmp_circular-progress','Circular Progress','circular-progress','Feedback','Shows task progress with a circular indicator.','{"type":"registry:ui","author":"Dakik Studio <https://dakik.co.uk>","dependencies":["@ark-ui/react"],"file":{"path":"registry/react/components/circular-progress.tsx","type":"registry:ui"}}','"use client";
 
-import { ark } from "@ark-ui/react/";
+import { ark } from "@ark-ui/react/factory";
 import {
   Progress as ArkProgress,
   useProgressContext,

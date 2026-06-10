@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useHead } from "@unhead/react";
 import { ArrowLeft, ArrowUpRight, ChevronDown } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Component, Suspense, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { bitsDemos } from "../../components/bits-demos";
 import Noise from "../../components/noise";
 import { pageHead } from "../../lib/head";
 import { cn } from "../../lib/utils";
@@ -11,7 +12,6 @@ import {
 	BitsHeader,
 	CopyButton,
 	fetchRegistry,
-	installCmd,
 	type RegistryItem,
 } from "./shared";
 
@@ -268,6 +268,63 @@ function CodeBlock({
 	);
 }
 
+// ---------------------------------------------------------------------------
+// Live preview — each bit ships a demo in components/bits-demos, lazy-loaded
+// client-side only (SSR renders the placeholder; the demo chunk hydrates in).
+// ---------------------------------------------------------------------------
+
+function PreviewMessage({ children }: { children: string }) {
+	return (
+		<p className="font-mono text-[10px] text-white/40 uppercase tracking-[0.35em]">
+			{children}
+		</p>
+	);
+}
+
+class PreviewBoundary extends Component<
+	{ children: React.ReactNode },
+	{ failed: boolean }
+> {
+	state = { failed: false };
+	static getDerivedStateFromError() {
+		return { failed: true };
+	}
+	render() {
+		return this.state.failed ? (
+			<PreviewMessage>// Preview failed to render</PreviewMessage>
+		) : (
+			this.props.children
+		);
+	}
+}
+
+function LivePreview({ slug }: { slug: string }) {
+	const Demo = bitsDemos[slug];
+	// Demos are interactive client code — skip them during SSR/hydration so the
+	// server markup (placeholder) always matches the first client render.
+	const [mounted, setMounted] = useState(false);
+	useEffect(() => setMounted(true), []);
+	if (!Demo) return null;
+
+	return (
+		<div className="mt-10 border border-white/10 bg-neutral-950">
+			<div className="flex min-h-[360px] w-full items-center justify-center px-6 py-12 sm:px-10">
+				{mounted ? (
+					<PreviewBoundary key={slug}>
+						<Suspense
+							fallback={<PreviewMessage>// Rendering preview…</PreviewMessage>}
+						>
+							<Demo />
+						</Suspense>
+					</PreviewBoundary>
+				) : (
+					<PreviewMessage>// Rendering preview…</PreviewMessage>
+				)}
+			</div>
+		</div>
+	);
+}
+
 function CommandBox({ command }: { command: string }) {
 	return (
 		<div className="flex items-center gap-3 border border-white/15 bg-white/[0.03] px-4 py-2.5">
@@ -487,14 +544,19 @@ export function DacompsDetailPage() {
 							</a>
 						)}
 
-						{doc.preview && /^https?:\/\//.test(doc.preview) && (
-							<div className="mt-10 border border-white/10 bg-neutral-950">
-								<img
-									alt={`${doc.name} preview`}
-									className="w-full"
-									src={doc.preview}
-								/>
-							</div>
+						{bitsDemos[doc.slug] ? (
+							<LivePreview slug={doc.slug} />
+						) : (
+							doc.preview &&
+							/^https?:\/\//.test(doc.preview) && (
+								<div className="mt-10 border border-white/10 bg-neutral-950">
+									<img
+										alt={`${doc.name} preview`}
+										className="w-full"
+										src={doc.preview}
+									/>
+								</div>
+							)
 						)}
 
 						{/* Install */}

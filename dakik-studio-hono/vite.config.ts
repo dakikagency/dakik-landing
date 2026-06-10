@@ -12,6 +12,10 @@ const decodeNamedNode = fileURLToPath(
 	),
 );
 
+// Materialized bits registry components (scripts/materialize-bits-components.mjs)
+// import each other shadcn-style via "@/..." — point the alias at their root.
+const bitsRoot = fileURLToPath(new URL("src/frontend/bits", import.meta.url));
+
 // Two builds share this config:
 //   `vite build`                        → client bundle → dist/ (wipes dist)
 //   `vite build --ssr entry-server.tsx` → SSR bundle    → dist/server/ (keeps dist)
@@ -39,16 +43,15 @@ export default defineConfig(({ isSsrBuild }) => ({
 	// SSR build only: `workerd` picks react-dom/server.edge (its MessageChannel is
 	// polyfilled in ssr-polyfill.ts); the alias forces the markdown entity-decoder
 	// to its Node build. Client build keeps default browser resolution.
-	...(isSsrBuild
-		? {
-				resolve: {
-					conditions: ["workerd", "worker"],
-					alias: {
-						"decode-named-character-reference": decodeNamedNode,
-					},
-				},
-			}
-		: {}),
+	resolve: {
+		alias: {
+			"@": bitsRoot,
+			...(isSsrBuild
+				? { "decode-named-character-reference": decodeNamedNode }
+				: {}),
+		},
+		...(isSsrBuild ? { conditions: ["workerd", "worker"] } : {}),
+	},
 	server: {
 		port: 5173,
 		proxy: {
