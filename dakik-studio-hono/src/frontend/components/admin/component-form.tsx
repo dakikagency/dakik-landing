@@ -210,7 +210,9 @@ export function ComponentForm({
 							<span className="font-mono">dependencies</span>,{" "}
 							<span className="font-mono">registryDependencies</span>,{" "}
 							<span className="font-mono">cssVars</span>/<span className="font-mono">css</span>,
-							and the <span className="font-mono">file</span> path/type.
+							and the <span className="font-mono">file</span> path/type. Optional{" "}
+							<span className="font-mono">meta.usage</span> (code string) replaces
+							the auto-generated Usage snippet on the public detail page.
 						</p>
 						{propsError && (
 							<p className="mt-1 text-red-400 text-xs">{propsError}</p>

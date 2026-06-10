@@ -1,13 +1,6 @@
 import { Hono } from "hono";
 import { getDb } from "../lib/db";
-import {
-	getBaseUrl,
-	injectSeoIntoShell,
-	readShellHtml,
-	SITE_DESCRIPTION,
-	SITE_NAME,
-	type SeoMeta,
-} from "../lib/seo";
+import { getBaseUrl, SUBDOMAIN_BASE, subdomainOf } from "../lib/seo";
 import type { CloudflareEnv } from "../types/cloudflare";
 
 export const seoRoute = new Hono<{ Bindings: CloudflareEnv }>();
@@ -44,7 +37,8 @@ for (const [from, to] of Object.entries(LEGACY_REDIRECTS)) {
 }
 
 seoRoute.get("/robots.txt", (c) => {
-	const base = getBaseUrl(c.env);
+	const sub = subdomainOf(c.req.header("host") ?? "");
+	const base = sub === "main" ? getBaseUrl(c.env) : SUBDOMAIN_BASE[sub];
 	const body = [
 		"User-agent: *",
 		"Allow: /",
@@ -60,50 +54,84 @@ seoRoute.get("/robots.txt", (c) => {
 	return c.text(body, 200, { "Content-Type": "text/plain; charset=utf-8" });
 });
 
+const escapeXml = (v: string) =>
+	v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+function urlTag(
+	loc: string,
+	lastmod: string,
+	changefreq: string,
+	priority: string,
+): string {
+	return `<url><loc>${escapeXml(loc)}</loc><lastmod>${lastmod}</lastmod><changefreq>${changefreq}</changefreq><priority>${priority}</priority></url>`;
+}
+
+// Host-aware sitemap: every host lists ITS content under ITS origin. The apex
+// lists the marketing pages + blog; each subdomain lists its home plus its own
+// detail pages. Automations live in flow's sitemap only — the apex
+// /automations path 301s to flow, so listing them on the apex would advertise
+// duplicate content against the flow pages' canonicals.
 seoRoute.get("/sitemap.xml", async (c) => {
-	const base = getBaseUrl(c.env);
+	const sub = subdomainOf(c.req.header("host") ?? "");
 	const db = getDb(c.env);
 	const now = new Date().toISOString();
-
-	const [posts, automations] = await Promise.all([
-		db.blogPost.findMany({
-			where: { published: true, publishedAt: { not: null } },
-			select: { slug: true, updatedAt: true, publishedAt: true },
-		}),
-		db.automation.findMany({
-			where: { published: true, publishedAt: { not: null } },
-			select: { slug: true, updatedAt: true, publishedAt: true },
-		}),
-	]);
-
 	const urls: string[] = [];
 
-	for (const entry of STATIC_SITEMAP_PATHS) {
-		urls.push(
-			`<url><loc>${base}${entry.path}</loc><lastmod>${now}</lastmod><changefreq>${entry.changefreq}</changefreq><priority>${entry.priority.toFixed(1)}</priority></url>`,
-		);
-	}
-
-	for (const post of posts) {
-		const lastmod = (
-			post.updatedAt ??
-			post.publishedAt ??
-			new Date()
-		).toISOString();
-		urls.push(
-			`<url><loc>${base}/blog/${post.slug}</loc><lastmod>${lastmod}</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>`,
-		);
-	}
-
-	for (const a of automations) {
-		const lastmod = (
-			a.updatedAt ??
-			a.publishedAt ??
-			new Date()
-		).toISOString();
-		urls.push(
-			`<url><loc>${base}/automations/${a.slug}</loc><lastmod>${lastmod}</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>`,
-		);
+	if (sub === "icons") {
+		urls.push(urlTag(`${SUBDOMAIN_BASE.icons}/`, now, "weekly", "1.0"));
+	} else if (sub === "bits") {
+		const base = SUBDOMAIN_BASE.bits;
+		urls.push(urlTag(`${base}/`, now, "weekly", "1.0"));
+		const components = await db.componentDoc.findMany({
+			where: { published: true },
+			orderBy: { slug: "asc" },
+			select: { slug: true, updatedAt: true },
+		});
+		for (const comp of components) {
+			urls.push(
+				urlTag(
+					`${base}/${comp.slug}`,
+					(comp.updatedAt ?? new Date()).toISOString(),
+					"monthly",
+					"0.7",
+				),
+			);
+		}
+	} else if (sub === "flow") {
+		const base = SUBDOMAIN_BASE.flow;
+		urls.push(urlTag(`${base}/`, now, "weekly", "1.0"));
+		const automations = await db.automation.findMany({
+			where: { published: true, publishedAt: { not: null } },
+			select: { slug: true, updatedAt: true, publishedAt: true },
+		});
+		for (const a of automations) {
+			const lastmod = (a.updatedAt ?? a.publishedAt ?? new Date()).toISOString();
+			urls.push(urlTag(`${base}/${a.slug}`, lastmod, "monthly", "0.7"));
+		}
+	} else {
+		const base = getBaseUrl(c.env);
+		for (const entry of STATIC_SITEMAP_PATHS) {
+			urls.push(
+				urlTag(
+					`${base}${entry.path}`,
+					now,
+					entry.changefreq,
+					entry.priority.toFixed(1),
+				),
+			);
+		}
+		const posts = await db.blogPost.findMany({
+			where: { published: true, publishedAt: { not: null } },
+			select: { slug: true, updatedAt: true, publishedAt: true },
+		});
+		for (const post of posts) {
+			const lastmod = (
+				post.updatedAt ??
+				post.publishedAt ??
+				new Date()
+			).toISOString();
+			urls.push(urlTag(`${base}/blog/${post.slug}`, lastmod, "monthly", "0.7"));
+		}
 	}
 
 	const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join(
@@ -116,80 +144,17 @@ seoRoute.get("/sitemap.xml", async (c) => {
 	});
 });
 
-async function renderShell(c: { env: CloudflareEnv }, meta: SeoMeta) {
-	const shell = await readShellHtml(c.env);
-	const html = injectSeoIntoShell(shell, meta);
-	return new Response(html, {
-		status: 200,
-		headers: {
-			"Content-Type": "text/html; charset=utf-8",
-			"Cache-Control": "public, max-age=60, s-maxage=300",
-		},
-	});
-}
-
 // /blog and /blog/:slug are served with full SSR (server-rendered body + head +
 // dehydrated React Query cache) by registerSsrRoutes in routes/ssr.ts.
 
-seoRoute.get("/automations", async (c) => {
-	const base = getBaseUrl(c.env);
-	return renderShell(c, {
-		title: `Automations · ${SITE_NAME}`,
-		description:
-			"Ready-to-use automation playbooks built and maintained by Dakik Studio.",
-		canonical: `${base}/automations`,
-		ogType: "website",
-	});
-});
-
-seoRoute.get("/automations/:slug", async (c) => {
+// Automation detail pages live canonically on flow.dakik.co.uk/<slug> (SSR'd
+// there with flow canonicals). The apex used to serve 200 shells with apex
+// self-canonicals here — duplicate content the client router then rendered as
+// a 404. Consolidate like the /automations legacy redirect above instead.
+seoRoute.get("/automations/:slug", (c) => {
 	const slug = c.req.param("slug");
-	const base = getBaseUrl(c.env);
-	const db = getDb(c.env);
-
-	const automation = await db.automation.findUnique({
-		where: { slug },
-		select: {
-			slug: true,
-			title: true,
-			excerpt: true,
-			coverImage: true,
-			publishedAt: true,
-			updatedAt: true,
-			published: true,
-		},
-	});
-
-	if (!automation || !automation.published) {
-		return c.notFound();
-	}
-
-	const description = automation.excerpt ?? SITE_DESCRIPTION;
-	const canonical = `${base}/automations/${automation.slug}`;
-	const image = automation.coverImage ?? undefined;
-
-	return renderShell(c, {
-		title: `${automation.title} · ${SITE_NAME}`,
-		description,
-		canonical,
-		ogType: "article",
-		ogImage: image,
-		publishedTime: automation.publishedAt?.toISOString(),
-		modifiedTime: automation.updatedAt.toISOString(),
-		jsonLd: {
-			"@context": "https://schema.org",
-			"@type": "Article",
-			headline: automation.title,
-			description,
-			image: image ? [image] : undefined,
-			datePublished: automation.publishedAt?.toISOString(),
-			dateModified: automation.updatedAt.toISOString(),
-			mainEntityOfPage: { "@type": "WebPage", "@id": canonical },
-			publisher: {
-				"@type": "Organization",
-				name: SITE_NAME,
-				url: base,
-			},
-		},
-	});
+	return c.redirect(
+		`https://flow.dakik.co.uk/${encodeURIComponent(slug)}`,
+		301,
+	);
 });

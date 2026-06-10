@@ -21,6 +21,7 @@ import { BlogPostPage } from "./pages/blog/post";
 import { ContactPage } from "./pages/contact";
 import { CookiesPage } from "./pages/cookies";
 import { DacompsPage } from "./pages/dacomps";
+import { DacompsDetailPage } from "./pages/dacomps/detail";
 import { DaiconsPage } from "./pages/daicons";
 import { LandingPage } from "./pages/landing-page";
 import { LoginPage } from "./pages/login";
@@ -89,6 +90,7 @@ const iconsRoutes: RouteObject[] = [
 
 const bitsRoutes: RouteObject[] = [
 	{ index: true, element: <DacompsPage /> },
+	{ path: ":slug", element: <DacompsDetailPage /> },
 	...sharedAuthRoutes,
 	{
 		path: "admin",

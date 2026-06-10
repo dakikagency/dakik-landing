@@ -1,7 +1,7 @@
 import type { QueryKey } from "@tanstack/react-query";
 import type { Context, Hono } from "hono";
 import type { SubdomainKind } from "../frontend/router";
-import { readShellHtml, renderSsrHtml, SITE_NAME } from "../lib/seo";
+import { readShellHtml, renderSsrHtml, SITE_NAME, subdomainOf } from "../lib/seo";
 import { renderApp } from "../ssr/render";
 import type { CloudflareEnv } from "../types/cloudflare";
 
@@ -11,19 +11,25 @@ type Ctx = Context<{ Bindings: CloudflareEnv }>;
 // First path segments on flow.dakik.co.uk that are NOT automation slugs.
 const FLOW_RESERVED = new Set(["login", "auth", "admin", "api", "media", "health"]);
 
+// First path segments on bits.dakik.co.uk that are NOT component slugs
+// (registry.json + /r/* are the CLI-facing registry endpoints).
+const BITS_RESERVED = new Set([
+	"login",
+	"auth",
+	"admin",
+	"api",
+	"media",
+	"health",
+	"r",
+	"registry.json",
+]);
+
 interface ArticleLike {
 	title: string;
 	excerpt?: string | null;
 	coverImage?: string | null;
 	publishedAt?: string | null;
 	updatedAt?: string | null;
-}
-
-function subdomainOf(hostname: string): SubdomainKind {
-	if (hostname.startsWith("icons.")) return "icons";
-	if (hostname.startsWith("bits.")) return "bits";
-	if (hostname.startsWith("flow.")) return "flow";
-	return "main";
 }
 
 /**
@@ -127,8 +133,11 @@ export function registerSsrRoutes(app: App): void {
 		return ssrRespond(app, c, subdomain, prefetched);
 	});
 
-	// Blog index (apex).
-	app.get("/blog", async (c) => {
+	// Blog index (apex only). The blog doesn't exist on the subdomains' route
+	// trees, so serving apex HTML there would hydrate into a mismatch (and get
+	// edge-cached). Non-main hosts fall through to the catch-all instead.
+	app.get("/blog", async (c, next) => {
+		if (subdomainOf(c.req.header("host") ?? "") !== "main") return next();
 		const data = await prefetch(app, c, "/api/blog");
 		const prefetched: Array<[QueryKey, unknown]> = data
 			? [[["blog", "list"], data]]
@@ -136,8 +145,9 @@ export function registerSsrRoutes(app: App): void {
 		return ssrRespond(app, c, "main", prefetched);
 	});
 
-	// Blog post (apex). JSON-LD Article injected for crawlers.
-	app.get("/blog/:slug", async (c) => {
+	// Blog post (apex only). JSON-LD Article injected for crawlers.
+	app.get("/blog/:slug", async (c, next) => {
+		if (subdomainOf(c.req.header("host") ?? "") !== "main") return next();
 		const slug = c.req.param("slug");
 		const data = await prefetch(app, c, `/api/blog/${encodeURIComponent(slug)}`);
 		if (!data) {
@@ -194,6 +204,52 @@ export function registerSsrRoutes(app: App): void {
 					[[["automations", "post", slug], data]],
 					jsonLd,
 				);
+			}
+		}
+
+		// bits.dakik.co.uk/<slug> → SSR the component detail page. Both queries the
+		// page mounts (the component + the registry index for the sidebar) are
+		// prefetched so the served HTML is complete and hydration is drift-free.
+		if (
+			subdomain === "bits" &&
+			segments.length === 1 &&
+			!BITS_RESERVED.has(segments[0])
+		) {
+			const slug = segments[0];
+			const data = await prefetch(
+				app,
+				c,
+				`/api/components/${encodeURIComponent(slug)}`,
+			);
+			if (data) {
+				const prefetched: Array<[QueryKey, unknown]> = [
+					[["bits", "component", slug], data],
+				];
+				const registry = await prefetch(app, c, "/registry.json");
+				if (registry) prefetched.push([["registry"], registry]);
+
+				const component = (
+					data as { component?: { name: string; description?: string | null } }
+				).component;
+				const url = `https://bits.dakik.co.uk/${slug}`;
+				const jsonLd = component
+					? {
+							"@context": "https://schema.org",
+							"@type": "SoftwareSourceCode",
+							name: component.name,
+							description: component.description ?? undefined,
+							programmingLanguage: "TypeScript",
+							runtimePlatform: "React",
+							url,
+							mainEntityOfPage: { "@type": "WebPage", "@id": url },
+							publisher: {
+								"@type": "Organization",
+								name: SITE_NAME,
+								url: "https://dakik.co.uk",
+							},
+						}
+					: undefined;
+				return ssrRespond(app, c, "bits", prefetched, jsonLd);
 			}
 		}
 

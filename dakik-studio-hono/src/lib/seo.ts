@@ -1,3 +1,4 @@
+import type { SubdomainKind } from "../frontend/router";
 import type { CloudflareEnv } from "../types/cloudflare";
 
 export const SITE_NAME = "Dakik Studio";
@@ -9,6 +10,27 @@ export function getBaseUrl(env: CloudflareEnv): string {
 	const fromEnv = (env as unknown as { NEXT_PUBLIC_APP_URL?: string })
 		.NEXT_PUBLIC_APP_URL;
 	return fromEnv ?? "https://dakik.co.uk";
+}
+
+/** Canonical public origin of each subdomain experience. */
+export const SUBDOMAIN_BASE: Record<Exclude<SubdomainKind, "main">, string> = {
+	icons: "https://icons.dakik.co.uk",
+	bits: "https://bits.dakik.co.uk",
+	flow: "https://flow.dakik.co.uk",
+};
+
+/**
+ * Worker-side twin of the client's `detectSubdomain` (frontend/router.tsx).
+ * Duplicated rather than imported: pulling the function from the frontend
+ * router would drag the entire page graph into the worker bundle.
+ */
+export function subdomainOf(hostname: string): SubdomainKind {
+	// Host headers are case-insensitive; the client twin always sees lowercase.
+	const host = hostname.toLowerCase();
+	if (host.startsWith("icons.")) return "icons";
+	if (host.startsWith("bits.")) return "bits";
+	if (host.startsWith("flow.")) return "flow";
+	return "main";
 }
 
 export interface SeoMeta {

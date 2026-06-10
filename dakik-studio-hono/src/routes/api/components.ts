@@ -1,5 +1,14 @@
 import { Hono } from "hono";
 
+/**
+ * Public read API for Dakik Bits components, backing the docs pages on
+ * bits.dakik.co.uk. The shadcn CLI never touches this — it consumes
+ * /registry.json and /r/:name.json (src/routes/registry.ts); this API serves
+ * the human-facing detail pages.
+ *
+ * List responses are metadata-only (no source, no files) — the full TSX source
+ * ships only per component from GET /:slug.
+ */
 export function createComponentsRouter() {
 	const components = new Hono();
 
@@ -31,22 +40,34 @@ export function createComponentsRouter() {
 				take,
 				skip,
 				orderBy: { name: "asc" },
-				include: { files: true },
+				select: {
+					id: true,
+					name: true,
+					slug: true,
+					category: true,
+					description: true,
+					props: true,
+					preview: true,
+					updatedAt: true,
+				},
 			}),
 			db.componentDoc.count({ where }),
 		]);
 
+		c.header("cache-control", "public, max-age=60");
 		return c.json({ components: items, total, page: pageNum, limit: take });
 	});
 
 	components.get("/:slug", async (c) => {
 		const db = c.get("db");
 		const slug = c.req.param("slug");
-		const component = await db.componentDoc.findUnique({
-			where: { slug },
-			include: { files: true },
+		const component = await db.componentDoc.findFirst({
+			where: { slug, published: true },
+			include: { files: { orderBy: { order: "asc" } } },
 		});
 		if (!component) return c.json({ error: "Not found" }, 404);
+
+		c.header("cache-control", "public, max-age=60");
 		return c.json({ component });
 	});
 
