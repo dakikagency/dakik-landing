@@ -15,6 +15,7 @@
     "run_worker_first": [
       "/*",
       "!/assets/*",
+      "!/daicons/*",
       "!/landing/*",
       "!/dakik_logo.svg",
       "!/image.png",

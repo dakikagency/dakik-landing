@@ -3,6 +3,7 @@ import { cors } from "./middleware/cors";
 import { errorHandler } from "./middleware/error-handler";
 import { logger } from "./middleware/logger";
 import { createApiRouter } from "./routes/api";
+import { createDaiconsRouter } from "./routes/daicons";
 import { healthRoute } from "./routes/health";
 import { mediaRoute } from "./routes/media";
 import { createRegistryRouter } from "./routes/registry";
@@ -36,6 +37,9 @@ app.route("/api", createApiRouter());
 
 app.route("/", mediaRoute);
 app.route("/", seoRoute);
+
+// Dakik Icons CDN — /v1/* on icons.dakik.co.uk (font kit CSS + woff2 + catalog).
+app.route("/", createDaiconsRouter());
 
 // Dakik Bits shadcn registry — /registry.json + /r/:name.json, served from D1.
 // These paths are in wrangler.jsonc `run_worker_first` so the worker (not the
