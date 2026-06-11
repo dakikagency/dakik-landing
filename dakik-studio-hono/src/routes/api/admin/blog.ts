@@ -1,4 +1,22 @@
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
+import { submitToIndexNow } from "../../../lib/indexnow";
+import { getBaseUrl } from "../../../lib/seo";
+import type { CloudflareEnv } from "../../../types/cloudflare";
+
+type AdminBlogEnv = { Bindings: CloudflareEnv };
+
+/**
+ * Fire-and-forget IndexNow ping for changed public URLs. waitUntil keeps the
+ * submission alive past the response; if the execution context is unavailable
+ * (e.g. tests), fall back to a floating promise — submitToIndexNow never throws.
+ */
+function pingIndexNow(c: Context<AdminBlogEnv>, urls: string[]): void {
+	try {
+		c.executionCtx.waitUntil(submitToIndexNow(urls));
+	} catch {
+		void submitToIndexNow(urls);
+	}
+}
 
 /** DDMMYYYY, e.g. 17092026 — used to disambiguate a duplicate slug. */
 function dateSuffix(d: Date): string {
@@ -33,7 +51,7 @@ async function ensureUniqueSlug(
  * which only returns published rows).
  */
 export function createAdminBlogRouter() {
-	const blog = new Hono();
+	const blog = new Hono<AdminBlogEnv>();
 
 	// GET /api/admin/blog?search=&published=&limit=
 	blog.get("/", async (c) => {
@@ -120,7 +138,30 @@ export function createAdminBlogRouter() {
 			include: { tags: true },
 		});
 
+		if (post.published) {
+			const base = getBaseUrl(c.env);
+			pingIndexNow(c, [`${base}/blog/${post.slug}`, `${base}/blog`]);
+		}
+
 		return c.json({ post }, 201);
+	});
+
+	// POST /api/admin/blog/reindex — submit every published post (plus the
+	// home and blog index) to IndexNow. Backfill after deploys/bulk imports.
+	blog.post("/reindex", async (c) => {
+		const db = c.get("db");
+		const base = getBaseUrl(c.env);
+		const posts = await db.blogPost.findMany({
+			where: { published: true, publishedAt: { not: null } },
+			select: { slug: true },
+		});
+		const urls = [
+			`${base}/`,
+			`${base}/blog`,
+			...posts.map((p: { slug: string }) => `${base}/blog/${p.slug}`),
+		];
+		await submitToIndexNow(urls);
+		return c.json({ submitted: urls.length, urls });
 	});
 
 	blog.put("/:id", async (c) => {
@@ -167,12 +208,32 @@ export function createAdminBlogRouter() {
 			include: { tags: true },
 		});
 
+		// Notify IndexNow about every URL this edit changed: the live URL when
+		// (still) published, and the old URL when it stopped resolving (slug
+		// change or unpublish) so engines recrawl it and see the 404.
+		const base = getBaseUrl(c.env);
+		const changed = new Set<string>();
+		if (post.published) changed.add(`${base}/blog/${post.slug}`);
+		if (existing.published && (existing.slug !== post.slug || !post.published)) {
+			changed.add(`${base}/blog/${existing.slug}`);
+		}
+		if (changed.size > 0) {
+			changed.add(`${base}/blog`);
+			pingIndexNow(c, [...changed]);
+		}
+
 		return c.json({ post });
 	});
 
 	blog.delete("/:id", async (c) => {
 		const db = c.get("db");
-		await db.blogPost.delete({ where: { id: c.req.param("id") } });
+		const id = c.req.param("id");
+		const existing = await db.blogPost.findUnique({ where: { id } });
+		await db.blogPost.delete({ where: { id } });
+		if (existing?.published) {
+			const base = getBaseUrl(c.env);
+			pingIndexNow(c, [`${base}/blog/${existing.slug}`, `${base}/blog`]);
+		}
 		return c.json({ success: true });
 	});
 

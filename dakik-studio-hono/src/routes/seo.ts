@@ -1,10 +1,20 @@
 import { Hono } from "hono";
 import { getDb } from "../lib/db";
-import { getBaseUrl, SUBDOMAIN_BASE, subdomainOf } from "../lib/seo";
+import { INDEXNOW_KEY } from "../lib/indexnow";
+import {
+	getBaseUrl,
+	SITE_DESCRIPTION,
+	SITE_NAME,
+	SUBDOMAIN_BASE,
+	subdomainOf,
+} from "../lib/seo";
 import type { CloudflareEnv } from "../types/cloudflare";
 
 export const seoRoute = new Hono<{ Bindings: CloudflareEnv }>();
 
+// /survey is intentionally absent: the page carries a noindex meta tag, and
+// listing a noindex URL in the sitemap reads as a config error in Search
+// Console ("Submitted URL marked noindex").
 const STATIC_SITEMAP_PATHS: Array<{
 	path: string;
 	priority: number;
@@ -14,7 +24,6 @@ const STATIC_SITEMAP_PATHS: Array<{
 	{ path: "/about", priority: 0.7, changefreq: "monthly" },
 	{ path: "/blog", priority: 0.8, changefreq: "weekly" },
 	{ path: "/contact", priority: 0.6, changefreq: "yearly" },
-	{ path: "/survey", priority: 0.9, changefreq: "monthly" },
 	{ path: "/login", priority: 0.4, changefreq: "yearly" },
 	{ path: "/cookies", priority: 0.3, changefreq: "yearly" },
 	{ path: "/privacy-policy", priority: 0.3, changefreq: "yearly" },
@@ -54,16 +63,26 @@ seoRoute.get("/robots.txt", (c) => {
 	return c.text(body, 200, { "Content-Type": "text/plain; charset=utf-8" });
 });
 
+// IndexNow ownership proof: engines GET /<key>.txt on the submitting host and
+// expect the bare key back. Served on every host so each subdomain can submit.
+seoRoute.get(`/${INDEXNOW_KEY}.txt`, (c) =>
+	c.text(INDEXNOW_KEY, 200, { "Content-Type": "text/plain; charset=utf-8" }),
+);
+
 const escapeXml = (v: string) =>
 	v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+// `lastmod: null` omits the tag — a lastmod that changes on every fetch (the
+// old behaviour for static paths) teaches crawlers to distrust the sitemap's
+// dates, so only emit one when we have a real content timestamp.
 function urlTag(
 	loc: string,
-	lastmod: string,
+	lastmod: string | null,
 	changefreq: string,
 	priority: string,
 ): string {
-	return `<url><loc>${escapeXml(loc)}</loc><lastmod>${lastmod}</lastmod><changefreq>${changefreq}</changefreq><priority>${priority}</priority></url>`;
+	const lastmodTag = lastmod ? `<lastmod>${lastmod}</lastmod>` : "";
+	return `<url><loc>${escapeXml(loc)}</loc>${lastmodTag}<changefreq>${changefreq}</changefreq><priority>${priority}</priority></url>`;
 }
 
 // Host-aware sitemap: every host lists ITS content under ITS origin. The apex
@@ -74,14 +93,13 @@ function urlTag(
 seoRoute.get("/sitemap.xml", async (c) => {
 	const sub = subdomainOf(c.req.header("host") ?? "");
 	const db = getDb(c.env);
-	const now = new Date().toISOString();
 	const urls: string[] = [];
 
 	if (sub === "icons") {
-		urls.push(urlTag(`${SUBDOMAIN_BASE.icons}/`, now, "weekly", "1.0"));
+		urls.push(urlTag(`${SUBDOMAIN_BASE.icons}/`, null, "weekly", "1.0"));
 	} else if (sub === "bits") {
 		const base = SUBDOMAIN_BASE.bits;
-		urls.push(urlTag(`${base}/`, now, "weekly", "1.0"));
+		urls.push(urlTag(`${base}/`, null, "weekly", "1.0"));
 		const components = await db.componentDoc.findMany({
 			where: { published: true },
 			orderBy: { slug: "asc" },
@@ -99,7 +117,7 @@ seoRoute.get("/sitemap.xml", async (c) => {
 		}
 	} else if (sub === "flow") {
 		const base = SUBDOMAIN_BASE.flow;
-		urls.push(urlTag(`${base}/`, now, "weekly", "1.0"));
+		urls.push(urlTag(`${base}/`, null, "weekly", "1.0"));
 		const automations = await db.automation.findMany({
 			where: { published: true, publishedAt: { not: null } },
 			select: { slug: true, updatedAt: true, publishedAt: true },
@@ -114,7 +132,7 @@ seoRoute.get("/sitemap.xml", async (c) => {
 			urls.push(
 				urlTag(
 					`${base}${entry.path}`,
-					now,
+					null,
 					entry.changefreq,
 					entry.priority.toFixed(1),
 				),
@@ -140,6 +158,106 @@ seoRoute.get("/sitemap.xml", async (c) => {
 
 	return c.body(xml, 200, {
 		"Content-Type": "application/xml; charset=utf-8",
+		"Cache-Control": "public, max-age=300, s-maxage=600",
+	});
+});
+
+/** Excerpts/descriptions may contain newlines; llms.txt list items can't. */
+const oneLine = (v: string | null | undefined) =>
+	v ? v.replace(/\s+/g, " ").trim() : "";
+
+// llms.txt (llmstxt.org) — a curated markdown map of the site that AI crawlers
+// and agents fetch directly. Host-aware like robots.txt and the sitemap: each
+// host describes its own content.
+seoRoute.get("/llms.txt", async (c) => {
+	const sub = subdomainOf(c.req.header("host") ?? "");
+	const db = getDb(c.env);
+	const lines: string[] = [];
+
+	if (sub === "icons") {
+		lines.push(
+			"# Dakik Icons",
+			"",
+			`> Icon font kits by ${SITE_NAME}, served from icons.dakik.co.uk.`,
+			"",
+			`- [Home](${SUBDOMAIN_BASE.icons}/)`,
+		);
+	} else if (sub === "bits") {
+		const components = await db.componentDoc.findMany({
+			where: { published: true },
+			orderBy: { slug: "asc" },
+			select: { slug: true, name: true, description: true },
+		});
+		lines.push(
+			"# Dakik Bits",
+			"",
+			`> React/TypeScript UI components by ${SITE_NAME}, installable via the shadcn registry CLI.`,
+			"",
+			"## Components",
+			"",
+			...components.map(
+				(comp: { slug: string; name: string; description: string | null }) => {
+					const desc = oneLine(comp.description);
+					return `- [${comp.name}](${SUBDOMAIN_BASE.bits}/${comp.slug})${desc ? `: ${desc}` : ""}`;
+				},
+			),
+		);
+	} else if (sub === "flow") {
+		const automations = await db.automation.findMany({
+			where: { published: true, publishedAt: { not: null } },
+			orderBy: { publishedAt: "desc" },
+			select: { slug: true, title: true, excerpt: true },
+		});
+		lines.push(
+			"# Dakik Flow",
+			"",
+			`> Business automations by ${SITE_NAME}.`,
+			"",
+			"## Automations",
+			"",
+			...automations.map(
+				(a: { slug: string; title: string; excerpt: string | null }) => {
+					const desc = oneLine(a.excerpt);
+					return `- [${a.title}](${SUBDOMAIN_BASE.flow}/${a.slug})${desc ? `: ${desc}` : ""}`;
+				},
+			),
+		);
+	} else {
+		const base = getBaseUrl(c.env);
+		const posts = await db.blogPost.findMany({
+			where: { published: true, publishedAt: { not: null } },
+			orderBy: { publishedAt: "desc" },
+			select: { slug: true, title: true, excerpt: true },
+		});
+		lines.push(
+			`# ${SITE_NAME}`,
+			"",
+			`> ${SITE_DESCRIPTION}`,
+			"",
+			"## Pages",
+			"",
+			`- [Home](${base}/)`,
+			`- [About](${base}/about)`,
+			`- [Blog](${base}/blog)`,
+			`- [Contact](${base}/contact)`,
+			"",
+			"## Blog posts",
+			"",
+			...posts.map((p: { slug: string; title: string; excerpt: string | null }) => {
+				const desc = oneLine(p.excerpt);
+				return `- [${p.title}](${base}/blog/${p.slug})${desc ? `: ${desc}` : ""}`;
+			}),
+			"",
+			"## Related sites",
+			"",
+			`- [Dakik Icons](${SUBDOMAIN_BASE.icons}/): icon font kits`,
+			`- [Dakik Bits](${SUBDOMAIN_BASE.bits}/): React UI components`,
+			`- [Dakik Flow](${SUBDOMAIN_BASE.flow}/): business automations`,
+		);
+	}
+
+	return c.text(`${lines.join("\n")}\n`, 200, {
+		"Content-Type": "text/plain; charset=utf-8",
 		"Cache-Control": "public, max-age=300, s-maxage=600",
 	});
 });
