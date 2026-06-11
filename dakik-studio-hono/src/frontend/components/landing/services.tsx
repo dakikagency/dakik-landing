@@ -12,6 +12,7 @@ interface Step {
 	angle: string;
 	body: string;
 	meta: string;
+	img: string;
 }
 
 const steps: readonly Step[] = [
@@ -21,6 +22,7 @@ const steps: readonly Step[] = [
 		angle: "We map the real problem",
 		body: "Short call, fast audit, then we define what 'done' means. Scope stays tight so you ship, not spiral.",
 		meta: "1–2 days",
+		img: "/landing/services-discover.webp",
 	},
 	{
 		num: "02",
@@ -28,6 +30,7 @@ const steps: readonly Step[] = [
 		angle: "Systems, not vibes",
 		body: "Typography, layout rules, and reusable blocks. Premium look, consistent system, ready to scale.",
 		meta: "3–7 days",
+		img: "/landing/services-design.webp",
 	},
 	{
 		num: "03",
@@ -35,6 +38,7 @@ const steps: readonly Step[] = [
 		angle: "Ship the thing",
 		body: "Hono, React, Tailwind, motion where it matters. Clean code, fast pages, SEO baked in.",
 		meta: "1–3 weeks",
+		img: "/landing/services-build.webp",
 	},
 	{
 		num: "04",
@@ -42,6 +46,7 @@ const steps: readonly Step[] = [
 		angle: "Measure, then iterate",
 		body: "Analytics, experiments, conversion tweaks. Small changes, big wins — no guesswork.",
 		meta: "ongoing",
+		img: "/landing/services-improve.webp",
 	},
 ];
 
@@ -68,9 +73,26 @@ function getPrefersReducedMotion(): boolean {
  * height, which varies between panels (different headline lengths)
  * and breaks cross-panel alignment.
  */
-function Panel({ step }: { step: Step }) {
+function Panel({ step, showImage = false }: { step: Step; showImage?: boolean }) {
 	return (
 		<article className="relative h-full w-screen shrink-0">
+			{/* Reduced-motion branch only: static per-panel artwork. The
+			    animated branch renders artwork once in the shared stage
+			    instead, so it can crossfade between panels. First in DOM so
+			    the text clusters paint above it. */}
+			{showImage && (
+				<img
+					alt=""
+					className="pointer-events-none absolute top-1/2 right-[clamp(1.5rem,6vw,6rem)] h-[min(52vh,72vw)] w-auto -translate-y-1/2 select-none object-contain grayscale mix-blend-multiply"
+					decoding="async"
+					draggable={false}
+					height={1024}
+					loading="lazy"
+					src={step.img}
+					width={1024}
+				/>
+			)}
+
 			{/* Top labels — anchored to top */}
 			<div className="absolute inset-x-[clamp(1.5rem,6vw,6rem)] top-[clamp(5.5rem,12vh,7rem)] flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
 				<span className="font-mono text-[10px] text-black/55 uppercase tracking-[0.35em] sm:text-[11px]">
@@ -97,11 +119,81 @@ function Panel({ step }: { step: Step }) {
 	);
 }
 
+/** Clamped 0→1 progress of p through [a, b]. */
+function ramp(p: number, a: number, b: number): number {
+	return Math.min(1, Math.max(0, (p - a) / (b - a)));
+}
+
+/**
+ * One artwork in the shared sticky stage. All four images occupy the
+ * same box; scroll position decides which one is visible. Each image
+ * owns the scroll range centred on its panel (centre = index/(count-1),
+ * half-window to the adjacent panel's midpoint). Fades complete exactly
+ * at panel midpoints, so one image is fully gone before the next
+ * appears — no double-exposure mid-transition. Scale and x drift across
+ * the whole window read as parallax against the faster-moving panels.
+ *
+ * Images are greyscale-on-white and multiply-blended, so their frames
+ * are invisible against the white section — only the marble shows.
+ *
+ * IMPORTANT: these use the function form of useTransform, not the
+ * keyframe-array form. The array form lets framer promote the
+ * animation to a native ScrollTimeline, which Chrome then binds to
+ * PAGE scroll — the section's target offsets get lost and every value
+ * maps to the wrong scroll range (observed in dev and prod builds).
+ * The function form stays JS-driven and tracks the section correctly.
+ */
+function StageImage({
+	progress,
+	index,
+	count,
+	src,
+}: {
+	progress: MotionValue<number>;
+	index: number;
+	count: number;
+	src: string;
+}) {
+	const center = index / (count - 1);
+	const half = 0.5 / (count - 1);
+	const fade = 0.07;
+
+	const opacity = useTransform(() => {
+		const p = progress.get();
+		const fadeIn = index > 0 ? ramp(p, center - half, center - half + fade) : 1;
+		const fadeOut =
+			index < count - 1 ? 1 - ramp(p, center + half - fade, center + half) : 1;
+		return Math.min(fadeIn, fadeOut);
+	});
+	// 0→1 across this image's whole window; drives the parallax drift.
+	const x = useTransform(
+		() => `${4 - 8 * ramp(progress.get(), center - half, center + half)}%`,
+	);
+	const scale = useTransform(
+		() => 1.04 - 0.07 * ramp(progress.get(), center - half, center + half),
+	);
+
+	return (
+		<motion.img
+			alt=""
+			className="absolute inset-0 h-full w-full object-contain grayscale mix-blend-multiply"
+			decoding="async"
+			draggable={false}
+			height={1024}
+			loading="lazy"
+			src={src}
+			style={{ opacity, scale, x }}
+			width={1024}
+		/>
+	);
+}
+
 /**
  * One progress marker. Width and opacity grow while its panel is on
- * screen via useTransform — framer-motion writes directly to the DOM
- * style, no React re-render fires on scroll. Extracted so each
- * instance owns its own hook call (rules of hooks).
+ * screen — function-form useTransform writes directly to the DOM
+ * style, no React re-render fires on scroll (see StageImage for why
+ * the keyframe-array form is avoided). Extracted so each instance
+ * owns its own hook call (rules of hooks).
  */
 function Dot({
 	progress,
@@ -112,16 +204,14 @@ function Dot({
 	start: number;
 	end: number;
 }) {
-	const opacity = useTransform(
-		progress,
-		[Math.max(0, start - 0.05), start, end, Math.min(1, end + 0.05)],
-		[0.25, 1, 1, 0.25],
-	);
-	const width = useTransform(
-		progress,
-		[Math.max(0, start - 0.05), start, end, Math.min(1, end + 0.05)],
-		[16, 40, 40, 16],
-	);
+	const active = useTransform(() => {
+		const p = progress.get();
+		const fadeIn = start <= 0 ? 1 : ramp(p, start - 0.05, start);
+		const fadeOut = end >= 1 ? 1 : 1 - ramp(p, end, end + 0.05);
+		return Math.min(fadeIn, fadeOut);
+	});
+	const opacity = useTransform(() => 0.25 + 0.75 * active.get());
+	const width = useTransform(() => 16 + 24 * active.get());
 	return (
 		<motion.span
 			aria-hidden="true"
@@ -154,7 +244,7 @@ export function ServicesSection() {
 				<div className="divide-y divide-black/10 pt-[clamp(4rem,10vh,7rem)]">
 					{steps.map((step) => (
 						<div className="min-h-[80vh]" key={step.num}>
-							<Panel step={step} />
+							<Panel showImage step={step} />
 						</div>
 					))}
 				</div>
@@ -181,8 +271,28 @@ export function ServicesSection() {
 					))}
 				</div>
 
+				{/* Shared artwork stage. Stays put while panels slide past;
+				    images hand off to each other at panel midpoints. Upper-
+				    centre on mobile (clear of the bottom text cluster),
+				    right-of-centre on desktop where headlines can overlap
+				    the marble for an editorial layer. */}
+				<div
+					aria-hidden="true"
+					className="pointer-events-none absolute top-[17vh] left-1/2 h-[min(44vh,85vw)] w-[min(44vh,85vw)] -translate-x-1/2 select-none lg:top-1/2 lg:right-[4vw] lg:left-auto lg:h-[min(72vh,46vw)] lg:w-[min(72vh,46vw)] lg:-translate-x-0 lg:-translate-y-1/2"
+				>
+					{steps.map((step, i) => (
+						<StageImage
+							count={steps.length}
+							index={i}
+							key={step.num}
+							progress={scrollYProgress}
+							src={step.img}
+						/>
+					))}
+				</div>
+
 				<motion.div
-					className="flex h-full will-change-transform"
+					className="relative flex h-full will-change-transform"
 					style={{ x }}
 				>
 					{steps.map((step) => (
