@@ -53,18 +53,18 @@ export function BlogIndexPage() {
 				</header>
 
 				{isLoading && (
-					<p className="font-mono text-[11px] text-black/45 uppercase tracking-[0.35em]">
+					<p className="font-mono text-[11px] text-black/60 uppercase tracking-[0.35em]">
 						Loading…
 					</p>
 				)}
 				{isError && (
-					<p className="font-mono text-[11px] text-black/45 uppercase tracking-[0.35em]">
+					<p className="font-mono text-[11px] text-black/60 uppercase tracking-[0.35em]">
 						Posts are temporarily unavailable. Check back soon.
 					</p>
 				)}
 
 				{!isLoading && !isError && posts.length === 0 && (
-					<p className="font-mono text-[11px] text-black/45 uppercase tracking-[0.35em]">
+					<p className="font-mono text-[11px] text-black/60 uppercase tracking-[0.35em]">
 						No posts yet.
 					</p>
 				)}
@@ -87,7 +87,7 @@ export function BlogIndexPage() {
 									<br />
 									the journal.
 								</h2>
-								<span className="mt-4 font-mono text-[10px] text-black/45 uppercase tracking-[0.35em] tabular-nums sm:text-[11px]">
+								<span className="mt-4 font-mono text-[10px] text-black/60 uppercase tracking-[0.35em] tabular-nums sm:text-[11px]">
 									{String(rest.length).padStart(2, "0")} posts
 								</span>
 							</div>

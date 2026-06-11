@@ -49,7 +49,7 @@ export function TableOfContents({ headings, activeId }: TocProps) {
 
 	return (
 		<nav aria-label="Table of contents">
-			<p className="font-mono text-[10px] text-black/45 uppercase tracking-[0.35em]">
+			<p className="font-mono text-[10px] text-black/60 uppercase tracking-[0.35em]">
 				Contents
 			</p>
 			<ul className="mt-4 space-y-px">

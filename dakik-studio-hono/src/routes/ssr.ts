@@ -80,6 +80,14 @@ function articleJsonLd(a: ArticleLike, url: string): Record<string, unknown> {
  * Render a route on the worker and return a full HTML response. On ANY failure,
  * degrade to the plain SPA shell (the client then renders + unhead populates the
  * head) — the live site never breaks because SSR threw.
+ *
+ * Successful renders are cached at the edge via the Cache API: Workers never
+ * populate Cloudflare's cache for worker-generated responses on their own, so
+ * without this every visit (and crawler hit) pays full SSR + D1 latency
+ * (~1.5s TTFB measured). The URL key is host-aware (apex/bits/flow can't
+ * collide) and SSR output is user-agnostic — sessions hydrate client-side —
+ * so no cookie vary is needed. Edge TTL comes from s-maxage (5 min), which
+ * bounds how stale a just-edited post can appear.
  */
 async function ssrRespond(
 	app: App,
@@ -88,6 +96,16 @@ async function ssrRespond(
 	prefetched: Array<[QueryKey, unknown]>,
 	jsonLd?: Record<string, unknown>,
 ): Promise<Response> {
+	// The shared tsconfig uses the DOM's CacheStorage type, which lacks the
+	// Workers-only `default` cache — present at runtime in workerd.
+	const cache = (caches as unknown as { default: Cache }).default;
+	const cacheKey = c.req.method === "GET" ? new Request(c.req.url) : null;
+	if (cacheKey) {
+		const hit = await cache.match(cacheKey);
+		// Fresh copy: cached responses carry immutable headers, which the cors
+		// middleware would crash on (same trap as serveShell / ASSETS.fetch).
+		if (hit) return new Response(hit.body, hit);
+	}
 	try {
 		const shell = await readShellHtml(c.env);
 		const { appHtml, headTags, dehydratedState } = await renderApp({
@@ -101,9 +119,13 @@ async function ssrRespond(
 				).replace(/</g, "\\u003c")}</script>`
 			: headTags;
 		const html = renderSsrHtml(shell, { headTags: head, appHtml, dehydratedState });
-		return c.html(html, 200, {
+		const res = c.html(html, 200, {
 			"Cache-Control": "public, max-age=60, s-maxage=300",
 		});
+		if (cacheKey) {
+			c.executionCtx.waitUntil(cache.put(cacheKey, res.clone()));
+		}
+		return res;
 	} catch (err) {
 		console.error(
 			"SSR_RENDER_FAILED",
@@ -120,14 +142,17 @@ export function registerSsrRoutes(app: App): void {
 		if (subdomain === "main") {
 			return serveShell(c);
 		}
+		// icons: no prefetch — the font-kit catalog (~85 KB JSON) would double the
+		// HTML if dehydrated into it; the browser grid loads it client-side while
+		// the SSR'd hero/usage docs carry the SEO weight.
 		const cfg = {
-			icons: { path: "/api/icons?limit=2000", key: ["icons"] },
+			icons: null,
 			bits: { path: "/registry.json", key: ["registry"] },
 			flow: { path: "/api/automations", key: ["automations", "list"] },
 		}[subdomain];
 
-		const data = await prefetch(app, c, cfg.path);
-		const prefetched: Array<[QueryKey, unknown]> = data
+		const data = cfg ? await prefetch(app, c, cfg.path) : null;
+		const prefetched: Array<[QueryKey, unknown]> = cfg && data
 			? [[cfg.key, data]]
 			: [];
 		return ssrRespond(app, c, subdomain, prefetched);

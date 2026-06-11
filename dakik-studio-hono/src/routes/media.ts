@@ -8,10 +8,11 @@ import type { CloudflareEnv } from "../types/cloudflare";
  * cache-busting on the same URL. Keys are everything after `/media/`,
  * including slashes for sub-folders.
  *
- * Cache strategy: 1 hour at the browser, 24 hours at the edge. Objects in
- * R2 are immutable once uploaded (we generate unique keys per upload), so
- * a stale cache is never wrong; only stale-while-deleted is theoretically
- * possible but harmless.
+ * Cache strategy: 1 year, immutable. Objects in R2 are immutable once
+ * uploaded (we generate unique keys per upload), so a stale cache is never
+ * wrong; only stale-while-deleted is theoretically possible but harmless.
+ * The old 1-hour browser TTL made Lighthouse charge every cover image as
+ * re-downloadable waste on repeat views.
  */
 export const mediaRoute = new Hono<{ Bindings: CloudflareEnv }>();
 
@@ -32,7 +33,7 @@ mediaRoute.get("/media/*", async (c) => {
 	const headers = new Headers();
 	object.writeHttpMetadata(headers);
 	headers.set("etag", object.httpEtag);
-	headers.set("Cache-Control", "public, max-age=3600, s-maxage=86400");
+	headers.set("Cache-Control", "public, max-age=31536000, immutable");
 
 	return new Response(object.body, { headers });
 });

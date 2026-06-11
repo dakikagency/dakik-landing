@@ -51,7 +51,7 @@ export function Footer() {
 						viewport={{ once: true }}
 						whileInView={{ opacity: 1, y: 0 }}
 					>
-						<span className="mb-4 block text-[10px] text-white/30 uppercase tracking-[0.2em]">
+						<span className="mb-4 block text-[10px] text-white/50 uppercase tracking-[0.2em]">
 							Pages
 						</span>
 						<div className="space-y-1">
@@ -78,7 +78,7 @@ export function Footer() {
 						viewport={{ once: true }}
 						whileInView={{ opacity: 1, y: 0 }}
 					>
-						<span className="mb-4 block text-[10px] text-white/30 uppercase tracking-[0.2em]">
+						<span className="mb-4 block text-[10px] text-white/50 uppercase tracking-[0.2em]">
 							Contact
 						</span>
 						<div className="space-y-1">
@@ -109,12 +109,12 @@ export function Footer() {
 						viewport={{ once: true }}
 						whileInView={{ opacity: 1, y: 0 }}
 					>
-						<span className="mb-4 block text-[10px] text-white/30 uppercase tracking-[0.2em]">
+						<span className="mb-4 block text-[10px] text-white/50 uppercase tracking-[0.2em]">
 							Location
 						</span>
 						<div className="space-y-1 text-sm text-white/50">
 							<p>London, UK</p>
-							<p className="text-white/30">
+							<p className="text-white/50">
 								Working with
 								<br />
 								founders globally
@@ -124,7 +124,7 @@ export function Footer() {
 				</div>
 
 				<div className="flex flex-col items-start justify-between gap-4 py-6 md:flex-row md:items-center">
-					<div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] text-white/30">
+					<div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] text-white/50">
 						<span>© {currentYear} Dakik Studio Ltd</span>
 						<span className="hidden md:inline">·</span>
 						<a
@@ -146,7 +146,7 @@ export function Footer() {
 						</a>
 					</div>
 					<button
-						className="flex items-center gap-2 text-[11px] text-white/30 transition-colors hover:text-white"
+						className="flex items-center gap-2 text-[11px] text-white/50 transition-colors hover:text-white"
 						onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
 						type="button"
 					>

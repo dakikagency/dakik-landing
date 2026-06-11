@@ -34,6 +34,30 @@ export interface BlogPostFull extends BlogPostSummary {
 	updatedAt: string;
 }
 
+const CLOUDINARY_UPLOAD_RE =
+	/^(https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(.+)$/;
+
+/**
+ * Rewrite a Cloudinary delivery URL to request an optimized variant: f_auto
+ * (WebP/AVIF per browser), q_auto (content-aware compression) and a width cap.
+ * Covers are uploaded as ~1MB 1024px PNGs; this serves double-digit-KB
+ * variants without touching the originals. Non-Cloudinary URLs (e.g. /media/*
+ * from R2) are returned unchanged.
+ */
+export function optimizedCover(url: string, width: number): string {
+	const m = CLOUDINARY_UPLOAD_RE.exec(url);
+	if (!m) return url;
+	return `${m[1]}f_auto,q_auto,c_limit,w_${width}/${m[2]}`;
+}
+
+/** Width-described srcset for the browser to pick from; Cloudinary only. */
+export function coverSrcSet(url: string): string | undefined {
+	if (!CLOUDINARY_UPLOAD_RE.test(url)) return undefined;
+	return [480, 768, 1024, 1536]
+		.map((w) => `${optimizedCover(url, w)} ${w}w`)
+		.join(", ");
+}
+
 export function formatDate(date: string | Date | null | undefined): string {
 	if (!date) return "";
 	return new Intl.DateTimeFormat("en-US", {

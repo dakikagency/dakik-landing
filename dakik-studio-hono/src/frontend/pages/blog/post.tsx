@@ -19,8 +19,10 @@ import {
 	type BlogPostFull,
 	type BlogPostSummary,
 	calculateReadTime,
+	coverSrcSet,
 	extractHeadings,
 	formatDate,
+	optimizedCover,
 } from "../../lib/blog";
 
 async function fetchPost(slug: string): Promise<{
@@ -125,7 +127,7 @@ export function BlogPostPage() {
 	if (isLoading) {
 		return (
 			<PageShell>
-				<p className="font-mono text-[11px] text-black/45 uppercase tracking-[0.35em]">
+				<p className="font-mono text-[11px] text-black/60 uppercase tracking-[0.35em]">
 					Loading…
 				</p>
 			</PageShell>
@@ -194,7 +196,13 @@ export function BlogPostPage() {
 							decoding="async"
 							fetchPriority="high"
 							loading="eager"
-							src={post.coverImage}
+							sizes={
+								coverSrcSet(post.coverImage)
+									? "(min-width: 1024px) 50vw, 100vw"
+									: undefined
+							}
+							src={optimizedCover(post.coverImage, 1024)}
+							srcSet={coverSrcSet(post.coverImage)}
 						/>
 					</div>
 				)}
@@ -229,7 +237,7 @@ export function BlogPostPage() {
 						<span className="font-mono text-[10px] text-black/55 uppercase tracking-[0.35em] sm:text-[11px]">
 							Keep reading
 						</span>
-						<span className="font-mono text-[10px] text-black/45 uppercase tracking-[0.35em] tabular-nums sm:text-[11px]">
+						<span className="font-mono text-[10px] text-black/60 uppercase tracking-[0.35em] tabular-nums sm:text-[11px]">
 							{String(related.length).padStart(2, "0")}
 						</span>
 					</div>

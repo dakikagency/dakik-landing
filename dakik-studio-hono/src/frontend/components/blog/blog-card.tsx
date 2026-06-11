@@ -1,6 +1,11 @@
 import { ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { type BlogPostSummary, formatDate } from "../../lib/blog";
+import {
+	type BlogPostSummary,
+	coverSrcSet,
+	formatDate,
+	optimizedCover,
+} from "../../lib/blog";
 import { cn } from "../../lib/utils";
 
 interface BlogCardProps
@@ -49,12 +54,15 @@ function CardImage({
 	slug,
 	className,
 	eager,
+	sizes,
 }: {
 	coverImage?: string | null;
 	title: string;
 	slug: string;
 	className?: string;
 	eager?: boolean;
+	/** `sizes` for the responsive srcset; defaults to full-viewport width. */
+	sizes?: string;
 }) {
 	return (
 		<div className={cn("relative overflow-hidden bg-black/5", className)}>
@@ -63,8 +71,13 @@ function CardImage({
 					alt={title}
 					className="absolute inset-0 h-full w-full object-cover transition-transform duration-[600ms] ease-[cubic-bezier(0.4,0,0.2,1)] group-hover:scale-[1.03]"
 					decoding="async"
+					// fetchPriority makes React SSR emit a priority-hinted preload
+					// for the LCP candidate (the eager featured cover).
+					fetchPriority={eager ? "high" : undefined}
 					loading={eager ? "eager" : "lazy"}
-					src={coverImage}
+					sizes={coverSrcSet(coverImage) ? (sizes ?? "100vw") : undefined}
+					src={optimizedCover(coverImage, 1024)}
+					srcSet={coverSrcSet(coverImage)}
 				/>
 			) : (
 				<NoImagePlaceholder slug={slug} />
@@ -132,11 +145,13 @@ export function BlogCard({
 						<div className="flex flex-col justify-center gap-3">
 							<MetaRow publishedAt={publishedAt} />
 							<div className="flex flex-col gap-1.5">
-								<h3 className="break-words font-black text-xl uppercase leading-[1.1] tracking-[-0.02em] transition-colors group-hover:text-black/60 sm:text-2xl">
+								{/* h2 (not h3): this card sits directly under the page h1,
+								    so h3 would skip a heading level. */}
+								<h2 className="break-words font-black text-xl uppercase leading-[1.1] tracking-[-0.02em] transition-colors group-hover:text-black/60 sm:text-2xl">
 									{title}
-								</h3>
+								</h2>
 								{readingTime ? (
-									<span className="font-mono text-[10px] text-black/45 uppercase tracking-[0.25em]">
+									<span className="font-mono text-[10px] text-black/60 uppercase tracking-[0.25em]">
 										{readingTime} min read
 									</span>
 								) : null}
@@ -163,6 +178,7 @@ export function BlogCard({
 							className="aspect-[16/9] lg:aspect-auto lg:min-h-[20rem]"
 							coverImage={coverImage}
 							eager
+							sizes="(min-width: 1024px) 70vw, 100vw"
 							slug={slug}
 							title={title}
 						/>
@@ -181,6 +197,7 @@ export function BlogCard({
 				<CardImage
 					className={isCompact ? "aspect-[3/2]" : "aspect-[16/10]"}
 					coverImage={coverImage}
+					sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
 					slug={slug}
 					title={title}
 				/>
