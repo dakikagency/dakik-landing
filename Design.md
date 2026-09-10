@@ -172,7 +172,7 @@ Pick **one** gutter scale per surface and use it everywhere on that surface so
 section left-edges align vertically. The landing's `services` and `faq`
 sections both use `clamp(1.5rem,6vw,6rem)` so their headings line up; the FAQ is
 full-width (no `max-w` cap) specifically so its left edge matches the
-full-bleed services panels above it.
+full-width services section above it.
 
 ### Grid & width
 
@@ -380,7 +380,8 @@ Framer Motion, restrained and fast.
 | Hover | 200ms | `ease-out` |
 | Reveal on mount / in-view | 400–500ms | `[0.25,0.25,0.25,0.75]` |
 | Drawer / accordion height | 250–300ms | `[0.4,0,0.2,1]` |
-| Scroll-linked (services panels) | — | `useTransform`, writes straight to DOM, no re-render |
+| Scroll-linked services type | — | `useTransform`, writes straight to DOM, no re-render |
+| Services step counter | 700ms | CSS transform, `cubic-bezier(0.22,1,0.36,1)` |
 
 No bounce/spring on chrome. Always honor reduced motion:
 
@@ -389,9 +390,15 @@ const reduced = useReducedMotion(); // src/frontend/hooks/use-reduced-motion.ts
 // variants: { hidden: { opacity: 0, y: reduced ? 0 : 20 }, visible: { opacity: 1, y: 0 } }
 ```
 
-The `services` section ships a full reduced-motion fallback (vertical stack
-instead of the scroll-driven horizontal panels) — match that pattern for any
-scroll-jacking layout.
+The `services` section uses natural vertical scrolling, with a sticky step
+counter and direct links to Discover, Design, Build, and Improve. The counter
+updates as each row crosses the viewport's reading line. Reduced motion disables
+the counter transition and renders service titles at full opacity with no movement.
+Mobile uses a single column with inline step numbers and no sticky counter.
+
+Services uses sentence-case, regular/medium display type as a deliberate contrast
+to the heavy uppercase hero and FAQ. It contains no decorative images. Its styles
+are scoped in `src/frontend/components/landing/services.css`.
 
 **Caveat learned:** for single-screen pages, prefer `animate="visible"` /
 `initial+animate` over `whileInView`; under React StrictMode + Vite HMR, a
@@ -458,8 +465,8 @@ shared marketing navbar/footer.
   list / responsive table.
 - **Subdomain catalog** — see §10.
 - **Marketing landing** — black hero (noise, oversized headline, capped
-  full-width CTA) → white `services` section (scroll-driven horizontal panels
-  with reduced-motion fallback) → white `faq` (split heading/accordion) → black
+  full-width CTA) → white `services` section (typographic rows, sticky rolling
+  step counter, reduced-motion support) → white `faq` (split heading/accordion) → black
   footer with the container-sized `dakik` wordmark.
 
 ---
@@ -538,7 +545,7 @@ export function Page() {
 | Reduced-motion hook | `src/frontend/hooks/use-reduced-motion.ts` |
 | Navbar (mix-blend, mobile menu, inline logo) | `src/frontend/components/landing/navbar.tsx` |
 | Hero (CTA, clamp headline) | `src/frontend/components/landing/hero.tsx` |
-| Services (scroll panels + reduced-motion) | `src/frontend/components/landing/services.tsx` |
+| Services (typographic rows + step counter) | `src/frontend/components/landing/services.tsx`, `services.css` |
 | FAQ (split heading/accordion) | `src/frontend/components/landing/faq.tsx` |
 | Footer (container-sized wordmark) | `src/frontend/components/landing/footer.tsx` |
 | Auth split-screen | `src/frontend/pages/login.tsx` |

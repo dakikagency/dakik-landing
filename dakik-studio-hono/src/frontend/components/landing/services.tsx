@@ -1,304 +1,178 @@
-import {
-	motion,
-	type MotionValue,
-	useScroll,
-	useTransform,
-} from "framer-motion";
-import { useRef } from "react";
+"use client";
 
-interface Step {
-	num: string;
-	label: string;
-	angle: string;
-	body: string;
-	meta: string;
-	img: string;
-}
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import "./services.css";
 
-const steps: readonly Step[] = [
+const steps = [
 	{
-		num: "01",
+		id: "discover",
 		label: "Discover",
-		angle: "We map the real problem",
-		body: "Short call, fast audit, then we define what 'done' means. Scope stays tight so you ship, not spiral.",
-		meta: "1–2 days",
-		img: "/landing/services-discover.webp",
+		angle: "We map the real problem.",
+		body: "Short call, fast audit, then we define what ‘done’ means. Scope stays tight so you ship, not spiral.",
+		meta: "1-2 days",
 	},
 	{
-		num: "02",
+		id: "design",
 		label: "Design",
-		angle: "Systems, not vibes",
+		angle: "Systems, not vibes.",
 		body: "Typography, layout rules, and reusable blocks. Premium look, consistent system, ready to scale.",
-		meta: "3–7 days",
-		img: "/landing/services-design.webp",
+		meta: "3-7 days",
 	},
 	{
-		num: "03",
+		id: "build",
 		label: "Build",
-		angle: "Ship the thing",
+		angle: "Ship the thing.",
 		body: "Hono, React, Tailwind, motion where it matters. Clean code, fast pages, SEO baked in.",
-		meta: "1–3 weeks",
-		img: "/landing/services-build.webp",
+		meta: "1-3 weeks",
 	},
 	{
-		num: "04",
+		id: "improve",
 		label: "Improve",
-		angle: "Measure, then iterate",
-		body: "Analytics, experiments, conversion tweaks. Small changes, big wins — no guesswork.",
-		meta: "ongoing",
-		img: "/landing/services-improve.webp",
+		angle: "Measure, then iterate.",
+		body: "Analytics, experiments, conversion tweaks. Small changes, big wins. No guesswork.",
+		meta: "Ongoing",
 	},
-];
+] as const;
 
-const TOTAL_LABEL = String(steps.length).padStart(2, "0");
-
-/**
- * Render-time read of prefers-reduced-motion. No useEffect subscription —
- * the OS preference doesn't change mid-session in practice, so the cost of
- * waiting for an effect to fire (and re-rendering the whole section after)
- * isn't worth it. Saves one useEffect per mount.
- */
-function getPrefersReducedMotion(): boolean {
-	if (typeof window === "undefined") return false;
-	return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
-/**
- * Panel uses absolute positioning so the top-label row and the bottom
- * headline+body cluster sit at the same pixel position on every panel.
- * That guarantees horizontal alignment as the user scrolls between
- * panels — text doesn't jump up or down between transitions.
- *
- * No flex column, no mt-auto: those distribute space based on content
- * height, which varies between panels (different headline lengths)
- * and breaks cross-panel alignment.
- */
-function Panel({ step, showImage = false }: { step: Step; showImage?: boolean }) {
-	return (
-		<article className="relative h-full w-screen shrink-0">
-			{/* Reduced-motion branch only: static per-panel artwork. The
-			    animated branch renders artwork once in the shared stage
-			    instead, so it can crossfade between panels. First in DOM so
-			    the text clusters paint above it. */}
-			{showImage && (
-				<img
-					alt=""
-					className="pointer-events-none absolute top-1/2 right-[clamp(1.5rem,6vw,6rem)] h-[min(52vh,72vw)] w-auto -translate-y-1/2 select-none object-contain grayscale mix-blend-multiply"
-					decoding="async"
-					draggable={false}
-					height={1024}
-					loading="lazy"
-					src={step.img}
-					width={1024}
-				/>
-			)}
-
-			{/* Top labels — anchored to top */}
-			<div className="absolute inset-x-[clamp(1.5rem,6vw,6rem)] top-[clamp(5.5rem,12vh,7rem)] flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
-				<span className="font-mono text-[10px] text-black/55 uppercase tracking-[0.35em] sm:text-[11px]">
-					{step.num} / {TOTAL_LABEL} · {step.label}
-				</span>
-				<span className="font-mono text-[10px] text-black/45 uppercase tracking-[0.3em] sm:text-[11px]">
-					{step.meta}
-				</span>
-			</div>
-
-			{/* Headline + body — bottom-anchored cluster. The body's bottom
-			    edge sits at the same y on every panel; headlines grow upward
-			    from above the body, so longer or shorter headlines don't
-			    shift body position. */}
-			<div className="absolute inset-x-[clamp(1.5rem,6vw,6rem)] bottom-[clamp(6rem,18vh,12rem)]">
-				<h3 className="font-black text-[clamp(2rem,8vw,9rem)] uppercase leading-[0.9] tracking-[-0.04em] lg:leading-[0.88]">
-					{step.angle}
-				</h3>
-				<p className="mt-5 max-w-[44ch] text-base text-black/70 leading-relaxed lg:mt-8 lg:text-lg">
-					{step.body}
-				</p>
-			</div>
-		</article>
-	);
-}
-
-/** Clamped 0→1 progress of p through [a, b]. */
-function ramp(p: number, a: number, b: number): number {
-	return Math.min(1, Math.max(0, (p - a) / (b - a)));
-}
-
-/**
- * One artwork in the shared sticky stage. All four images occupy the
- * same box; scroll position decides which one is visible. Each image
- * owns the scroll range centred on its panel (centre = index/(count-1),
- * half-window to the adjacent panel's midpoint). Fades complete exactly
- * at panel midpoints, so one image is fully gone before the next
- * appears — no double-exposure mid-transition. Scale and x drift across
- * the whole window read as parallax against the faster-moving panels.
- *
- * Images are greyscale-on-white and multiply-blended, so their frames
- * are invisible against the white section — only the marble shows.
- *
- * IMPORTANT: these use the function form of useTransform, not the
- * keyframe-array form. The array form lets framer promote the
- * animation to a native ScrollTimeline, which Chrome then binds to
- * PAGE scroll — the section's target offsets get lost and every value
- * maps to the wrong scroll range (observed in dev and prod builds).
- * The function form stays JS-driven and tracks the section correctly.
- */
-function StageImage({
-	progress,
+function ServiceRow({
+	step,
 	index,
-	count,
-	src,
+	active,
 }: {
-	progress: MotionValue<number>;
+	step: (typeof steps)[number];
 	index: number;
-	count: number;
-	src: string;
+	active: boolean;
 }) {
-	const center = index / (count - 1);
-	const half = 0.5 / (count - 1);
-	const fade = 0.07;
-
-	const opacity = useTransform(() => {
-		const p = progress.get();
-		const fadeIn = index > 0 ? ramp(p, center - half, center - half + fade) : 1;
-		const fadeOut =
-			index < count - 1 ? 1 - ramp(p, center + half - fade, center + half) : 1;
-		return Math.min(fadeIn, fadeOut);
+	const ref = useRef<HTMLLIElement>(null);
+	const { scrollYProgress } = useScroll({
+		target: ref,
+		offset: ["start end", "start center"],
 	});
-	// 0→1 across this image's whole window; drives the parallax drift.
-	const x = useTransform(
-		() => `${4 - 8 * ramp(progress.get(), center - half, center + half)}%`,
-	);
-	const scale = useTransform(
-		() => 1.04 - 0.07 * ramp(progress.get(), center - half, center + half),
-	);
+	// Function transforms retain section-relative offsets in browsers that
+	// otherwise promote keyframe transforms to a document ScrollTimeline.
+	const y = useTransform(() => (1 - scrollYProgress.get()) * 44);
+	const opacity = useTransform(() => 0.45 + scrollYProgress.get() * 0.55);
 
 	return (
-		<motion.img
-			alt=""
-			className="absolute inset-0 h-full w-full object-contain grayscale mix-blend-multiply"
-			decoding="async"
-			draggable={false}
-			height={1024}
-			loading="lazy"
-			src={src}
-			style={{ opacity, scale, x }}
-			width={1024}
-		/>
-	);
-}
-
-/**
- * One progress marker. Width and opacity grow while its panel is on
- * screen — function-form useTransform writes directly to the DOM
- * style, no React re-render fires on scroll (see StageImage for why
- * the keyframe-array form is avoided). Extracted so each instance
- * owns its own hook call (rules of hooks).
- */
-function Dot({
-	progress,
-	start,
-	end,
-}: {
-	progress: MotionValue<number>;
-	start: number;
-	end: number;
-}) {
-	const active = useTransform(() => {
-		const p = progress.get();
-		const fadeIn = start <= 0 ? 1 : ramp(p, start - 0.05, start);
-		const fadeOut = end >= 1 ? 1 : 1 - ramp(p, end, end + 0.05);
-		return Math.min(fadeIn, fadeOut);
-	});
-	const opacity = useTransform(() => 0.25 + 0.75 * active.get());
-	const width = useTransform(() => 16 + 24 * active.get());
-	return (
-		<motion.span
-			aria-hidden="true"
-			className="h-0.5 bg-black"
-			style={{ opacity, width }}
-		/>
+		<li
+			className="service-row"
+			data-active={active}
+			data-service-index={index}
+			id={`service-${step.id}`}
+			ref={ref}
+		>
+			<div className="service-row-meta">
+				<span className="service-row-number">0{index + 1}</span>
+				<span>{step.meta}</span>
+			</div>
+			<h3 className="service-title">
+				<motion.span
+					className="service-title-reveal"
+					style={{ y, opacity }}
+				>
+					{step.label}<span className="service-title-period">.</span>
+				</motion.span>
+			</h3>
+			<div className="service-description">
+				<p className="service-angle">{step.angle}</p>
+				<p className="service-body">{step.body}</p>
+			</div>
+		</li>
 	);
 }
 
 export function ServicesSection() {
-	const ref = useRef<HTMLElement>(null);
-	const prefersReducedMotion = getPrefersReducedMotion();
-	const { scrollYProgress } = useScroll({
-		target: ref,
-		offset: ["start start", "end end"],
-	});
+	const listRef = useRef<HTMLOListElement>(null);
+	const [activeIndex, setActiveIndex] = useState(0);
 
-	// Map vertical scroll to horizontal translate.
-	// scrollYProgress = 0 → panel 0 visible (x = 0)
-	// scrollYProgress = 1 → panel N-1 visible (x = -(N-1)*100vw)
-	const x = useTransform(
-		scrollYProgress,
-		[0, 1],
-		["0vw", `-${(steps.length - 1) * 100}vw`],
-	);
-
-	if (prefersReducedMotion) {
-		return (
-			<section className="bg-white text-black" id="services">
-				<div className="divide-y divide-black/10 pt-[clamp(4rem,10vh,7rem)]">
-					{steps.map((step) => (
-						<div className="min-h-[80vh]" key={step.num}>
-							<Panel showImage step={step} />
-						</div>
-					))}
-				</div>
-			</section>
+	useEffect(() => {
+		const rows = listRef.current?.querySelectorAll<HTMLElement>(
+			"[data-service-index]",
 		);
-	}
+		if (!rows) return;
+
+		let observer: IntersectionObserver;
+		const observe = () => {
+			observer?.disconnect();
+			// Keep anchor navigation on the chosen step even on tall screens
+			// where several complete rows can be visible at once.
+			const readingLine = Math.min(window.innerHeight * 0.4, 240);
+			const updateActiveStep = () => {
+				let next = 0;
+				for (const row of rows) {
+					if (row.getBoundingClientRect().top > readingLine) break;
+					next = Number(row.dataset.serviceIndex);
+				}
+				setActiveIndex(next);
+			};
+			// A one-pixel reading line handles forward/backward scrolling and
+			// anchor jumps. Pixel margins also work in narrow, tall viewports.
+			observer = new IntersectionObserver(updateActiveStep, {
+				rootMargin: `-${readingLine}px 0px -${window.innerHeight - readingLine - 1}px 0px`,
+				threshold: 0,
+			});
+			for (const row of rows) observer.observe(row);
+			updateActiveStep();
+		};
+		observe();
+		window.addEventListener("resize", observe);
+		return () => {
+			observer.disconnect();
+			window.removeEventListener("resize", observe);
+		};
+	}, []);
 
 	return (
-		<section
-			className="relative bg-white text-black"
-			id="services"
-			ref={ref}
-			style={{ height: `${steps.length * 100}vh` }}
-		>
-			<div className="sticky top-0 h-screen w-full overflow-hidden">
-				<div className="absolute bottom-[clamp(2rem,6vh,4rem)] left-1/2 z-10 flex -translate-x-1/2 items-center gap-2">
-					{steps.map((s, i) => (
-						<Dot
-							end={(i + 1) / steps.length}
-							key={s.num}
-							progress={scrollYProgress}
-							start={i / steps.length}
+		<section aria-labelledby="services-heading" className="services" id="services">
+			<header className="services-intro">
+				<p className="services-caption">// Services</p>
+				<h2 id="services-heading">
+					From first idea<br />
+					to what’s next.
+				</h2>
+			</header>
+
+			<div className="services-layout">
+				<aside className="services-index">
+					<p className="services-index-label">One team. Every step.</p>
+					<div aria-hidden="true" className="services-counter">
+						<span>0</span>
+						<div className="services-counter-window">
+							<div
+								className="services-counter-reel"
+								style={{ transform: `translateY(${activeIndex * -25}%)` }}
+							>
+								{steps.map((step, index) => (
+									<span key={step.id}>{index + 1}</span>
+								))}
+							</div>
+						</div>
+					</div>
+					<nav aria-label="Our process" className="services-nav">
+						{steps.map((step, index) => (
+							<a
+								aria-current={activeIndex === index ? "step" : undefined}
+								href={`#service-${step.id}`}
+								key={step.id}
+							>
+								<span className="services-nav-number">0{index + 1}</span>
+								{step.label}
+							</a>
+						))}
+					</nav>
+				</aside>
+
+				<ol className="services-list" ref={listRef}>
+					{steps.map((step, index) => (
+						<ServiceRow
+							active={activeIndex === index}
+							index={index}
+							key={step.id}
+							step={step}
 						/>
 					))}
-				</div>
-
-				{/* Shared artwork stage. Stays put while panels slide past;
-				    images hand off to each other at panel midpoints. Upper-
-				    centre on mobile (clear of the bottom text cluster),
-				    right-of-centre on desktop where headlines can overlap
-				    the marble for an editorial layer. */}
-				<div
-					aria-hidden="true"
-					className="pointer-events-none absolute top-[17vh] left-1/2 h-[min(44vh,85vw)] w-[min(44vh,85vw)] -translate-x-1/2 select-none lg:top-1/2 lg:right-[4vw] lg:left-auto lg:h-[min(72vh,46vw)] lg:w-[min(72vh,46vw)] lg:-translate-x-0 lg:-translate-y-1/2"
-				>
-					{steps.map((step, i) => (
-						<StageImage
-							count={steps.length}
-							index={i}
-							key={step.num}
-							progress={scrollYProgress}
-							src={step.img}
-						/>
-					))}
-				</div>
-
-				<motion.div
-					className="relative flex h-full will-change-transform"
-					style={{ x }}
-				>
-					{steps.map((step) => (
-						<Panel key={step.num} step={step} />
-					))}
-				</motion.div>
+				</ol>
 			</div>
 		</section>
 	);
