@@ -64,6 +64,11 @@ specs/*
 scripts/import-daicons.ts
 scripts/upload-icons-test.js
 
+# This generator is required by the production build in a clean checkout.
+!dakik-studio-hono/scripts/
+dakik-studio-hono/scripts/*
+!dakik-studio-hono/scripts/build-daicons-font.mjs
+
 # Cloudflare Workers
 .wrangler/
 .open-next/
